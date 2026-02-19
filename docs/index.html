@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>namespace-guard — Slug Uniqueness Checker</title>
+  <meta name="description" content="Interactive playground for namespace-guard. Check slug/handle uniqueness across multiple database tables with reserved name protection.">
+  <meta property="og:title" content="namespace-guard Playground">
+  <meta property="og:description" content="Try the slug uniqueness checker in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --background: #090e17;
+      --foreground: #eef4ff;
+      --ink-muted: #bcc9df;
+      --accent: #1ed760;
+      --accent-strong: #11bf4f;
+      --accent-soft: rgba(30, 215, 96, 0.22);
+      --line: rgba(208, 227, 255, 0.15);
+      --red: #ff5a5a;
+      --red-soft: rgba(255, 90, 90, 0.12);
+      --amber: #ffbe3c;
+      --amber-soft: rgba(255, 190, 60, 0.12);
+      --font-display: 'Syne', system-ui, sans-serif;
+      --font-body: 'Instrument Sans', system-ui, sans-serif;
+      --font-mono: 'Google Sans Code', ui-monospace, 'SF Mono', monospace;
+      --font-serif: 'Fraunces', Georgia, serif;
+      --shell-pad: clamp(1rem, 2.2vw, 2.25rem);
+    }
+
+    html { background: #080b12; }
+
+    body {
+      background:
+        radial-gradient(1300px 720px at 9% -8%, rgba(30, 215, 96, 0.22), transparent 48%),
+        radial-gradient(980px 640px at 88% 2%, rgba(63, 121, 255, 0.2), transparent 52%),
+        radial-gradient(1020px 760px at 50% 108%, rgba(15, 30, 58, 0.62), transparent 56%),
+        linear-gradient(180deg, #0c1018 0%, #080b12 100%);
+      color: var(--foreground);
+      font-family: var(--font-body);
+      letter-spacing: 0.01em;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    ::selection {
+      background: rgba(30, 215, 96, 0.34);
+      color: #fff;
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: fixed; left: 1rem; top: 0.75rem; z-index: 120;
+      border: 1px solid rgba(30, 215, 96, 0.52);
+      border-radius: 0.6rem;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.75rem; font-weight: 600;
+      color: #e7fff1;
+      background: rgba(6, 18, 12, 0.94);
+      box-shadow: 0 10px 24px -14px rgba(0,0,0,0.88), inset 0 1px 0 rgba(255,255,255,0.14);
+      transform: translateY(-180%); opacity: 0;
+      transition: transform 180ms cubic-bezier(0.22,1,0.36,1), opacity 180ms ease;
+      text-decoration: none;
+    }
+    .skip-link:focus-visible { transform: translateY(0); opacity: 1; }
+
+    /* Layout */
+    .shell {
+      width: min(100%, 72rem);
+      margin-inline: auto;
+      padding-inline: var(--shell-pad);
+    }
+
+    /* Focus ring */
+    :focus-visible {
+      outline: 2px solid var(--accent-soft);
+      outline-offset: 2px;
+    }
+
+    /* Typography */
+    .display-type {
+      font-family: var(--font-display);
+      letter-spacing: -0.02em;
+    }
+    .phonetic-serif {
+      font-family: var(--font-serif);
+      font-variation-settings: "SOFT" 40, "WONK" 0;
+    }
+    .mono { font-family: var(--font-mono); }
+
+    /* Hero */
+    .hero {
+      padding-top: clamp(3rem, 8vh, 6rem);
+      padding-bottom: clamp(2rem, 5vh, 4rem);
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .hero-tagline {
+      font-size: clamp(1rem, 1.8vw, 1.25rem);
+      color: var(--ink-muted);
+      max-width: 42ch;
+      margin: 0 auto 1.5rem;
+    }
+    .hero-phonetic {
+      font-size: 0.95rem;
+      color: var(--ink-muted);
+      margin-bottom: 2rem;
+    }
+    .hero-phonetic .pron { font-style: italic; color: var(--foreground); opacity: 0.7; }
+    .hero-phonetic .pos { font-style: italic; opacity: 0.6; margin-left: 0.5em; }
+    .hero-phonetic .def { display: block; margin-top: 0.3rem; max-width: 48ch; margin-inline: auto; }
+    .hero-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 1rem; padding: 0.6rem 1.4rem;
+      font-size: 0.9rem; font-weight: 600; font-family: var(--font-body);
+      color: #04120a; text-decoration: none; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent) 0%, #4bf07e 100%);
+      box-shadow: 0 10px 26px -10px rgba(30,215,96,0.62), inset 0 1px 0 rgba(255,255,255,0.55);
+      transition: filter 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.04);
+      box-shadow: 0 14px 32px -12px rgba(30,215,96,0.72), inset 0 1px 0 rgba(255,255,255,0.68);
+    }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 1rem; padding: 0.6rem 1.4rem;
+      font-size: 0.9rem; font-weight: 600; font-family: var(--font-body);
+      text-decoration: none; cursor: pointer;
+      border: 1px solid rgba(203,222,255,0.22);
+      color: #d8e2f3;
+      background: rgba(11,18,29,0.52);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .btn-secondary:hover {
+      color: #fff;
+      border-color: rgba(203,222,255,0.34);
+      background: rgba(17,27,43,0.68);
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(196,216,248,0.36), rgba(30,215,96,0.34), transparent);
+      margin: clamp(2rem, 4vh, 3.5rem) 0;
+    }
+
+    /* Cards */
+    .glass-card {
+      border: 1px solid rgba(212,230,255,0.16);
+      background: linear-gradient(145deg, rgba(20,29,44,0.84), rgba(9,14,23,0.62));
+      border-radius: 1.15rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 34px -20px rgba(3,8,16,0.82);
+      backdrop-filter: blur(12px) saturate(130%);
+      -webkit-backdrop-filter: blur(12px) saturate(130%);
+      padding: clamp(1.25rem, 2vw, 2rem);
+    }
+
+    /* How it works */
+    .how-section { text-align: center; }
+    .how-section h2 {
+      font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+    .how-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 768px) {
+      .how-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .how-card { text-align: left; }
+    .how-card h3 {
+      font-size: 1rem; font-weight: 600;
+      margin-bottom: 0.4rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .how-card p { font-size: 0.88rem; color: var(--ink-muted); }
+    .how-card .example {
+      margin-top: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0,0,0,0.3);
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .how-card .example .val { color: var(--accent); }
+    .how-card .example .err { color: var(--red); }
+    .how-card .example .warn { color: var(--amber); }
+
+    /* Playground */
+    .playground { text-align: left; }
+    .playground h2 {
+      font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+    }
+    .playground-card { padding: clamp(1.5rem, 3vw, 2.5rem); }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .input-group:focus-within {
+      border-color: rgba(30,215,96,0.55);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .input-prefix {
+      padding: 0.7rem 0 0.7rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--ink-muted);
+      white-space: nowrap;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .input-field {
+      flex: 1;
+      min-width: 0;
+      padding: 0.7rem 0.5rem;
+      background: transparent;
+      border: none;
+      color: var(--foreground);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .input-field::placeholder { color: rgba(188,201,223,0.4); }
+    .check-btn {
+      flex-shrink: 0;
+      margin: 0.35rem 0.35rem 0.35rem 0;
+      padding: 0.45rem 1.1rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    /* Result area */
+    .result-area {
+      min-height: 3.5rem;
+      margin-top: 1rem;
+    }
+    .result-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border-radius: 0.7rem;
+      border: 1px solid transparent;
+      animation: resultIn 0.2s ease;
+    }
+    @keyframes resultIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      @keyframes resultIn { from { opacity: 1; transform: none; } }
+    }
+    .result-available {
+      background: rgba(30,215,96,0.08);
+      border-color: rgba(30,215,96,0.25);
+    }
+    .result-invalid, .result-taken {
+      background: var(--red-soft);
+      border-color: rgba(255,90,90,0.25);
+    }
+    .result-reserved {
+      background: var(--amber-soft);
+      border-color: rgba(255,190,60,0.25);
+    }
+    .result-icon { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin-top: 0.1rem; }
+    .result-body { flex: 1; min-width: 0; }
+    .result-body strong { font-weight: 600; }
+    .result-body .slug-name { font-family: var(--font-mono); }
+    .result-body .result-msg { font-size: 0.88rem; color: var(--ink-muted); margin-top: 0.15rem; }
+    .result-body .result-source {
+      display: inline-block;
+      font-size: 0.75rem; font-family: var(--font-mono);
+      padding: 0.1rem 0.45rem;
+      border-radius: 0.3rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+    .result-body .result-category {
+      display: inline-block;
+      font-size: 0.75rem; font-family: var(--font-mono);
+      padding: 0.1rem 0.45rem;
+      border-radius: 0.3rem;
+      background: rgba(255,190,60,0.12);
+      border: 1px solid rgba(255,190,60,0.2);
+      color: var(--amber);
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
+    /* Suggestions */
+    .suggestions { margin-top: 0.6rem; }
+    .suggestions-label { font-size: 0.82rem; color: var(--ink-muted); margin-bottom: 0.35rem; }
+    .suggestion-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .suggestion-pill {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 2rem;
+      border: 1px solid rgba(30,215,96,0.3);
+      background: rgba(30,215,96,0.08);
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .suggestion-pill:hover {
+      background: rgba(30,215,96,0.18);
+      border-color: rgba(30,215,96,0.5);
+    }
+
+    /* Examples */
+    .examples-section { margin-top: 1.5rem; }
+    .examples-label {
+      font-size: 0.82rem;
+      color: var(--ink-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .examples-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .example-pill {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 2rem;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .example-pill:hover {
+      color: var(--foreground);
+      border-color: rgba(208,227,255,0.3);
+      background: rgba(255,255,255,0.06);
+    }
+
+    /* Mock data */
+    .mock-section { margin-top: 1.5rem; }
+    .mock-summary {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--ink-muted);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .mock-summary::-webkit-details-marker { display: none; }
+    .mock-summary .chevron {
+      transition: transform 0.2s;
+      width: 0.8rem; height: 0.8rem;
+    }
+    details[open] .mock-summary .chevron { transform: rotate(90deg); }
+    .mock-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: 1fr;
+      margin-top: 0.75rem;
+      font-size: 0.82rem;
+    }
+    @media (min-width: 640px) {
+      .mock-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .mock-group h4 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink-muted);
+      margin-bottom: 0.3rem;
+    }
+    .mock-group .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .mock-tag {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.3rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Code section */
+    .code-section { text-align: left; }
+    .code-section h2 {
+      font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+    }
+    .code-block {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--ink-muted);
+    }
+    .code-block .kw { color: #c792ea; }
+    .code-block .fn { color: #82aaff; }
+    .code-block .str { color: #c3e88d; }
+    .code-block .cm { color: #546e7a; font-style: italic; }
+    .code-block .type { color: #ffcb6b; }
+    .code-block .br { color: rgba(255,255,255,0.3); }
+
+    /* Footer */
+    footer {
+      margin-top: clamp(2.5rem, 5vh, 4rem);
+      padding-bottom: clamp(2rem, 4vh, 3rem);
+      text-align: center;
+    }
+    .install-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      padding: 0.6rem 0.8rem 0.6rem 1.2rem;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+    .install-bar code { color: var(--ink-muted); }
+    .install-bar .prefix { color: var(--accent); user-select: none; }
+    .copy-btn {
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.4rem;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--ink-muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      font-family: var(--font-body);
+    }
+    .copy-btn:hover { color: var(--foreground); border-color: rgba(208,227,255,0.3); }
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+    .footer-links a {
+      color: var(--ink-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--foreground); }
+    .footer-author {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: rgba(188,201,223,0.5);
+    }
+
+    /* Utility */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+  </style>
+</head>
+<body>
+  <a href="#playground" class="skip-link">Skip to playground</a>
+
+  <header class="shell hero">
+    <h1 class="display-type">namespace-guard</h1>
+    <p class="hero-tagline">Check slug uniqueness across multiple tables in one call.</p>
+    <div class="hero-phonetic phonetic-serif">
+      <span class="pron">/neym-speys gahrd/</span>
+      <span class="pos">noun</span>
+      <span class="def">A utility that prevents slug collisions across users, organisations, and reserved routes.</span>
+    </div>
+    <div class="hero-actions">
+      <a href="#playground" class="btn-primary">Try it out</a>
+      <a href="https://github.com/paultendo/namespace-guard" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- How it works -->
+    <section class="how-section" aria-labelledby="how-heading">
+      <h2 id="how-heading" class="display-type">How it works</h2>
+      <div class="how-grid">
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Format Validation
+          </h3>
+          <p>Validates identifiers against a configurable regex pattern. Default: 2&ndash;30 lowercase alphanumeric characters and hyphens.</p>
+          <div class="example"><span class="err">"a"</span> &rarr; invalid</div>
+        </div>
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Reserved Names
+          </h3>
+          <p>Blocks system routes, brand names, and other reserved identifiers. Supports categorised lists with custom error messages.</p>
+          <div class="example"><span class="warn">"admin"</span> &rarr; reserved <small>(system)</small></div>
+        </div>
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Collision Detection
+          </h3>
+          <p>Checks multiple database tables in parallel. Users, organisations, teams &mdash; one call covers them all, with alternative suggestions.</p>
+          <div class="example"><span class="err">"sarah"</span> &rarr; taken by <small>user</small></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Playground -->
+    <section id="playground" class="playground" aria-labelledby="playground-heading">
+      <h2 id="playground-heading" class="display-type">Try it out</h2>
+      <div class="glass-card playground-card">
+        <form id="check-form" role="search" aria-label="Check slug availability">
+          <div class="input-group">
+            <span class="input-prefix" aria-hidden="true">yourapp.com/</span>
+            <input
+              id="slug-input"
+              class="input-field"
+              type="text"
+              placeholder="pick-a-slug"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="playground-desc"
+              aria-label="Slug to check"
+              autofocus
+            >
+            <button type="submit" class="btn-primary check-btn">Check</button>
+          </div>
+        </form>
+        <p id="playground-desc" class="sr-only">Type a slug to check its availability against a simulated database of users and organisations.</p>
+
+        <div id="result" class="result-area" aria-live="polite" aria-atomic="true"></div>
+
+        <div class="examples-section">
+          <div class="examples-label">Try these:</div>
+          <div class="examples-row" role="group" aria-label="Example slugs to try">
+            <button class="example-pill" data-slug="sarah">sarah</button>
+            <button class="example-pill" data-slug="admin">admin</button>
+            <button class="example-pill" data-slug="acme-corp">acme-corp</button>
+            <button class="example-pill" data-slug="my-new-app">my-new-app</button>
+            <button class="example-pill" data-slug="a">a</button>
+            <button class="example-pill" data-slug="hello!">hello!</button>
+            <button class="example-pill" data-slug="@Bob">@Bob</button>
+            <button class="example-pill" data-slug="namespace-guard">namespace-guard</button>
+          </div>
+        </div>
+
+        <div class="mock-section">
+          <details>
+            <summary class="mock-summary">
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              Simulated database
+            </summary>
+            <div class="mock-grid">
+              <div class="mock-group">
+                <h4>Users</h4>
+                <div class="tags">
+                  <span class="mock-tag">sarah</span>
+                  <span class="mock-tag">bob</span>
+                  <span class="mock-tag">charlie</span>
+                </div>
+              </div>
+              <div class="mock-group">
+                <h4>Organisations</h4>
+                <div class="tags">
+                  <span class="mock-tag">acme-corp</span>
+                  <span class="mock-tag">github</span>
+                  <span class="mock-tag">vercel</span>
+                </div>
+              </div>
+              <div class="mock-group">
+                <h4>Reserved (system)</h4>
+                <div class="tags">
+                  <span class="mock-tag">admin</span>
+                  <span class="mock-tag">api</span>
+                  <span class="mock-tag">settings</span>
+                  <span class="mock-tag">dashboard</span>
+                  <span class="mock-tag">login</span>
+                  <span class="mock-tag">signup</span>
+                  <span class="mock-tag">help</span>
+                  <span class="mock-tag">support</span>
+                  <span class="mock-tag">billing</span>
+                </div>
+              </div>
+              <div class="mock-group">
+                <h4>Reserved (brand)</h4>
+                <div class="tags">
+                  <span class="mock-tag">namespace-guard</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Code example -->
+    <section class="code-section" aria-labelledby="code-heading">
+      <h2 id="code-heading" class="display-type">Use it in your project</h2>
+      <div class="code-block"><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createPrismaAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/prisma"</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, <span class="fn">createPrismaAdapter</span><span class="br">(</span>prisma<span class="br">)</span><span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
+
+<span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
+  <span class="cm">// Create the org</span>
+<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;
+  <span class="cm">// "That name is already in use."</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>;
+  <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+<span class="br">}</span></div>
+    </section>
+  </main>
+
+  <footer class="shell">
+    <div class="install-bar">
+      <code><span class="prefix">$</span> npm install namespace-guard</code>
+      <button class="copy-btn" id="copy-btn" aria-label="Copy install command">Copy</button>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/paultendo/namespace-guard" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.npmjs.com/package/namespace-guard" target="_blank" rel="noopener">npm</a>
+      <span style="color: rgba(188,201,223,0.3)">MIT License</span>
+    </div>
+    <div class="footer-author">Built by <a href="https://github.com/paultendo" target="_blank" rel="noopener" style="color: rgba(188,201,223,0.6); text-decoration: none;">Paul Wood FRSA</a></div>
+  </footer>
+
+  <script type="module">
+    // === namespace-guard library (inlined from dist/index.mjs) ===
+    var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
+    var DEFAULT_MESSAGES = {
+      invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
+      reserved: "That name is reserved. Try another one.",
+      taken: (source) => `That name is already in use.`
+    };
+    function defaultSuggest(identifier) {
+      return Array.from({ length: 9 }, (_, i) => `${identifier}-${i + 1}`);
+    }
+    function normalize(raw) {
+      return raw.trim().toLowerCase().replace(/^@+/, "");
+    }
+    function buildReservedMap(reserved) {
+      const map = new Map();
+      if (!reserved) return map;
+      if (reserved instanceof Set) {
+        for (const name of reserved) map.set(name, "default");
+      } else if (Array.isArray(reserved)) {
+        for (const name of reserved) map.set(name, "default");
+      } else {
+        for (const [category, names] of Object.entries(reserved)) {
+          for (const name of names) map.set(name, category);
+        }
+      }
+      return map;
+    }
+    function createNamespaceGuard(config, adapter) {
+      const reservedMap = buildReservedMap(config.reserved);
+      const pattern = config.pattern ?? DEFAULT_PATTERN;
+      const configMessages = config.messages ?? {};
+      const defaultReservedMsg = DEFAULT_MESSAGES.reserved;
+      const invalidMsg = configMessages.invalid ?? DEFAULT_MESSAGES.invalid;
+      const takenMsg = configMessages.taken ?? DEFAULT_MESSAGES.taken;
+      const validators = config.validators ?? [];
+      function getReservedMessage(category) {
+        const rm = configMessages.reserved;
+        if (typeof rm === "string") return rm;
+        if (rm && typeof rm === "object") return rm[category] ?? defaultReservedMsg;
+        return defaultReservedMsg;
+      }
+      function validateFormat(identifier) {
+        const normalized = normalize(identifier);
+        if (!pattern.test(normalized)) return invalidMsg;
+        if (reservedMap.has(normalized)) return getReservedMessage(reservedMap.get(normalized));
+        return null;
+      }
+      async function check(identifier, scope = {}, options) {
+        const normalized = normalize(identifier);
+        if (!pattern.test(normalized)) {
+          return { available: false, reason: "invalid", message: invalidMsg };
+        }
+        const reservedCategory = reservedMap.get(normalized);
+        if (reservedCategory) {
+          return { available: false, reason: "reserved", message: getReservedMessage(reservedCategory), category: reservedCategory };
+        }
+        for (const validator of validators) {
+          const rejection = await validator(normalized);
+          if (rejection) return { available: false, reason: "invalid", message: rejection.message };
+        }
+        const checks = config.sources.map(async (source) => {
+          const existing = await adapter.findOne(source, normalized);
+          if (!existing) return null;
+          if (source.scopeKey) {
+            const scopeValue = scope[source.scopeKey];
+            const idColumn = source.idColumn ?? "id";
+            const existingId = existing[idColumn];
+            if (scopeValue && existingId && scopeValue === String(existingId)) return null;
+          }
+          return source.name;
+        });
+        const results = await Promise.all(checks);
+        const collision = results.find((r) => r !== null);
+        if (collision) {
+          const result = { available: false, reason: "taken", message: takenMsg(collision), source: collision };
+          if (config.suggest && !options?.skipSuggestions) {
+            const generate = config.suggest.generate ?? defaultSuggest;
+            const max = config.suggest.max ?? 3;
+            const candidates = generate(normalized);
+            const suggestions = [];
+            for (const candidate of candidates) {
+              if (suggestions.length >= max) break;
+              const candidateResult = await check(candidate, scope, { skipSuggestions: true });
+              if (candidateResult.available) suggestions.push(candidate);
+            }
+            if (suggestions.length > 0) result.suggestions = suggestions;
+          }
+          return result;
+        }
+        return { available: true };
+      }
+      return { normalize, validateFormat, check };
+    }
+
+    // === Mock adapter and guard ===
+    const mockDatabase = {
+      user: {
+        "sarah":   { id: "u1", handle: "sarah" },
+        "bob":     { id: "u2", handle: "bob" },
+        "charlie": { id: "u3", handle: "charlie" },
+      },
+      organization: {
+        "acme-corp": { id: "o1", slug: "acme-corp" },
+        "github":    { id: "o2", slug: "github" },
+        "vercel":    { id: "o3", slug: "vercel" },
+      },
+    };
+
+    const playgroundAdapter = {
+      async findOne(source, value) {
+        const table = mockDatabase[source.name];
+        if (!table) return null;
+        return table[value] ?? null;
+      },
+    };
+
+    const guard = createNamespaceGuard(
+      {
+        reserved: {
+          system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
+          brand:  ["namespace-guard"],
+        },
+        sources: [
+          { name: "user", column: "handle", scopeKey: "id" },
+          { name: "organization", column: "slug", scopeKey: "id" },
+        ],
+        messages: {
+          reserved: {
+            system: "That\u2019s a reserved system route.",
+            brand:  "That\u2019s a protected brand name.",
+          },
+          taken: (source) => `Already taken by a ${source}.`,
+        },
+        suggest: {
+          generate: (id) => [`${id}-1`, `${id}-2`, `${id}-3`, `${id}-io`, `${id}-app`, `${id}-hq`],
+          max: 3,
+        },
+      },
+      playgroundAdapter
+    );
+
+    // === Playground logic ===
+    const form = document.getElementById("check-form");
+    const input = document.getElementById("slug-input");
+    const resultEl = document.getElementById("result");
+    const copyBtn = document.getElementById("copy-btn");
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function debounce(fn, ms) {
+      let timer;
+      return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+
+    const iconCheck = `<svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="#1ed760" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11.5 14.5 16 10"/></svg>`;
+    const iconX = `<svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="#ff5a5a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+    const iconShield = `<svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="#ffbe3c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
+    function renderResult(value, result) {
+      if (!value) { resultEl.innerHTML = ""; return; }
+      const normalized = escapeHtml(normalize(value));
+
+      if (result.available) {
+        resultEl.innerHTML = `<div class="result-card result-available">${iconCheck}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong> is available!</div></div>`;
+        return;
+      }
+
+      let icon, cls, extra = "";
+      if (result.reason === "reserved") {
+        icon = iconShield; cls = "result-reserved";
+        if (result.category) extra = `<span class="result-category">${escapeHtml(result.category)}</span>`;
+      } else if (result.reason === "taken") {
+        icon = iconX; cls = "result-taken";
+        if (result.source) extra = `<span class="result-source">${escapeHtml(result.source)}</span>`;
+      } else {
+        icon = iconX; cls = "result-invalid";
+      }
+
+      let suggestionsHtml = "";
+      if (result.suggestions && result.suggestions.length > 0) {
+        const pills = result.suggestions.map(s => `<button class="suggestion-pill" data-suggestion="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("");
+        suggestionsHtml = `<div class="suggestions"><div class="suggestions-label">Try instead:</div><div class="suggestion-pills">${pills}</div></div>`;
+      }
+
+      resultEl.innerHTML = `<div class="result-card ${cls}">${icon}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong>${extra}<div class="result-msg">${escapeHtml(result.message)}</div>${suggestionsHtml}</div></div>`;
+    }
+
+    async function checkSlug(value) {
+      if (!value.trim()) { renderResult("", null); return; }
+      const result = await guard.check(value);
+      renderResult(value, result);
+    }
+
+    const debouncedCheck = debounce(checkSlug, 300);
+    input.addEventListener("input", (e) => debouncedCheck(e.target.value));
+    form.addEventListener("submit", (e) => { e.preventDefault(); checkSlug(input.value); });
+
+    // Example pills
+    document.querySelectorAll("[data-slug]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        input.value = btn.dataset.slug;
+        checkSlug(btn.dataset.slug);
+        input.focus();
+      });
+    });
+
+    // Suggestion pills (event delegation)
+    resultEl.addEventListener("click", (e) => {
+      const pill = e.target.closest("[data-suggestion]");
+      if (pill) {
+        input.value = pill.dataset.suggestion;
+        checkSlug(pill.dataset.suggestion);
+        input.focus();
+      }
+    });
+
+    // Copy button
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText("npm install namespace-guard");
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+      } catch {
+        copyBtn.textContent = "Failed";
+        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+      }
+    });
+  </script>
+</body>
+</html>

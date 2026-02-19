@@ -1,0 +1,104 @@
+{
+  "name": "namespace-guard",
+  "version": "0.1.0",
+  "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "namespace-guard": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./adapters/prisma": {
+      "types": "./dist/adapters/prisma.d.ts",
+      "import": "./dist/adapters/prisma.mjs",
+      "require": "./dist/adapters/prisma.js"
+    },
+    "./adapters/drizzle": {
+      "types": "./dist/adapters/drizzle.d.ts",
+      "import": "./dist/adapters/drizzle.mjs",
+      "require": "./dist/adapters/drizzle.js"
+    },
+    "./adapters/raw": {
+      "types": "./dist/adapters/raw.d.ts",
+      "import": "./dist/adapters/raw.mjs",
+      "require": "./dist/adapters/raw.js"
+    },
+    "./adapters/kysely": {
+      "types": "./dist/adapters/kysely.d.ts",
+      "import": "./dist/adapters/kysely.mjs",
+      "require": "./dist/adapters/kysely.js"
+    },
+    "./adapters/knex": {
+      "types": "./dist/adapters/knex.d.ts",
+      "import": "./dist/adapters/knex.mjs",
+      "require": "./dist/adapters/knex.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "namespace",
+    "slug",
+    "handle",
+    "username",
+    "unique",
+    "collision",
+    "reserved",
+    "multi-tenant",
+    "drizzle",
+    "prisma",
+    "kysely",
+    "knex",
+    "cli"
+  ],
+  "author": "Paul Wood FRSA",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paultendo/namespace-guard.git"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=5.0.0",
+    "drizzle-orm": ">=0.29.0",
+    "knex": ">=2.0.0",
+    "kysely": ">=0.26.0",
+    "pg": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@prisma/client": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    },
+    "kysely": {
+      "optional": true
+    },
+    "knex": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    }
+  }
+}
