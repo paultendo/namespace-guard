@@ -47,7 +47,7 @@ export function createKnexAdapter(knex: KnexInstance): NamespaceAdapter {
       let query = knex(source.name).select(columns);
 
       if (options?.caseInsensitive) {
-        query = query.whereRaw(`LOWER("${source.column}") = LOWER(?)`, [value]);
+        query = query.whereRaw(`LOWER(??) = LOWER(?)`, [source.column, value]);
       } else {
         query = query.where(source.column, value);
       }

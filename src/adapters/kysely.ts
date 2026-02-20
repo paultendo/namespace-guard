@@ -3,7 +3,6 @@ import type { NamespaceAdapter, NamespaceSource, FindOneOptions } from "../index
 type KyselyQueryBuilder = {
   select: (columns: string[]) => KyselyQueryBuilder;
   where: (column: string, operator: string, value: unknown) => KyselyQueryBuilder;
-  whereRaw: (raw: unknown) => KyselyQueryBuilder;
   limit: (limit: number) => KyselyQueryBuilder;
   executeTakeFirst: () => Promise<Record<string, unknown> | undefined>;
 };

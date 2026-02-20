@@ -693,6 +693,10 @@
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-drizzle" id="tab-drizzle">Drizzle</button>
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-kysely" id="tab-kysely">Kysely</button>
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-knex" id="tab-knex">Knex</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-typeorm" id="tab-typeorm">TypeORM</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-mikroorm" id="tab-mikroorm">MikroORM</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-sequelize" id="tab-sequelize">Sequelize</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-mongoose" id="tab-mongoose">Mongoose</button>
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-raw" id="tab-raw">Raw SQL</button>
       </div>
       <div id="panel-prisma" role="tabpanel" aria-labelledby="tab-prisma" class="adapter-panel active">
@@ -796,6 +800,82 @@
   console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
   console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
 <span class="br">}</span></code></pre>
+      </div>
+      <div id="panel-typeorm" role="tabpanel" aria-labelledby="tab-typeorm" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createTypeORMAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/typeorm"</span>;
+<span class="kw">import</span> <span class="br">{</span> DataSource <span class="br">}</span> <span class="kw">from</span> <span class="str">"typeorm"</span>;
+<span class="kw">import</span> <span class="br">{</span> User, Organization <span class="br">}</span> <span class="kw">from</span> <span class="str">"./entities"</span>;
+
+<span class="kw">const</span> dataSource = <span class="kw">new</span> <span class="fn">DataSource</span><span class="br">(</span><span class="br">{</span> <span class="cm">/* ... */</span> <span class="br">}</span><span class="br">)</span>;
+<span class="kw">const</span> adapter = <span class="fn">createTypeORMAdapter</span><span class="br">(</span>dataSource, <span class="br">{</span> user: User, organization: Organization <span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
+      </div>
+      <div id="panel-mikroorm" role="tabpanel" aria-labelledby="tab-mikroorm" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createMikroORMAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/mikro-orm"</span>;
+<span class="kw">import</span> <span class="br">{</span> MikroORM <span class="br">}</span> <span class="kw">from</span> <span class="str">"@mikro-orm/core"</span>;
+<span class="kw">import</span> <span class="br">{</span> User, Organization <span class="br">}</span> <span class="kw">from</span> <span class="str">"./entities"</span>;
+
+<span class="kw">const</span> orm = <span class="kw">await</span> MikroORM.<span class="fn">init</span><span class="br">(</span>config<span class="br">)</span>;
+<span class="kw">const</span> adapter = <span class="fn">createMikroORMAdapter</span><span class="br">(</span>orm.em, <span class="br">{</span> user: User, organization: Organization <span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
+      </div>
+      <div id="panel-sequelize" role="tabpanel" aria-labelledby="tab-sequelize" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createSequelizeAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/sequelize"</span>;
+<span class="kw">import</span> <span class="br">{</span> User, Organization <span class="br">}</span> <span class="kw">from</span> <span class="str">"./models"</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createSequelizeAdapter</span><span class="br">(</span><span class="br">{</span> user: User, organization: Organization <span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
+      </div>
+      <div id="panel-mongoose" role="tabpanel" aria-labelledby="tab-mongoose" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createMongooseAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/mongoose"</span>;
+<span class="kw">import</span> <span class="br">{</span> User, Organization <span class="br">}</span> <span class="kw">from</span> <span class="str">"./models"</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createMongooseAdapter</span><span class="br">(</span><span class="br">{</span> user: User, organization: Organization <span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span>, idColumn: <span class="str">"_id"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span>, idColumn: <span class="str">"_id"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
       </div>
       <div id="panel-raw" role="tabpanel" aria-labelledby="tab-raw" class="adapter-panel">
         <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;

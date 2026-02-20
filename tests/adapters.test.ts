@@ -4,6 +4,10 @@ import { createDrizzleAdapter } from "../src/adapters/drizzle";
 import { createRawAdapter } from "../src/adapters/raw";
 import { createKyselyAdapter } from "../src/adapters/kysely";
 import { createKnexAdapter } from "../src/adapters/knex";
+import { createTypeORMAdapter } from "../src/adapters/typeorm";
+import { createMikroORMAdapter } from "../src/adapters/mikro-orm";
+import { createSequelizeAdapter } from "../src/adapters/sequelize";
+import { createMongooseAdapter } from "../src/adapters/mongoose";
 import type { NamespaceSource } from "../src/index";
 
 // ---------------------------------------------------------------------------
@@ -497,9 +501,357 @@ describe("createKnexAdapter", () => {
     await adapter.findOne(source, "sarah", { caseInsensitive: true });
 
     expect(builder.whereRaw).toHaveBeenCalledWith(
-      'LOWER("handle") = LOWER(?)',
-      ["sarah"]
+      'LOWER(??) = LOWER(?)',
+      ["handle", "sarah"]
     );
     expect(builder.where).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TypeORM Adapter
+// ---------------------------------------------------------------------------
+describe("createTypeORMAdapter", () => {
+  const source: NamespaceSource = {
+    name: "user",
+    column: "handle",
+    scopeKey: "id",
+  };
+
+  function createMockDataSource(result: Record<string, unknown> | null) {
+    const findOne = vi.fn().mockResolvedValue(result);
+    const repository = { findOne };
+    const dataSource = { getRepository: vi.fn().mockReturnValue(repository) };
+    return { dataSource, repository, findOne };
+  }
+
+  it("calls findOne on the correct repository", async () => {
+    const { dataSource, findOne } = createMockDataSource({ id: "u1" });
+    const UserEntity = class User {};
+    const adapter = createTypeORMAdapter(dataSource, { user: UserEntity });
+
+    const result = await adapter.findOne(source, "sarah");
+
+    expect(dataSource.getRepository).toHaveBeenCalledWith(UserEntity);
+    expect(findOne).toHaveBeenCalledWith({
+      where: { handle: "sarah" },
+      select: { id: true },
+    });
+    expect(result).toEqual({ id: "u1" });
+  });
+
+  it("includes scopeKey in select when different from idColumn", async () => {
+    const { dataSource, findOne } = createMockDataSource({ id: "u1", orgId: "o1" });
+    const sourceWithScope: NamespaceSource = {
+      name: "user",
+      column: "handle",
+      scopeKey: "orgId",
+    };
+
+    const adapter = createTypeORMAdapter(dataSource, { user: class {} });
+    await adapter.findOne(sourceWithScope, "sarah");
+
+    expect(findOne).toHaveBeenCalledWith({
+      where: { handle: "sarah" },
+      select: { id: true, orgId: true },
+    });
+  });
+
+  it("returns null when no match", async () => {
+    const { dataSource } = createMockDataSource(null);
+    const adapter = createTypeORMAdapter(dataSource, { user: class {} });
+
+    const result = await adapter.findOne(source, "nobody");
+    expect(result).toBeNull();
+  });
+
+  it("throws when entity is not found", async () => {
+    const { dataSource } = createMockDataSource(null);
+    const adapter = createTypeORMAdapter(dataSource, {});
+
+    await expect(adapter.findOne(source, "sarah")).rejects.toThrow(
+      'TypeORM entity "user" not found'
+    );
+  });
+
+  it("uses ILike for case-insensitive matching", async () => {
+    const { dataSource, findOne } = createMockDataSource({ id: "u1" });
+    const ilike = vi.fn((val: string) => ({ _type: "ilike", _value: val }));
+    const adapter = createTypeORMAdapter(dataSource, { user: class {} }, ilike);
+
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(ilike).toHaveBeenCalledWith("sarah");
+    expect(findOne).toHaveBeenCalledWith({
+      where: { handle: { _type: "ilike", _value: "sarah" } },
+      select: { id: true },
+    });
+  });
+
+  it("throws when caseInsensitive used without ILike", async () => {
+    const { dataSource } = createMockDataSource({ id: "u1" });
+    const adapter = createTypeORMAdapter(dataSource, { user: class {} });
+
+    await expect(
+      adapter.findOne(source, "sarah", { caseInsensitive: true })
+    ).rejects.toThrow("caseInsensitive requires passing ILike");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MikroORM Adapter
+// ---------------------------------------------------------------------------
+describe("createMikroORMAdapter", () => {
+  const source: NamespaceSource = {
+    name: "user",
+    column: "handle",
+    scopeKey: "id",
+  };
+
+  it("calls em.findOne with correct entity and where", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1" });
+    const em = { findOne };
+    const UserEntity = class User {};
+    const adapter = createMikroORMAdapter(em, { user: UserEntity });
+
+    const result = await adapter.findOne(source, "sarah");
+
+    expect(findOne).toHaveBeenCalledWith(
+      UserEntity,
+      { handle: "sarah" },
+      { fields: ["id"] }
+    );
+    expect(result).toEqual({ id: "u1" });
+  });
+
+  it("includes scopeKey in fields when different from idColumn", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1", orgId: "o1" });
+    const em = { findOne };
+    const sourceWithScope: NamespaceSource = {
+      name: "user",
+      column: "handle",
+      scopeKey: "orgId",
+    };
+
+    const adapter = createMikroORMAdapter(em, { user: class {} });
+    await adapter.findOne(sourceWithScope, "sarah");
+
+    expect(findOne).toHaveBeenCalledWith(
+      expect.anything(),
+      { handle: "sarah" },
+      { fields: ["id", "orgId"] }
+    );
+  });
+
+  it("returns null when no match", async () => {
+    const findOne = vi.fn().mockResolvedValue(null);
+    const em = { findOne };
+    const adapter = createMikroORMAdapter(em, { user: class {} });
+
+    const result = await adapter.findOne(source, "nobody");
+    expect(result).toBeNull();
+  });
+
+  it("throws when entity is not found", async () => {
+    const em = { findOne: vi.fn() };
+    const adapter = createMikroORMAdapter(em, {});
+
+    await expect(adapter.findOne(source, "sarah")).rejects.toThrow(
+      'MikroORM entity "user" not found'
+    );
+  });
+
+  it("uses $ilike for case-insensitive matching", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1" });
+    const em = { findOne };
+    const adapter = createMikroORMAdapter(em, { user: class {} });
+
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(findOne).toHaveBeenCalledWith(
+      expect.anything(),
+      { handle: { $ilike: "sarah" } },
+      { fields: ["id"] }
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sequelize Adapter
+// ---------------------------------------------------------------------------
+describe("createSequelizeAdapter", () => {
+  const source: NamespaceSource = {
+    name: "user",
+    column: "handle",
+    scopeKey: "id",
+  };
+
+  it("calls model.findOne with correct where and attributes", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1" });
+    const UserModel = { findOne };
+    const adapter = createSequelizeAdapter({ user: UserModel });
+
+    const result = await adapter.findOne(source, "sarah");
+
+    expect(findOne).toHaveBeenCalledWith({
+      where: { handle: "sarah" },
+      attributes: ["id"],
+      raw: true,
+    });
+    expect(result).toEqual({ id: "u1" });
+  });
+
+  it("includes scopeKey in attributes when different from idColumn", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1", orgId: "o1" });
+    const sourceWithScope: NamespaceSource = {
+      name: "user",
+      column: "handle",
+      scopeKey: "orgId",
+    };
+
+    const adapter = createSequelizeAdapter({ user: { findOne } });
+    await adapter.findOne(sourceWithScope, "sarah");
+
+    expect(findOne).toHaveBeenCalledWith({
+      where: { handle: "sarah" },
+      attributes: ["id", "orgId"],
+      raw: true,
+    });
+  });
+
+  it("returns null when no match", async () => {
+    const findOne = vi.fn().mockResolvedValue(null);
+    const adapter = createSequelizeAdapter({ user: { findOne } });
+
+    const result = await adapter.findOne(source, "nobody");
+    expect(result).toBeNull();
+  });
+
+  it("throws when model is not found", async () => {
+    const adapter = createSequelizeAdapter({});
+
+    await expect(adapter.findOne(source, "sarah")).rejects.toThrow(
+      'Sequelize model "user" not found'
+    );
+  });
+
+  it("uses Sequelize.where/fn/col for case-insensitive matching", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1" });
+    const helpers = {
+      where: vi.fn((left: unknown, right: unknown) => ({ _where: [left, right] })),
+      fn: vi.fn((name: string, ...args: unknown[]) => ({ _fn: name, _args: args })),
+      col: vi.fn((name: string) => ({ _col: name })),
+    };
+
+    const adapter = createSequelizeAdapter({ user: { findOne } }, helpers);
+    await adapter.findOne(source, "Sarah", { caseInsensitive: true });
+
+    expect(helpers.col).toHaveBeenCalledWith("handle");
+    expect(helpers.fn).toHaveBeenCalledWith("LOWER", { _col: "handle" });
+    expect(helpers.where).toHaveBeenCalledWith(
+      { _fn: "LOWER", _args: [{ _col: "handle" }] },
+      "sarah"
+    );
+  });
+
+  it("throws when caseInsensitive used without helpers", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1" });
+    const adapter = createSequelizeAdapter({ user: { findOne } });
+
+    await expect(
+      adapter.findOne(source, "sarah", { caseInsensitive: true })
+    ).rejects.toThrow("caseInsensitive requires passing Sequelize helpers");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mongoose Adapter
+// ---------------------------------------------------------------------------
+describe("createMongooseAdapter", () => {
+  const source: NamespaceSource = {
+    name: "user",
+    column: "handle",
+    idColumn: "_id",
+    scopeKey: "_id",
+  };
+
+  function createMockMongooseModel(result: Record<string, unknown> | null) {
+    const lean = vi.fn().mockResolvedValue(result);
+    const collation = vi.fn().mockReturnValue({ lean });
+    const findOne = vi.fn().mockReturnValue({ lean, collation });
+    return { findOne, lean, collation };
+  }
+
+  it("calls findOne with correct conditions and projection, uses lean()", async () => {
+    const model = createMockMongooseModel({ _id: "u1" });
+    const adapter = createMongooseAdapter({ user: model });
+
+    const result = await adapter.findOne(source, "sarah");
+
+    expect(model.findOne).toHaveBeenCalledWith(
+      { handle: "sarah" },
+      { _id: 1 }
+    );
+    expect(model.lean).toHaveBeenCalled();
+    expect(result).toEqual({ _id: "u1" });
+  });
+
+  it("includes scopeKey in projection when different from idColumn", async () => {
+    const model = createMockMongooseModel({ _id: "u1", orgId: "o1" });
+    const sourceWithScope: NamespaceSource = {
+      name: "user",
+      column: "handle",
+      idColumn: "_id",
+      scopeKey: "orgId",
+    };
+
+    const adapter = createMongooseAdapter({ user: model });
+    await adapter.findOne(sourceWithScope, "sarah");
+
+    expect(model.findOne).toHaveBeenCalledWith(
+      { handle: "sarah" },
+      { _id: 1, orgId: 1 }
+    );
+  });
+
+  it("returns null when no match", async () => {
+    const model = createMockMongooseModel(null);
+    const adapter = createMongooseAdapter({ user: model });
+
+    const result = await adapter.findOne(source, "nobody");
+    expect(result).toBeNull();
+  });
+
+  it("throws when model is not found", async () => {
+    const adapter = createMongooseAdapter({});
+
+    await expect(adapter.findOne(source, "sarah")).rejects.toThrow(
+      'Mongoose model "user" not found'
+    );
+  });
+
+  it("uses collation for case-insensitive matching", async () => {
+    const model = createMockMongooseModel({ _id: "u1" });
+    const adapter = createMongooseAdapter({ user: model });
+
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(model.collation).toHaveBeenCalledWith({ locale: "en", strength: 2 });
+  });
+
+  it("defaults idColumn to _id for Mongoose", async () => {
+    const sourceNoId: NamespaceSource = {
+      name: "user",
+      column: "handle",
+    };
+
+    const model = createMockMongooseModel({ _id: "u1" });
+    const adapter = createMongooseAdapter({ user: model });
+    await adapter.findOne(sourceNoId, "sarah");
+
+    expect(model.findOne).toHaveBeenCalledWith(
+      { handle: "sarah" },
+      { _id: 1 }
+    );
   });
 });

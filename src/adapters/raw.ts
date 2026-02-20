@@ -8,8 +8,8 @@ type QueryExecutor = (
 /**
  * Create a namespace adapter for raw SQL queries
  *
- * Works with any database client that can execute parameterized queries
- * (pg, mysql2, better-sqlite3, etc.)
+ * Works with PostgreSQL-compatible clients that use $1-style parameter placeholders (pg).
+ * For MySQL or SQLite, wrap the executor to translate parameter syntax.
  *
  * @example
  * ```ts

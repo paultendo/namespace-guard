@@ -74,7 +74,7 @@ if (result.available) {
 | Conflict suggestions | Auto-suggest alternatives | Not built |
 | Async validators | Custom hooks (profanity, etc.) | Manual wiring |
 | Batch checking | `checkMany()` | Loop it yourself |
-| ORM agnostic | Prisma, Drizzle, Kysely, Knex, raw SQL | Tied to your ORM |
+| ORM agnostic | Prisma, Drizzle, Kysely, Knex, TypeORM, MikroORM, Sequelize, Mongoose, raw SQL | Tied to your ORM |
 | CLI | `npx namespace-guard check` | None |
 
 ## Adapters
@@ -118,6 +118,47 @@ import { createKnexAdapter } from "namespace-guard/adapters/knex";
 
 const knex = Knex({ client: "pg", connection: process.env.DATABASE_URL });
 const adapter = createKnexAdapter(knex);
+```
+
+### TypeORM
+
+```typescript
+import { DataSource } from "typeorm";
+import { createTypeORMAdapter } from "namespace-guard/adapters/typeorm";
+import { User, Organization } from "./entities";
+
+const dataSource = new DataSource({ /* ... */ });
+const adapter = createTypeORMAdapter(dataSource, { user: User, organization: Organization });
+```
+
+### MikroORM
+
+```typescript
+import { MikroORM } from "@mikro-orm/core";
+import { createMikroORMAdapter } from "namespace-guard/adapters/mikro-orm";
+import { User, Organization } from "./entities";
+
+const orm = await MikroORM.init(config);
+const adapter = createMikroORMAdapter(orm.em, { user: User, organization: Organization });
+```
+
+### Sequelize
+
+```typescript
+import { createSequelizeAdapter } from "namespace-guard/adapters/sequelize";
+import { User, Organization } from "./models";
+
+const adapter = createSequelizeAdapter({ user: User, organization: Organization });
+```
+
+### Mongoose
+
+```typescript
+import { createMongooseAdapter } from "namespace-guard/adapters/mongoose";
+import { User, Organization } from "./models";
+
+// Note: Mongoose sources typically use idColumn: "_id"
+const adapter = createMongooseAdapter({ user: User, organization: Organization });
 ```
 
 ### Raw SQL (pg, mysql2, etc.)
@@ -446,6 +487,10 @@ Each adapter handles this differently:
 - **Drizzle**: Uses `ilike` instead of `eq` (pass `ilike` to the adapter: `createDrizzleAdapter(db, tables, { eq, ilike })`)
 - **Kysely**: Uses `ilike` operator
 - **Knex**: Uses `LOWER()` in a raw where clause
+- **TypeORM**: Uses `ILike` (pass it to the adapter: `createTypeORMAdapter(dataSource, entities, ILike)`)
+- **MikroORM**: Uses `$ilike` operator
+- **Sequelize**: Uses `LOWER()` via Sequelize helpers (pass `{ where: Sequelize.where, fn: Sequelize.fn, col: Sequelize.col }`)
+- **Mongoose**: Uses collation `{ locale: "en", strength: 2 }`
 - **Raw SQL**: Wraps both sides in `LOWER()`
 
 ## Caching

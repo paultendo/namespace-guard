@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -38,6 +38,26 @@
       "types": "./dist/adapters/knex.d.ts",
       "import": "./dist/adapters/knex.mjs",
       "require": "./dist/adapters/knex.js"
+    },
+    "./adapters/typeorm": {
+      "types": "./dist/adapters/typeorm.d.ts",
+      "import": "./dist/adapters/typeorm.mjs",
+      "require": "./dist/adapters/typeorm.js"
+    },
+    "./adapters/mikro-orm": {
+      "types": "./dist/adapters/mikro-orm.d.ts",
+      "import": "./dist/adapters/mikro-orm.mjs",
+      "require": "./dist/adapters/mikro-orm.js"
+    },
+    "./adapters/sequelize": {
+      "types": "./dist/adapters/sequelize.d.ts",
+      "import": "./dist/adapters/sequelize.mjs",
+      "require": "./dist/adapters/sequelize.js"
+    },
+    "./adapters/mongoose": {
+      "types": "./dist/adapters/mongoose.d.ts",
+      "import": "./dist/adapters/mongoose.mjs",
+      "require": "./dist/adapters/mongoose.js"
     }
   },
   "files": [
@@ -63,6 +83,11 @@
     "prisma",
     "kysely",
     "knex",
+    "typeorm",
+    "mikro-orm",
+    "sequelize",
+    "mongoose",
+    "mongodb",
     "cli"
   ],
   "author": "Paul Wood FRSA",
@@ -86,7 +111,11 @@
     "drizzle-orm": ">=0.29.0",
     "knex": ">=2.0.0",
     "kysely": ">=0.26.0",
-    "pg": ">=8.0.0"
+    "pg": ">=8.0.0",
+    "typeorm": ">=0.3.0",
+    "@mikro-orm/core": ">=5.0.0",
+    "sequelize": ">=6.0.0",
+    "mongoose": ">=7.0.0"
   },
   "peerDependenciesMeta": {
     "@prisma/client": {
@@ -102,6 +131,18 @@
       "optional": true
     },
     "pg": {
+      "optional": true
+    },
+    "typeorm": {
+      "optional": true
+    },
+    "@mikro-orm/core": {
+      "optional": true
+    },
+    "sequelize": {
+      "optional": true
+    },
+    "mongoose": {
       "optional": true
     }
   }
