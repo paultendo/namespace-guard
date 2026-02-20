@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-02-20
+
+### Added
+- Pluggable suggestion strategies: `"sequential"`, `"random-digits"`, `"suffix-words"`, `"short-random"`, `"scramble"`
+- `SuggestStrategyName` exported type
+- Strategy composition via arrays (e.g., `strategy: ["random-digits", "suffix-words"]`)
+- Custom strategy functions via `strategy: (id) => string[]`
+- Optimized three-phase suggestion pipeline (sync format/reserved filter → async validators → DB checks)
+
+### Changed
+- Default suggestion strategy changed from sequential-only to `["sequential", "random-digits"]`
+- Suggestions now skip reserved names and format-invalid candidates without DB calls
+- `generate` callback is now deprecated in favor of `strategy` (still works for backwards compatibility)
+
 ## [0.4.0] - 2026-02-20
 
 ### Added

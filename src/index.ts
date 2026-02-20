@@ -10,6 +10,14 @@ export type NamespaceSource = {
   scopeKey?: string;
 };
 
+/** Built-in suggestion strategy names. */
+export type SuggestStrategyName =
+  | "sequential"
+  | "random-digits"
+  | "suffix-words"
+  | "short-random"
+  | "scramble";
+
 /** Configuration for a namespace guard instance. */
 export type NamespaceConfig = {
   /** Reserved names — flat list, Set, or categorized record */
@@ -30,10 +38,12 @@ export type NamespaceConfig = {
   validators?: Array<(value: string) => Promise<{ available: false; message: string } | null>>;
   /** Enable conflict resolution suggestions when a slug is taken */
   suggest?: {
-    /** Generate candidate slugs (default: appends -1 through -9) */
-    generate?: (identifier: string) => string[];
+    /** Named strategy, array of strategies to compose, or custom generator function (default: `["sequential", "random-digits"]`) */
+    strategy?: SuggestStrategyName | SuggestStrategyName[] | ((identifier: string) => string[]);
     /** Max suggestions to return (default: 3) */
     max?: number;
+    /** @deprecated Use `strategy` instead. Custom generator function. */
+    generate?: (identifier: string) => string[];
   };
   /** Enable in-memory caching of adapter lookups */
   cache?: {
@@ -130,6 +140,142 @@ function createDefaultSuggest(pattern: RegExp): (identifier: string) => string[]
     }
 
     return candidates;
+  };
+}
+
+const SUFFIX_WORDS = ["dev", "io", "app", "hq", "pro", "team", "labs", "hub", "go", "one"];
+
+/**
+ * Create a strategy that generates random 3-4 digit suffixed candidates.
+ */
+function createRandomDigitsStrategy(pattern: RegExp): (identifier: string) => string[] {
+  const maxLen = extractMaxLength(pattern);
+  return (identifier: string): string[] => {
+    const candidates: string[] = [];
+    for (let i = 0; i < 15; i++) {
+      const digits = String(Math.floor(100 + Math.random() * 9900)); // 3-4 digit number
+      const candidate = `${identifier}-${digits}`;
+      if (candidate.length <= maxLen && !candidates.includes(candidate)) {
+        candidates.push(candidate);
+      }
+    }
+    return candidates;
+  };
+}
+
+/**
+ * Create a strategy that appends word suffixes (e.g., sarah-dev, sarah-hq).
+ */
+function createSuffixWordsStrategy(pattern: RegExp): (identifier: string) => string[] {
+  const maxLen = extractMaxLength(pattern);
+  return (identifier: string): string[] => {
+    const candidates: string[] = [];
+    for (const word of SUFFIX_WORDS) {
+      const candidate = `${identifier}-${word}`;
+      if (candidate.length <= maxLen) {
+        candidates.push(candidate);
+      }
+    }
+    return candidates;
+  };
+}
+
+/**
+ * Create a strategy that generates short random alphanumeric suffixes (e.g., sarah-x7k).
+ */
+function createShortRandomStrategy(pattern: RegExp): (identifier: string) => string[] {
+  const maxLen = extractMaxLength(pattern);
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return (identifier: string): string[] => {
+    const candidates: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      let suffix = "";
+      for (let j = 0; j < 3; j++) {
+        suffix += chars[Math.floor(Math.random() * chars.length)];
+      }
+      const candidate = `${identifier}-${suffix}`;
+      if (candidate.length <= maxLen && !candidates.includes(candidate)) {
+        candidates.push(candidate);
+      }
+    }
+    return candidates;
+  };
+}
+
+/**
+ * Create a strategy that generates adjacent character swaps (e.g., sarha, sahra).
+ */
+function createScrambleStrategy(_pattern: RegExp): (identifier: string) => string[] {
+  return (identifier: string): string[] => {
+    const candidates: string[] = [];
+    const chars = identifier.split("");
+    for (let i = 0; i < chars.length - 1; i++) {
+      if (chars[i] !== chars[i + 1]) {
+        const swapped = [...chars];
+        [swapped[i], swapped[i + 1]] = [swapped[i + 1], swapped[i]];
+        const candidate = swapped.join("");
+        if (candidate !== identifier && !candidates.includes(candidate)) {
+          candidates.push(candidate);
+        }
+      }
+    }
+    return candidates;
+  };
+}
+
+/**
+ * Create a generator for a named strategy.
+ */
+function createStrategy(name: SuggestStrategyName, pattern: RegExp): (identifier: string) => string[] {
+  switch (name) {
+    case "sequential":
+      return createDefaultSuggest(pattern);
+    case "random-digits":
+      return createRandomDigitsStrategy(pattern);
+    case "suffix-words":
+      return createSuffixWordsStrategy(pattern);
+    case "short-random":
+      return createShortRandomStrategy(pattern);
+    case "scramble":
+      return createScrambleStrategy(pattern);
+  }
+}
+
+/**
+ * Resolve a generator function from the suggest config.
+ * Legacy `generate` callback takes priority for backwards compatibility.
+ */
+function resolveGenerator(
+  suggest: NamespaceConfig["suggest"],
+  pattern: RegExp
+): (identifier: string) => string[] {
+  // Legacy: generate callback takes priority for backwards compat
+  if (suggest?.generate) return suggest.generate;
+
+  const strategyInput = suggest?.strategy ?? ["sequential", "random-digits"];
+
+  // Custom function
+  if (typeof strategyInput === "function") return strategyInput;
+
+  // Single or array of named strategies
+  const names = Array.isArray(strategyInput) ? strategyInput : [strategyInput];
+  const generators = names.map((name) => createStrategy(name, pattern));
+
+  if (generators.length === 1) return generators[0];
+
+  // Compose: round-robin interleave candidates
+  return (identifier: string): string[] => {
+    const lists = generators.map((g) => g(identifier));
+    const result: string[] = [];
+    const maxListLen = Math.max(...lists.map((l) => l.length));
+    for (let i = 0; i < maxListLen; i++) {
+      for (const list of lists) {
+        if (i < list.length && !result.includes(list[i])) {
+          result.push(list[i]);
+        }
+      }
+    }
+    return result;
   };
 }
 
@@ -330,6 +476,35 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
+   * Check if a value is available in the database only (no format/reserved/validator checks).
+   * Used by the suggestion pipeline to avoid redundant cheap checks.
+   */
+  async function checkDbOnly(value: string, scope: OwnershipScope): Promise<boolean> {
+    const findOptions: FindOneOptions | undefined = config.caseInsensitive
+      ? { caseInsensitive: true }
+      : undefined;
+
+    const checks = config.sources.map(async (source) => {
+      const existing = await cachedFindOne(source, value, findOptions);
+      if (!existing) return null;
+
+      if (source.scopeKey) {
+        const scopeValue = scope[source.scopeKey];
+        const idColumn = source.idColumn ?? "id";
+        const existingId = existing[idColumn];
+        if (scopeValue && existingId && scopeValue === String(existingId)) {
+          return null;
+        }
+      }
+
+      return source.name;
+    });
+
+    const results = await Promise.all(checks);
+    return !results.some((r) => r !== null);
+  }
+
+  /**
    * Check if an identifier is available across all configured sources.
    * Runs format validation, reserved check, async validators, and database lookups.
    *
@@ -408,19 +583,41 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
         source: collision,
       };
 
-      // Generate suggestions if configured and not skipped
+      // Generate suggestions using optimized three-phase pipeline
       if (config.suggest && !options?.skipSuggestions) {
-        const generate = config.suggest.generate ?? createDefaultSuggest(pattern);
+        const generate = resolveGenerator(config.suggest, pattern);
         const max = config.suggest.max ?? 3;
         const candidates = generate(normalized);
         const suggestions: string[] = [];
 
-        for (const candidate of candidates) {
+        // Phase 1: Cheap sync filter — format + reserved
+        const passedSync = candidates.filter(
+          (c) => pattern.test(c) && !reservedMap.has(c)
+        );
+
+        // Phase 2: Async validators (only if validators exist)
+        let passedValidators = passedSync;
+        if (validators.length > 0) {
+          const validated = await Promise.all(
+            passedSync.map(async (c) => {
+              for (const validator of validators) {
+                try {
+                  const rejection = await validator(c);
+                  if (rejection) return null;
+                } catch {
+                  return null;
+                }
+              }
+              return c;
+            })
+          );
+          passedValidators = validated.filter((c): c is string => c !== null);
+        }
+
+        // Phase 3: DB checks — sequential with early exit
+        for (const candidate of passedValidators) {
           if (suggestions.length >= max) break;
-          // Skip candidates that don't match the format pattern
-          if (!pattern.test(candidate)) continue;
-          const candidateResult = await check(candidate, scope, { skipSuggestions: true });
-          if (candidateResult.available) {
+          if (await checkDbOnly(candidate, scope)) {
             suggestions.push(candidate);
           }
         }

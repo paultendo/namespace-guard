@@ -748,7 +748,12 @@ describe("suggestions", () => {
     if (!result.available) {
       expect(result.suggestions).toBeDefined();
       expect(result.suggestions!.length).toBe(3);
-      expect(result.suggestions).toEqual(["sarah-1", "sarah1", "sarah-2"]);
+      // Default strategy is ["sequential", "random-digits"], so first suggestion is sequential
+      expect(result.suggestions![0]).toBe("sarah-1");
+      // All suggestions should match the format pattern
+      for (const s of result.suggestions!) {
+        expect(s).toMatch(/^[a-z0-9][a-z0-9-]{1,29}$/);
+      }
     }
   });
 
@@ -776,7 +781,7 @@ describe("suggestions", () => {
     const guard = createNamespaceGuard(
       {
         sources: defaultSources,
-        suggest: {},
+        suggest: { strategy: "sequential" },
       },
       createMockAdapter({
         user: {
@@ -800,7 +805,7 @@ describe("suggestions", () => {
       {
         reserved: ["sarah-1"],
         sources: defaultSources,
-        suggest: {},
+        suggest: { strategy: "sequential" },
       },
       createMockAdapter({
         user: { sarah: { id: "u1" } },
@@ -1187,12 +1192,12 @@ describe("cacheStats", () => {
 // ---------------------------------------------------------------------------
 // Smarter default suggestions
 // ---------------------------------------------------------------------------
-describe("smarter default suggestions", () => {
+describe("sequential strategy", () => {
   it("includes both hyphenated and compact variants", async () => {
     const guard = createNamespaceGuard(
       {
         sources: defaultSources,
-        suggest: { max: 6 },
+        suggest: { strategy: "sequential", max: 6 },
       },
       createMockAdapter({
         user: { sarah: { id: "u1" } },
@@ -1214,7 +1219,7 @@ describe("smarter default suggestions", () => {
       {
         sources: [{ name: "user", column: "handle", scopeKey: "id" }],
         pattern: /^[a-z0-9-]{2,5}$/,
-        suggest: { max: 5 },
+        suggest: { strategy: "sequential", max: 5 },
       },
       createMockAdapter({
         user: { abcde: { id: "u1" } },
@@ -1257,7 +1262,7 @@ describe("smarter default suggestions", () => {
       {
         sources: [{ name: "user", column: "handle", scopeKey: "id" }],
         pattern: /^[a-z0-9]{2,30}$/,
-        suggest: { max: 3 },
+        suggest: { strategy: "sequential", max: 3 },
       },
       createMockAdapter({
         user: { sarah: { id: "u1" } },
@@ -1381,5 +1386,285 @@ describe("edge cases", () => {
     // Passing wrong scope key — ownership check is skipped, collision detected
     const result = await guard.check("sarah", { wrongKey: "u1" });
     expect(result.available).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suggestion strategies
+// ---------------------------------------------------------------------------
+describe("suggestion strategies", () => {
+  it("sequential strategy produces hyphenated and compact variants", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 4 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toEqual(["sarah-1", "sarah1", "sarah-2", "sarah2"]);
+    }
+  });
+
+  it("random-digits strategy produces numeric suffixed candidates", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "random-digits", max: 3 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.length).toBe(3);
+      for (const s of result.suggestions!) {
+        expect(s).toMatch(/^sarah-\d{3,4}$/);
+      }
+    }
+  });
+
+  it("suffix-words strategy produces word-suffixed candidates", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "suffix-words", max: 3 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.length).toBe(3);
+      // First 3 suffix words are "dev", "io", "app"
+      expect(result.suggestions).toEqual(["sarah-dev", "sarah-io", "sarah-app"]);
+    }
+  });
+
+  it("short-random strategy produces 3-char alphanumeric suffixes", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "short-random", max: 3 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.length).toBe(3);
+      for (const s of result.suggestions!) {
+        expect(s).toMatch(/^sarah-[a-z0-9]{3}$/);
+      }
+    }
+  });
+
+  it("scramble strategy produces character transpositions", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "scramble", max: 10 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      // "sarah" has 4 adjacent swap positions, all produce unique results
+      // s↔a = "asrah", a↔r = "sraha"... etc.
+      for (const s of result.suggestions!) {
+        expect(s).not.toBe("sarah");
+        expect(s.length).toBe(5); // same length as input
+      }
+    }
+  });
+
+  it("array composition interleaves candidates round-robin", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: ["sequential", "suffix-words"], max: 4 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.length).toBe(4);
+      // Interleaved: first sequential, first suffix-word, second sequential, second suffix-word
+      expect(result.suggestions![0]).toBe("sarah-1"); // sequential
+      expect(result.suggestions![1]).toBe("sarah-dev"); // suffix-words
+      expect(result.suggestions![2]).toBe("sarah1"); // sequential
+      expect(result.suggestions![3]).toBe("sarah-io"); // suffix-words
+    }
+  });
+
+  it("custom function strategy works", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: {
+          strategy: (id) => [`${id}-custom1`, `${id}-custom2`],
+        },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toEqual(["sarah-custom1", "sarah-custom2"]);
+    }
+  });
+
+  it("legacy generate callback still works", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: {
+          generate: (id) => [`${id}-legacy1`, `${id}-legacy2`],
+        },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toEqual(["sarah-legacy1", "sarah-legacy2"]);
+    }
+  });
+
+  it("generate takes priority over strategy when both specified", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: {
+          strategy: "suffix-words",
+          generate: (id) => [`${id}-override`],
+        },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toEqual(["sarah-override"]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Optimized suggestion pipeline
+// ---------------------------------------------------------------------------
+describe("optimized suggestion pipeline", () => {
+  it("skips reserved names without DB call", async () => {
+    const adapter = createMockAdapter({
+      user: { sarah: { id: "u1" } },
+    });
+
+    const guard = createNamespaceGuard(
+      {
+        reserved: ["sarah-1", "sarah1", "sarah-2"],
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 1 },
+      },
+      adapter
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      // First 3 candidates are reserved, so sarah2 should be the first suggestion
+      expect(result.suggestions).toEqual(["sarah2"]);
+    }
+  });
+
+  it("skips format-invalid candidates without DB call", async () => {
+    // Pattern forbids hyphens
+    const adapter = createMockAdapter({
+      user: { sarah: { id: "u1" } },
+    });
+
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle", scopeKey: "id" }],
+        pattern: /^[a-z0-9]{2,30}$/,
+        suggest: { strategy: "sequential", max: 2 },
+      },
+      adapter
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      // Hyphenated variants are filtered out by pattern check; only compact pass
+      expect(result.suggestions).toEqual(["sarah1", "sarah2"]);
+      // DB calls: 1 for "sarah" collision check + 2 for suggestions that passed sync filter
+      // Without optimization, all candidates would hit the DB
+      const findOneCalls = (adapter.findOne as ReturnType<typeof vi.fn>).mock.calls;
+      // The adapter should only have been called for the original check + valid candidates
+      expect(findOneCalls.length).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("runs validators before DB check in suggestions", async () => {
+    const adapter = createMockAdapter({
+      user: { sarah: { id: "u1" } },
+    });
+
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 1 },
+        validators: [
+          async (value) =>
+            value.includes("1")
+              ? { available: false, message: "No ones" }
+              : null,
+        ],
+      },
+      adapter
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      // sarah-1, sarah1 contain "1" so rejected by validator
+      // sarah-2 is the first valid candidate
+      expect(result.suggestions).toEqual(["sarah-2"]);
+    }
   });
 });

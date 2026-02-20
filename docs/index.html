@@ -351,6 +351,37 @@
       border-color: rgba(30,215,96,0.5);
     }
 
+    /* Strategy selector */
+    .strategy-section { margin-top: 1rem; }
+    .strategy-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--ink-muted);
+      margin-bottom: 0.4rem;
+    }
+    .strategy-row { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .strategy-chip {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 2rem;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .strategy-chip:hover {
+      color: var(--foreground);
+      border-color: rgba(208,227,255,0.3);
+      background: rgba(255,255,255,0.06);
+    }
+    .strategy-chip[aria-pressed="true"] {
+      color: var(--accent);
+      border-color: rgba(30,215,96,0.4);
+      background: rgba(30,215,96,0.1);
+    }
+
     /* Examples */
     .examples-section { margin-top: 1.5rem; }
     .examples-label {
@@ -618,6 +649,18 @@
         </form>
         <p id="playground-desc" class="sr-only">Type a slug to check its availability against a simulated database of users and organisations.</p>
 
+        <div class="strategy-section">
+          <div class="strategy-label">Suggestion strategy:</div>
+          <div class="strategy-row" role="group" aria-label="Choose suggestion strategy">
+            <button class="strategy-chip" aria-pressed="true" data-strategy="sequential,random-digits">default</button>
+            <button class="strategy-chip" aria-pressed="false" data-strategy="sequential">sequential</button>
+            <button class="strategy-chip" aria-pressed="false" data-strategy="random-digits">random-digits</button>
+            <button class="strategy-chip" aria-pressed="false" data-strategy="suffix-words">suffix-words</button>
+            <button class="strategy-chip" aria-pressed="false" data-strategy="short-random">short-random</button>
+            <button class="strategy-chip" aria-pressed="false" data-strategy="scramble">scramble</button>
+          </div>
+        </div>
+
         <div id="result" class="result-area" aria-live="polite" aria-atomic="true"></div>
 
         <div class="examples-section">
@@ -712,7 +755,7 @@
     <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, <span class="fn">createPrismaAdapter</span><span class="br">(</span>prisma<span class="br">)</span><span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
@@ -721,7 +764,7 @@
   <span class="cm">// Safe to create</span>
 <span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
   console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-4821", "acme-corp1"]</span>
 <span class="br">}</span></code></pre>
       </div>
       <div id="panel-drizzle" role="tabpanel" aria-labelledby="tab-drizzle" class="adapter-panel">
@@ -739,7 +782,7 @@
     <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, adapter<span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
@@ -748,7 +791,7 @@
   <span class="cm">// Safe to create</span>
 <span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
   console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-4821", "acme-corp1"]</span>
 <span class="br">}</span></code></pre>
       </div>
       <div id="panel-kysely" role="tabpanel" aria-labelledby="tab-kysely" class="adapter-panel">
@@ -764,7 +807,7 @@
     <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, <span class="fn">createKyselyAdapter</span><span class="br">(</span>db<span class="br">)</span><span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
@@ -773,7 +816,7 @@
   <span class="cm">// Safe to create</span>
 <span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
   console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-4821", "acme-corp1"]</span>
 <span class="br">}</span></code></pre>
       </div>
       <div id="panel-knex" role="tabpanel" aria-labelledby="tab-knex" class="adapter-panel">
@@ -789,7 +832,7 @@
     <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, <span class="fn">createKnexAdapter</span><span class="br">(</span>knex<span class="br">)</span><span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
@@ -798,7 +841,7 @@
   <span class="cm">// Safe to create</span>
 <span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
   console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-4821", "acme-corp1"]</span>
 <span class="br">}</span></code></pre>
       </div>
       <div id="panel-typeorm" role="tabpanel" aria-labelledby="tab-typeorm" class="adapter-panel">
@@ -816,7 +859,7 @@
     <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, adapter<span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
@@ -836,7 +879,7 @@
     <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, adapter<span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
@@ -854,7 +897,7 @@
     <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, adapter<span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
@@ -872,7 +915,7 @@
     <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span>, idColumn: <span class="str">"_id"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span>, idColumn: <span class="str">"_id"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, adapter<span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;</code></pre>
@@ -891,7 +934,7 @@
     <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, adapter<span class="br">)</span>;
 
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
@@ -900,7 +943,7 @@
   <span class="cm">// Safe to create</span>
 <span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
   console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-4821", "acme-corp1"]</span>
 <span class="br">}</span></code></pre>
       </div>
     </section>
@@ -922,16 +965,15 @@
   </footer>
 
   <script type="module">
-    // === namespace-guard library (inlined from dist/index.mjs) ===
+    // === namespace-guard library (inlined from dist/index.mjs, v0.5.0) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
     var DEFAULT_MESSAGES = {
       invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
       reserved: "That name is reserved. Try another one.",
       taken: (source) => `That name is already in use.`
     };
-    function defaultSuggest(identifier) {
-      return Array.from({ length: 9 }, (_, i) => `${identifier}-${i + 1}`);
-    }
+    var SUFFIX_WORDS = ["dev", "io", "app", "hq", "pro", "team", "labs", "hub", "go", "one"];
+
     function normalize(raw) {
       return raw.trim().toLowerCase().replace(/^@+/, "");
     }
@@ -949,6 +991,119 @@
       }
       return map;
     }
+
+    // Strategy factories
+    function extractMaxLength(pattern) {
+      const src = pattern.source;
+      const m = src.match(/\{(\d+),(\d+)\}/);
+      if (m) return parseInt(m[2], 10) + 1;
+      return null;
+    }
+
+    function createSequentialStrategy(pattern) {
+      const maxLen = extractMaxLength(pattern);
+      return (identifier) => {
+        const candidates = [];
+        for (let i = 1; i <= 9; i++) {
+          const hyphenated = `${identifier}-${i}`;
+          const compact = `${identifier}${i}`;
+          if (!maxLen || hyphenated.length <= maxLen) candidates.push(hyphenated);
+          if (!maxLen || compact.length <= maxLen) candidates.push(compact);
+        }
+        return candidates;
+      };
+    }
+
+    function createRandomDigitsStrategy(pattern) {
+      const maxLen = extractMaxLength(pattern);
+      return (identifier) => {
+        const candidates = [];
+        for (let i = 0; i < 15; i++) {
+          const digits = String(Math.floor(1000 + Math.random() * 9000));
+          const candidate = `${identifier}-${digits}`;
+          if ((!maxLen || candidate.length <= maxLen) && pattern.test(candidate)) {
+            candidates.push(candidate);
+          }
+        }
+        return candidates;
+      };
+    }
+
+    function createSuffixWordsStrategy(pattern) {
+      const maxLen = extractMaxLength(pattern);
+      return (identifier) => {
+        return SUFFIX_WORDS
+          .map(word => `${identifier}-${word}`)
+          .filter(c => (!maxLen || c.length <= maxLen) && pattern.test(c));
+      };
+    }
+
+    function createShortRandomStrategy(pattern) {
+      const maxLen = extractMaxLength(pattern);
+      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      return (identifier) => {
+        const candidates = [];
+        for (let i = 0; i < 10; i++) {
+          let suffix = "";
+          for (let j = 0; j < 3; j++) suffix += chars[Math.floor(Math.random() * chars.length)];
+          const candidate = `${identifier}-${suffix}`;
+          if ((!maxLen || candidate.length <= maxLen) && pattern.test(candidate)) {
+            candidates.push(candidate);
+          }
+        }
+        return candidates;
+      };
+    }
+
+    function createScrambleStrategy(pattern) {
+      return (identifier) => {
+        const seen = new Set();
+        const candidates = [];
+        const chars = identifier.split("");
+        for (let i = 0; i < chars.length - 1; i++) {
+          if (chars[i] === chars[i + 1]) continue;
+          const swapped = [...chars];
+          [swapped[i], swapped[i + 1]] = [swapped[i + 1], swapped[i]];
+          const candidate = swapped.join("");
+          if (!seen.has(candidate) && candidate !== identifier && pattern.test(candidate)) {
+            seen.add(candidate);
+            candidates.push(candidate);
+          }
+        }
+        return candidates;
+      };
+    }
+
+    function createStrategy(name, pattern) {
+      switch (name) {
+        case "sequential": return createSequentialStrategy(pattern);
+        case "random-digits": return createRandomDigitsStrategy(pattern);
+        case "suffix-words": return createSuffixWordsStrategy(pattern);
+        case "short-random": return createShortRandomStrategy(pattern);
+        case "scramble": return createScrambleStrategy(pattern);
+        default: return createSequentialStrategy(pattern);
+      }
+    }
+
+    function resolveGenerator(suggest, pattern) {
+      if (suggest?.generate) return suggest.generate;
+      const strategyInput = suggest?.strategy ?? ["sequential", "random-digits"];
+      if (typeof strategyInput === "function") return strategyInput;
+      const names = Array.isArray(strategyInput) ? strategyInput : [strategyInput];
+      const generators = names.map(name => createStrategy(name, pattern));
+      return (identifier) => {
+        const lists = generators.map(g => g(identifier));
+        const result = [];
+        const maxLen = Math.max(...lists.map(l => l.length));
+        for (let i = 0; i < maxLen; i++) {
+          for (const list of lists) {
+            if (i < list.length) result.push(list[i]);
+          }
+        }
+        return result;
+      };
+    }
+
     function createNamespaceGuard(config, adapter) {
       const reservedMap = buildReservedMap(config.reserved);
       const pattern = config.pattern ?? DEFAULT_PATTERN;
@@ -969,6 +1124,21 @@
         if (reservedMap.has(normalized)) return getReservedMessage(reservedMap.get(normalized));
         return null;
       }
+      async function checkDbOnly(value, scope) {
+        const checks = config.sources.map(async (source) => {
+          const existing = await adapter.findOne(source, value);
+          if (!existing) return null;
+          if (source.scopeKey) {
+            const scopeValue = scope[source.scopeKey];
+            const idColumn = source.idColumn ?? "id";
+            const existingId = existing[idColumn];
+            if (scopeValue && existingId && scopeValue === String(existingId)) return null;
+          }
+          return source.name;
+        });
+        const results = await Promise.all(checks);
+        return !results.some(r => r !== null);
+      }
       async function check(identifier, scope = {}, options) {
         const normalized = normalize(identifier);
         if (!pattern.test(normalized)) {
@@ -982,7 +1152,7 @@
           const rejection = await validator(normalized);
           if (rejection) return { available: false, reason: "invalid", message: rejection.message };
         }
-        const checks = config.sources.map(async (source) => {
+        const dbChecks = config.sources.map(async (source) => {
           const existing = await adapter.findOne(source, normalized);
           if (!existing) return null;
           if (source.scopeKey) {
@@ -993,19 +1163,21 @@
           }
           return source.name;
         });
-        const results = await Promise.all(checks);
+        const results = await Promise.all(dbChecks);
         const collision = results.find((r) => r !== null);
         if (collision) {
           const result = { available: false, reason: "taken", message: takenMsg(collision), source: collision };
           if (config.suggest && !options?.skipSuggestions) {
-            const generate = config.suggest.generate ?? defaultSuggest;
+            const generate = resolveGenerator(config.suggest, pattern);
             const max = config.suggest.max ?? 3;
             const candidates = generate(normalized);
             const suggestions = [];
-            for (const candidate of candidates) {
+            const passedSync = candidates.filter(c => pattern.test(c) && !reservedMap.has(c));
+            for (const candidate of passedSync) {
               if (suggestions.length >= max) break;
-              const candidateResult = await check(candidate, scope, { skipSuggestions: true });
-              if (candidateResult.available) suggestions.push(candidate);
+              if (await checkDbOnly(candidate, scope)) {
+                suggestions.push(candidate);
+              }
             }
             if (suggestions.length > 0) result.suggestions = suggestions;
           }
@@ -1016,7 +1188,7 @@
       return { normalize, validateFormat, check };
     }
 
-    // === Mock adapter and guard ===
+    // === Mock adapter ===
     const mockDatabase = {
       user: {
         "sarah":   { id: "u1", handle: "sarah" },
@@ -1038,30 +1210,37 @@
       },
     };
 
-    const guard = createNamespaceGuard(
-      {
-        reserved: {
-          system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
-          brand:  ["namespace-guard"],
-        },
-        sources: [
-          { name: "user", column: "handle", scopeKey: "id" },
-          { name: "organization", column: "slug", scopeKey: "id" },
-        ],
-        messages: {
+    // === Guard factory (recreated when strategy changes) ===
+    let currentStrategy = ["sequential", "random-digits"];
+
+    function createGuard(strategy) {
+      return createNamespaceGuard(
+        {
           reserved: {
-            system: "That\u2019s a reserved system route.",
-            brand:  "That\u2019s a protected brand name.",
+            system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
+            brand:  ["namespace-guard"],
           },
-          taken: (source) => `Already taken by a ${source}.`,
+          sources: [
+            { name: "user", column: "handle", scopeKey: "id" },
+            { name: "organization", column: "slug", scopeKey: "id" },
+          ],
+          messages: {
+            reserved: {
+              system: "That\u2019s a reserved system route.",
+              brand:  "That\u2019s a protected brand name.",
+            },
+            taken: (source) => `Already taken by a ${source}.`,
+          },
+          suggest: {
+            strategy,
+            max: 3,
+          },
         },
-        suggest: {
-          generate: (id) => [`${id}-1`, `${id}-2`, `${id}-3`, `${id}-io`, `${id}-app`, `${id}-hq`],
-          max: 3,
-        },
-      },
-      playgroundAdapter
-    );
+        playgroundAdapter
+      );
+    }
+
+    let guard = createGuard(currentStrategy);
 
     // === Playground logic ===
     const form = document.getElementById("check-form");
@@ -1172,6 +1351,24 @@
         else if (e.key === "Home") next = tabs[0];
         else if (e.key === "End") next = tabs[tabs.length - 1];
         if (next) { e.preventDefault(); next.focus(); switchTab(next); }
+      });
+    });
+
+    // Strategy chips
+    const strategyChips = document.querySelectorAll("[data-strategy]");
+    strategyChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        strategyChips.forEach(c => c.setAttribute("aria-pressed", "false"));
+        chip.setAttribute("aria-pressed", "true");
+        const raw = chip.dataset.strategy;
+        const strategy = raw.includes(",") ? raw.split(",") : raw;
+        currentStrategy = strategy;
+        guard = createGuard(strategy);
+        // Re-check current input with new strategy
+        if (input.value.trim()) {
+          lastRendered = "";
+          checkSlug(input.value);
+        }
       });
     });
 

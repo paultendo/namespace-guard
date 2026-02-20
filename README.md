@@ -298,21 +298,15 @@ No words are bundled — use any word list you like (e.g., the `bad-words` npm p
 
 ## Conflict Suggestions
 
-When a slug is taken, automatically suggest available alternatives:
+When a slug is taken, automatically suggest available alternatives using pluggable strategies:
 
 ```typescript
 const guard = createNamespaceGuard({
   sources: [/* ... */],
   suggest: {
-    // Optional: custom generator (default appends -1 through -9)
-    generate: (identifier) => [
-      `${identifier}-1`,
-      `${identifier}-2`,
-      `${identifier}-io`,
-      `${identifier}-app`,
-      `${identifier}-hq`,
-    ],
-    // Optional: max suggestions to return (default: 3)
+    // Named strategy (default: ["sequential", "random-digits"])
+    strategy: "suffix-words",
+    // Max suggestions to return (default: 3)
     max: 3,
   },
 }, adapter);
@@ -323,11 +317,47 @@ const result = await guard.check("acme-corp");
 //   reason: "taken",
 //   message: "That name is already in use.",
 //   source: "organization",
-//   suggestions: ["acme-corp-1", "acme-corp-2", "acme-corp-io"]
+//   suggestions: ["acme-corp-dev", "acme-corp-io", "acme-corp-app"]
 // }
 ```
 
-Suggestions are verified against format, reserved names, and database collisions. Only available suggestions are returned.
+### Built-in Strategies
+
+| Strategy | Example Output | Description |
+|----------|---------------|-------------|
+| `"sequential"` | `sarah-1`, `sarah1`, `sarah-2` | Hyphenated and compact numeric suffixes |
+| `"random-digits"` | `sarah-4821`, `sarah-1037` | Random 3-4 digit suffixes |
+| `"suffix-words"` | `sarah-dev`, `sarah-hq`, `sarah-app` | Common word suffixes |
+| `"short-random"` | `sarah-x7k`, `sarah-m2p` | Short 3-char alphanumeric suffixes |
+| `"scramble"` | `asrah`, `sarha` | Adjacent character transpositions |
+
+### Composing Strategies
+
+Combine multiple strategies — candidates are interleaved round-robin:
+
+```typescript
+suggest: {
+  strategy: ["random-digits", "suffix-words"],
+  max: 4,
+}
+// → ["sarah-4821", "sarah-dev", "sarah-1037", "sarah-io"]
+```
+
+### Custom Strategy Function
+
+Pass a function that returns candidate slugs:
+
+```typescript
+suggest: {
+  strategy: (identifier) => [
+    `${identifier}-io`,
+    `${identifier}-app`,
+    `the-real-${identifier}`,
+  ],
+}
+```
+
+Suggestions are verified against format, reserved names, validators, and database collisions using an optimized three-phase pipeline. Only available suggestions are returned.
 
 ## Batch Checking
 
@@ -641,6 +671,7 @@ import {
   type CheckResult,
   type FindOneOptions,
   type OwnershipScope,
+  type SuggestStrategyName,
 } from "namespace-guard";
 ```
 
