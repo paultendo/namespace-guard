@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-02-20
+
+### Added
+- NFKC Unicode normalization in `normalize()` — collapses full-width characters, ligatures, superscripts, and other compatibility forms to canonical equivalents (on by default, opt out with `normalizeUnicode: false`)
+- `createHomoglyphValidator()` — detects Cyrillic and Greek characters that visually mimic Latin letters (e.g., Cyrillic "а" in "аdmin")
+- `CONFUSABLE_MAP` export — ~30 Cyrillic-to-Latin and Greek-to-Latin confusable character pairs
+- `rejectMixedScript` option for homoglyph validator — also rejects strings mixing Latin + Cyrillic/Greek scripts
+- `allowPurelyNumeric` config option — reject purely numeric identifiers like "123" (default: allowed)
+- `messages.purelyNumeric` for custom rejection message
+
+### Changed
+- `normalize()` now accepts an optional `options` parameter (`{ unicode?: boolean }`)
+- Playground updated with homoglyph detection toggle, purely-numeric toggle, and confusable example pills
+
 ## [0.6.0] - 2026-02-20
 
 ### Added
@@ -94,3 +108,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Raw SQL adapter (`namespace-guard/adapters/raw`)
 - CLI (`npx namespace-guard check <slug>`)
 - Interactive playground page (GitHub Pages)
+
+[0.7.0]: https://github.com/paultendo/namespace-guard/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/paultendo/namespace-guard/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/paultendo/namespace-guard/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/paultendo/namespace-guard/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/paultendo/namespace-guard/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/paultendo/namespace-guard/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/paultendo/namespace-guard/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/paultendo/namespace-guard/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/paultendo/namespace-guard/releases/tag/v0.1.0

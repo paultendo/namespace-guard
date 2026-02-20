@@ -3,6 +3,8 @@ import {
   normalize,
   createNamespaceGuard,
   createProfanityValidator,
+  createHomoglyphValidator,
+  CONFUSABLE_MAP,
   type NamespaceAdapter,
   type NamespaceSource,
 } from "../src/index";
@@ -1969,6 +1971,241 @@ describe("composed strategy deduplication", () => {
     if (!result.available && result.suggestions) {
       const unique = new Set(result.suggestions);
       expect(unique.size).toBe(result.suggestions.length);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// normalize() with NFKC
+// ---------------------------------------------------------------------------
+describe("normalize with NFKC", () => {
+  it("normalizes full-width characters to ASCII", () => {
+    expect(normalize("\uff48\uff45\uff4c\uff4c\uff4f")).toBe("hello");
+  });
+
+  it("normalizes ligatures", () => {
+    expect(normalize("\ufb01nance")).toBe("finance");
+  });
+
+  it("normalizes superscripts", () => {
+    expect(normalize("x\u2075")).toBe("x5");
+  });
+
+  it("normalizes combining characters to precomposed form", () => {
+    expect(normalize("caf\u0065\u0301")).toBe("caf\u00e9");
+  });
+
+  it("is a no-op for plain ASCII", () => {
+    expect(normalize("hello-world")).toBe("hello-world");
+  });
+
+  it("respects unicode: false option", () => {
+    const result = normalize("\uff48ello", { unicode: false });
+    expect(result).not.toBe("hello");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createHomoglyphValidator
+// ---------------------------------------------------------------------------
+describe("createHomoglyphValidator", () => {
+  it("rejects Cyrillic а in admin", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u0430dmin");
+    expect(result).not.toBeNull();
+    expect(result!.message).toContain("confused");
+  });
+
+  it("rejects Greek ο in bob", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("b\u03bfb");
+    expect(result).not.toBeNull();
+  });
+
+  it("passes pure ASCII input", async () => {
+    const validator = createHomoglyphValidator();
+    expect(await validator("hello")).toBeNull();
+    expect(await validator("admin")).toBeNull();
+    expect(await validator("test-123")).toBeNull();
+  });
+
+  it("uses custom message", async () => {
+    const validator = createHomoglyphValidator({ message: "No spoofing!" });
+    const result = await validator("\u0430dmin");
+    expect(result!.message).toBe("No spoofing!");
+  });
+
+  it("supports additional mappings", async () => {
+    const validator = createHomoglyphValidator({
+      additionalMappings: { "\u0261": "g" },
+    });
+    const result = await validator("te\u0261t");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Cyrillic+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Cyrillic б (not in confusable map) + Latin text
+    const result = await validator("hel\u0431o");
+    expect(result).not.toBeNull();
+  });
+
+  it("allows pure Cyrillic without confusable chars when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // "мид" — all Cyrillic, none in confusable map (м=U+043C, и=U+0438, д=U+0434)
+    const result = await validator("\u043c\u0438\u0434");
+    expect(result).toBeNull();
+  });
+
+  it("allows pure Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    expect(await validator("hello")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CONFUSABLE_MAP export
+// ---------------------------------------------------------------------------
+describe("CONFUSABLE_MAP", () => {
+  it("is exported and contains expected mappings", () => {
+    expect(CONFUSABLE_MAP["\u0430"]).toBe("a");
+    expect(CONFUSABLE_MAP["\u03b1"]).toBe("a");
+    expect(CONFUSABLE_MAP["\u0441"]).toBe("c");
+    expect(Object.keys(CONFUSABLE_MAP).length).toBeGreaterThanOrEqual(28);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// allowPurelyNumeric
+// ---------------------------------------------------------------------------
+describe("allowPurelyNumeric", () => {
+  it("rejects purely numeric when allowPurelyNumeric is false", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, allowPurelyNumeric: false },
+      createMockAdapter({})
+    );
+    const result = await guard.check("123456");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("invalid");
+      expect(result.message).toBe("Identifiers cannot be purely numeric.");
+    }
+  });
+
+  it("rejects numeric-with-hyphens when allowPurelyNumeric is false", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, allowPurelyNumeric: false },
+      createMockAdapter({})
+    );
+    const result = await guard.check("12-34");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("invalid");
+    }
+  });
+
+  it("allows alphanumeric identifiers even when allowPurelyNumeric is false", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, allowPurelyNumeric: false },
+      createMockAdapter({})
+    );
+    const result = await guard.check("abc123");
+    expect(result.available).toBe(true);
+  });
+
+  it("allows purely numeric by default", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+    const result = await guard.check("123456");
+    expect(result.available).toBe(true);
+  });
+
+  it("uses custom purelyNumeric message", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        allowPurelyNumeric: false,
+        messages: { purelyNumeric: "No numbers only!" },
+      },
+      createMockAdapter({})
+    );
+    const result = await guard.check("123456");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.message).toBe("No numbers only!");
+    }
+  });
+
+  it("validateFormat respects allowPurelyNumeric", () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, allowPurelyNumeric: false },
+      createMockAdapter({})
+    );
+    expect(guard.validateFormat("123456")).toBe(
+      "Identifiers cannot be purely numeric."
+    );
+    expect(guard.validateFormat("abc123")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Anti-spoofing integration
+// ---------------------------------------------------------------------------
+describe("anti-spoofing integration", () => {
+  it("NFKC normalization blocks full-width reserved names", async () => {
+    const guard = createNamespaceGuard(
+      { reserved: ["admin"], sources: defaultSources },
+      createMockAdapter({})
+    );
+    // Full-width "admin" → NFKC → "admin" → reserved
+    const result = await guard.check(
+      "\uff41\uff44\uff4d\uff49\uff4e"
+    );
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("reserved");
+    }
+  });
+
+  it("normalizeUnicode: false disables NFKC", async () => {
+    const guard = createNamespaceGuard(
+      {
+        reserved: ["admin"],
+        sources: defaultSources,
+        normalizeUnicode: false,
+        pattern: /^.{2,30}$/,
+      },
+      createMockAdapter({})
+    );
+    // Full-width "admin" without NFKC stays as full-width chars
+    const result = await guard.check(
+      "\uff41\uff44\uff4d\uff49\uff4e"
+    );
+    // Should NOT match "admin" reserved name since NFKC is off
+    if (!result.available) {
+      expect(result.reason).not.toBe("reserved");
+    }
+  });
+
+  it("homoglyph validator works in suggestion pipeline", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 2 },
+        validators: [createHomoglyphValidator()],
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+    // Clean slug that is taken — suggestions should still work
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.length).toBeGreaterThan(0);
     }
   });
 });

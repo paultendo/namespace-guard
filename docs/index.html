@@ -662,6 +662,14 @@
           </div>
         </div>
 
+        <div class="strategy-section">
+          <div class="strategy-label">Security options:</div>
+          <div class="strategy-row" role="group" aria-label="Toggle security features">
+            <button class="strategy-chip" aria-pressed="false" id="toggle-homoglyph">homoglyph detection</button>
+            <button class="strategy-chip" aria-pressed="false" id="toggle-numeric">reject purely numeric</button>
+          </div>
+        </div>
+
         <div id="result" class="result-area" aria-live="polite" aria-atomic="true"></div>
 
         <div class="examples-section">
@@ -675,6 +683,9 @@
             <button class="example-pill" data-slug="hello!">hello!</button>
             <button class="example-pill" data-slug="@Bob">@Bob</button>
             <button class="example-pill" data-slug="namespace-guard">namespace-guard</button>
+            <button class="example-pill" data-slug="&#x430;dmin" title="Cyrillic а + Latin dmin">\u0430dmin</button>
+            <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">ｈｅｌｌｏ</button>
+            <button class="example-pill" data-slug="123456">123456</button>
           </div>
         </div>
 
@@ -966,17 +977,47 @@
   </footer>
 
   <script type="module">
-    // === namespace-guard library (inlined from dist/index.mjs, v0.6.0) ===
+    // === namespace-guard library (inlined from dist/index.mjs, v0.7.0) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
     var DEFAULT_MESSAGES = {
       invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
       reserved: "That name is reserved. Try another one.",
-      taken: (source) => `That name is already in use.`
+      taken: (source) => `That name is already in use.`,
+      purelyNumeric: "Identifiers cannot be purely numeric.",
     };
     var SUFFIX_WORDS = ["dev", "io", "app", "hq", "pro", "team", "labs", "hub", "go", "one"];
 
+    var CONFUSABLE_MAP = {
+      "\u0430":"a","\u0441":"c","\u0435":"e","\u043e":"o",
+      "\u0440":"p","\u0445":"x","\u0443":"y","\u0456":"i",
+      "\u0455":"s","\u0458":"j","\u04bb":"h","\u051d":"w",
+      "\u0410":"A","\u0412":"B","\u0421":"C","\u0415":"E",
+      "\u041d":"H","\u041a":"K","\u041c":"M","\u041e":"O",
+      "\u0420":"P","\u0422":"T","\u0425":"X",
+      "\u03b1":"a","\u03bf":"o","\u03c1":"p","\u03bd":"v",
+      "\u03c4":"t","\u03b9":"i","\u03ba":"k",
+    };
+
+    function createHomoglyphValidator(options) {
+      const map = { ...CONFUSABLE_MAP, ...(options?.additionalMappings ?? {}) };
+      const chars = Object.keys(map);
+      const re = new RegExp("[" + chars.join("") + "]");
+      const msg = options?.message ?? "That name contains characters that could be confused with other letters.";
+      const mixed = options?.rejectMixedScript ?? false;
+      return async (value) => {
+        if (re.test(value)) return { available: false, message: msg };
+        if (mixed) {
+          const hasLatin = /[a-zA-Z]/.test(value);
+          const hasCyrillic = /[\u0400-\u04FF]/.test(value);
+          const hasGreek = /[\u0370-\u03FF]/.test(value);
+          if (hasLatin && (hasCyrillic || hasGreek)) return { available: false, message: msg };
+        }
+        return null;
+      };
+    }
+
     function normalize(raw) {
-      return raw.trim().toLowerCase().replace(/^@+/, "");
+      return raw.trim().normalize("NFKC").toLowerCase().replace(/^@+/, "");
     }
     function buildReservedMap(reserved) {
       const map = new Map();
@@ -1020,7 +1061,7 @@
       return (identifier) => {
         const candidates = [];
         for (let i = 0; i < 15; i++) {
-          const digits = String(Math.floor(1000 + Math.random() * 9000));
+          const digits = String(Math.floor(100 + Math.random() * 9900));
           const candidate = `${identifier}-${digits}`;
           if ((!maxLen || candidate.length <= maxLen) && pattern.test(candidate)) {
             candidates.push(candidate);
@@ -1152,6 +1193,8 @@
       const invalidMsg = configMessages.invalid ?? DEFAULT_MESSAGES.invalid;
       const takenMsg = configMessages.taken ?? DEFAULT_MESSAGES.taken;
       const validators = config.validators ?? [];
+      const allowPurelyNumeric = config.allowPurelyNumeric ?? true;
+      const purelyNumericMsg = configMessages.purelyNumeric ?? DEFAULT_MESSAGES.purelyNumeric;
       function getReservedMessage(category) {
         const rm = configMessages.reserved;
         if (typeof rm === "string") return rm;
@@ -1161,6 +1204,7 @@
       function validateFormat(identifier) {
         const normalized = normalize(identifier);
         if (!pattern.test(normalized)) return invalidMsg;
+        if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) return purelyNumericMsg;
         if (reservedMap.has(normalized)) return getReservedMessage(reservedMap.get(normalized));
         return null;
       }
@@ -1183,6 +1227,9 @@
         const normalized = normalize(identifier);
         if (!pattern.test(normalized)) {
           return { available: false, reason: "invalid", message: invalidMsg };
+        }
+        if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) {
+          return { available: false, reason: "invalid", message: purelyNumericMsg };
         }
         const reservedCategory = reservedMap.get(normalized);
         if (reservedCategory) {
@@ -1212,7 +1259,7 @@
             const max = config.suggest.max ?? 3;
             const candidates = generate(normalized);
             const suggestions = [];
-            const passedSync = candidates.filter(c => pattern.test(c) && !reservedMap.has(c));
+            const passedSync = candidates.filter(c => pattern.test(c) && !reservedMap.has(c) && (allowPurelyNumeric || !/^\d+(-\d+)*$/.test(c)));
             for (const candidate of passedSync) {
               if (suggestions.length >= max) break;
               if (await checkDbOnly(candidate, scope)) {
@@ -1250,10 +1297,14 @@
       },
     };
 
-    // === Guard factory (recreated when strategy changes) ===
+    // === Guard factory (recreated when strategy/options change) ===
     let currentStrategy = ["sequential", "random-digits"];
+    let homoglyphEnabled = false;
+    let rejectNumeric = false;
 
     function createGuard(strategy) {
+      const validators = [];
+      if (homoglyphEnabled) validators.push(createHomoglyphValidator());
       return createNamespaceGuard(
         {
           reserved: {
@@ -1275,6 +1326,8 @@
             strategy,
             max: 3,
           },
+          validators,
+          allowPurelyNumeric: !rejectNumeric,
         },
         playgroundAdapter
       );
@@ -1410,6 +1463,27 @@
           checkSlug(input.value);
         }
       });
+    });
+
+    // Security toggles
+    const toggleHomoglyph = document.getElementById("toggle-homoglyph");
+    const toggleNumeric = document.getElementById("toggle-numeric");
+
+    function refreshGuard() {
+      guard = createGuard(currentStrategy);
+      if (input.value.trim()) { lastRendered = ""; checkSlug(input.value); }
+    }
+
+    toggleHomoglyph.addEventListener("click", () => {
+      homoglyphEnabled = !homoglyphEnabled;
+      toggleHomoglyph.setAttribute("aria-pressed", String(homoglyphEnabled));
+      refreshGuard();
+    });
+
+    toggleNumeric.addEventListener("click", () => {
+      rejectNumeric = !rejectNumeric;
+      toggleNumeric.setAttribute("aria-pressed", String(rejectNumeric));
+      refreshGuard();
     });
 
     // Copy button

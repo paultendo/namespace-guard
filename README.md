@@ -60,7 +60,7 @@ if (result.available) {
   // Create the org
 } else {
   // Show error: result.message
-  // e.g., "That name is reserved." or "That name is already in use."
+  // e.g., "That name is reserved. Try another one." or "That name is already in use."
 }
 ```
 
@@ -98,6 +98,7 @@ import { createDrizzleAdapter } from "namespace-guard/adapters/drizzle";
 import { db } from "./db";
 import { users, organizations } from "./schema";
 
+// Pass eq directly, or use { eq, ilike } for case-insensitive support
 const adapter = createDrizzleAdapter(db, { users, organizations }, eq);
 ```
 
@@ -295,6 +296,68 @@ const guard = createNamespaceGuard({
 ```
 
 No words are bundled — use any word list you like (e.g., the `bad-words` npm package, your own list, or an external API wrapped in a custom validator).
+
+### Built-in Homoglyph Validator
+
+Prevent spoofing attacks where Cyrillic or Greek characters are substituted for visually identical Latin letters (e.g., Cyrillic "а" for Latin "a" in "admin"):
+
+```typescript
+import { createNamespaceGuard, createHomoglyphValidator } from "namespace-guard";
+
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  validators: [
+    createHomoglyphValidator(),
+  ],
+}, adapter);
+```
+
+Options:
+
+```typescript
+createHomoglyphValidator({
+  message: "Custom rejection message.",       // optional
+  additionalMappings: { "\u0261": "g" },      // extend the built-in map
+  rejectMixedScript: true,                    // also reject Latin + Cyrillic/Greek mixing
+})
+```
+
+The built-in `CONFUSABLE_MAP` covers ~30 Cyrillic-to-Latin and Greek-to-Latin pairs — the most common spoofing vectors. It's exported for inspection or extension.
+
+## Unicode Normalization
+
+By default, `normalize()` applies [NFKC normalization](https://unicode.org/reports/tr15/) before lowercasing. This collapses full-width characters, ligatures, superscripts, and other Unicode compatibility forms to their canonical equivalents:
+
+```typescript
+normalize("ｈｅｌｌｏ");  // "hello" (full-width → ASCII)
+normalize("\ufb01nance"); // "finance" (ﬁ ligature → fi)
+```
+
+NFKC is a no-op for ASCII input and matches what ENS, GitHub, and Unicode IDNA standards mandate. To opt out:
+
+```typescript
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  normalizeUnicode: false,
+}, adapter);
+```
+
+## Rejecting Purely Numeric Identifiers
+
+Twitter/X blocks purely numeric handles. Enable this with `allowPurelyNumeric: false`:
+
+```typescript
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  allowPurelyNumeric: false,
+  messages: {
+    purelyNumeric: "Handles cannot be all numbers.", // optional custom message
+  },
+}, adapter);
+
+await guard.check("123456"); // { available: false, reason: "invalid", message: "Handles cannot be all numbers." }
+await guard.check("abc123"); // available (has letters)
+```
 
 ## Conflict Suggestions
 
@@ -512,9 +575,9 @@ Validate format only (no database queries).
 
 ---
 
-### `normalize(identifier)`
+### `normalize(identifier, options?)`
 
-Utility function to normalize identifiers. Trims whitespace, lowercases, and strips leading `@` symbols.
+Utility function to normalize identifiers. Trims whitespace, applies NFKC Unicode normalization (by default), lowercases, and strips leading `@` symbols. Pass `{ unicode: false }` to skip NFKC.
 
 ```typescript
 import { normalize } from "namespace-guard";
@@ -664,6 +727,8 @@ Full TypeScript support with exported types:
 import {
   createNamespaceGuard,
   createProfanityValidator,
+  createHomoglyphValidator,
+  CONFUSABLE_MAP,
   normalize,
   type NamespaceConfig,
   type NamespaceSource,
