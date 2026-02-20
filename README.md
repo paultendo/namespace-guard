@@ -493,10 +493,17 @@ import type {
 } from "namespace-guard";
 ```
 
+## Support
+
+If you find this useful, consider supporting the project:
+
+- [GitHub Sponsors](https://github.com/sponsors/paultendo)
+- [Buy me a coffee](https://buymeacoffee.com/paultendo)
+
 ## Contributing
 
 Contributions welcome! Please open an issue first to discuss what you'd like to change.
 
 ## License
 
-MIT © [Paul Wood FRSA](https://github.com/paultendo)
+MIT © [Paul Wood FRSA (@paultendo)](https://github.com/paultendo)
