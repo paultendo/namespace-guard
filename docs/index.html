@@ -8,6 +8,7 @@
   <meta property="og:title" content="namespace-guard Playground">
   <meta property="og:description" content="Try the slug uniqueness checker in your browser.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://paultendo.github.io/namespace-guard/">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -279,6 +280,8 @@
     }
     @media (prefers-reduced-motion: reduce) {
       @keyframes resultIn { from { opacity: 1; transform: none; } }
+      .skip-link { transition: none; }
+      details[open] .mock-summary .chevron { transition: none; }
     }
     .result-available {
       background: rgba(30,215,96,0.08);
@@ -429,7 +432,9 @@
       font-size: 0.85rem;
       line-height: 1.7;
       color: var(--ink-muted);
+      white-space: pre;
     }
+    .code-block code { font: inherit; color: inherit; }
     .code-block .kw { color: #c792ea; }
     .code-block .fn { color: #82aaff; }
     .code-block .str { color: #c3e88d; }
@@ -639,7 +644,7 @@
     <!-- Code example -->
     <section class="code-section" aria-labelledby="code-heading">
       <h2 id="code-heading" class="display-type">Use it in your project</h2>
-      <div class="code-block"><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+      <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
 <span class="kw">import</span> <span class="br">{</span> <span class="fn">createPrismaAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/prisma"</span>;
 
 <span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
@@ -660,7 +665,7 @@
   <span class="cm">// "That name is already in use."</span>
   console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>;
   <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
-<span class="br">}</span></div>
+<span class="br">}</span></code></pre>
     </section>
   </main>
 
