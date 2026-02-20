@@ -1,6 +1,7 @@
 # namespace-guard
 
 [![npm version](https://img.shields.io/npm/v/namespace-guard.svg)](https://www.npmjs.com/package/namespace-guard)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/namespace-guard)](https://bundlephobia.com/package/namespace-guard)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -275,6 +276,26 @@ const guard = createNamespaceGuard({
 
 Validators run sequentially and stop at the first rejection. They receive the normalized identifier.
 
+### Built-in Profanity Validator
+
+Use `createProfanityValidator` for a turnkey profanity filter — supply your own word list:
+
+```typescript
+import { createNamespaceGuard, createProfanityValidator } from "namespace-guard";
+
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  validators: [
+    createProfanityValidator(["badword", "offensive", "slur"], {
+      message: "Please choose an appropriate name.", // optional custom message
+      checkSubstrings: true,                         // default: true
+    }),
+  ],
+}, adapter);
+```
+
+No words are bundled — use any word list you like (e.g., the `bad-words` npm package, your own list, or an external API wrapped in a custom validator).
+
 ## Conflict Suggestions
 
 When a slug is taken, automatically suggest available alternatives:
@@ -507,6 +528,10 @@ const guard = createNamespaceGuard({
 
 // Manually clear the cache after writes
 guard.clearCache();
+
+// Monitor cache performance
+const stats = guard.cacheStats();
+// { size: 12, hits: 48, misses: 12 }
 ```
 
 ## Framework Integration
@@ -605,14 +630,17 @@ export const namespaceRouter = router({
 Full TypeScript support with exported types:
 
 ```typescript
-import type {
-  NamespaceConfig,
-  NamespaceSource,
-  NamespaceAdapter,
-  NamespaceGuard,
-  CheckResult,
-  FindOneOptions,
-  OwnershipScope,
+import {
+  createNamespaceGuard,
+  createProfanityValidator,
+  normalize,
+  type NamespaceConfig,
+  type NamespaceSource,
+  type NamespaceAdapter,
+  type NamespaceGuard,
+  type CheckResult,
+  type FindOneOptions,
+  type OwnershipScope,
 } from "namespace-guard";
 ```
 

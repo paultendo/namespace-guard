@@ -1,14 +1,16 @@
+/** A database table or model to check for slug/handle collisions. */
 export type NamespaceSource = {
-  /** Table/model name */
+  /** Table/model name (must match the adapter's lookup key) */
   name: string;
   /** Column that holds the slug/handle */
   column: string;
-  /** Column name for the primary key (default: "id") */
+  /** Column name for the primary key (default: "id", or "_id" for Mongoose) */
   idColumn?: string;
-  /** Optional scope key for ownership checks (e.g., "userId", "orgId") */
+  /** Scope key for ownership checks — allows users to update their own slug without a false collision */
   scopeKey?: string;
 };
 
+/** Configuration for a namespace guard instance. */
 export type NamespaceConfig = {
   /** Reserved names — flat list, Set, or categorized record */
   reserved?: Set<string> | string[] | Record<string, string[]>;
@@ -40,11 +42,13 @@ export type NamespaceConfig = {
   };
 };
 
+/** Options passed to adapter `findOne` calls. */
 export type FindOneOptions = {
   /** Use case-insensitive matching */
   caseInsensitive?: boolean;
 };
 
+/** Database adapter interface — implement this for your ORM or query builder. */
 export type NamespaceAdapter = {
   findOne: (
     source: NamespaceSource,
@@ -53,8 +57,13 @@ export type NamespaceAdapter = {
   ) => Promise<Record<string, unknown> | null>;
 };
 
+/** Key-value pairs identifying the current user's records, used to skip self-collisions. */
 export type OwnershipScope = Record<string, string | null | undefined>;
 
+/**
+ * Result of a namespace availability check.
+ * Either `{ available: true }` or an object with `reason`, `message`, and optional context.
+ */
 export type CheckResult =
   | { available: true }
   | {
@@ -74,15 +83,118 @@ const DEFAULT_MESSAGES = {
   taken: (source: string) => `That name is already in use.`,
 };
 
-function defaultSuggest(identifier: string): string[] {
-  return Array.from({ length: 9 }, (_, i) => `${identifier}-${i + 1}`);
+/**
+ * Determine the maximum string length accepted by a regex pattern.
+ * Tests strings of decreasing length to find the longest match.
+ */
+function extractMaxLength(pattern: RegExp): number {
+  const testChar = "a";
+  for (let len = 100; len >= 1; len--) {
+    if (pattern.test(testChar.repeat(len))) return len;
+  }
+  return 30;
 }
 
 /**
- * Normalize an identifier (trim, lowercase, strip leading @)
+ * Create a default suggestion generator that's aware of the max identifier length.
+ * Generates interleaved hyphenated and compact variants, plus truncated variants
+ * for identifiers near the max length.
+ */
+function createDefaultSuggest(pattern: RegExp): (identifier: string) => string[] {
+  const maxLen = extractMaxLength(pattern);
+
+  return (identifier: string): string[] => {
+    const candidates: string[] = [];
+
+    for (let i = 1; i <= 9; i++) {
+      const hyphenated = `${identifier}-${i}`;
+      if (hyphenated.length <= maxLen) candidates.push(hyphenated);
+
+      const compact = `${identifier}${i}`;
+      if (compact.length <= maxLen) candidates.push(compact);
+    }
+
+    // Truncated variants for identifiers near max length
+    if (identifier.length >= maxLen - 1) {
+      for (let i = 1; i <= 9; i++) {
+        const suffix = String(i);
+        const truncated = identifier.slice(0, maxLen - suffix.length) + suffix;
+        if (truncated !== identifier && !candidates.includes(truncated)) {
+          candidates.push(truncated);
+        }
+      }
+    }
+
+    return candidates;
+  };
+}
+
+/**
+ * Normalize a raw identifier: trims whitespace, lowercases, and strips leading `@` symbols.
+ *
+ * @param raw - The raw user input
+ * @returns The normalized identifier
+ *
+ * @example
+ * ```ts
+ * normalize("  @Sarah  "); // "sarah"
+ * normalize("ACME-Corp");  // "acme-corp"
+ * ```
  */
 export function normalize(raw: string): string {
   return raw.trim().toLowerCase().replace(/^@+/, "");
+}
+
+/**
+ * Create a validator that rejects identifiers containing profanity or offensive words.
+ *
+ * Supply your own word list — no words are bundled with the library.
+ * The returned function is compatible with `config.validators`.
+ *
+ * @param words - Array of words to block
+ * @param options - Optional settings
+ * @param options.message - Custom rejection message (default: "That name is not allowed.")
+ * @param options.checkSubstrings - Check if identifier contains a blocked word as a substring (default: true)
+ * @returns An async validator function for use in `config.validators`
+ *
+ * @example
+ * ```ts
+ * const guard = createNamespaceGuard({
+ *   reserved: ["admin"],
+ *   sources: [{ name: "user", column: "handle" }],
+ *   validators: [
+ *     createProfanityValidator(["badword", "offensive"], {
+ *       message: "Please choose an appropriate name.",
+ *     }),
+ *   ],
+ * }, adapter);
+ * ```
+ */
+export function createProfanityValidator(
+  words: string[],
+  options?: { message?: string; checkSubstrings?: boolean }
+): (value: string) => Promise<{ available: false; message: string } | null> {
+  const message = options?.message ?? "That name is not allowed.";
+  const checkSubstrings = options?.checkSubstrings ?? true;
+  const wordSet = new Set(words.map((w) => w.toLowerCase()));
+
+  return async (value: string) => {
+    const normalized = value.toLowerCase();
+
+    if (wordSet.has(normalized)) {
+      return { available: false, message };
+    }
+
+    if (checkSubstrings) {
+      for (const word of wordSet) {
+        if (normalized.includes(word)) {
+          return { available: false, message };
+        }
+      }
+    }
+
+    return null;
+  };
 }
 
 /**
@@ -109,7 +221,34 @@ function buildReservedMap(
 }
 
 /**
- * Create a namespace guard instance
+ * Create a namespace guard instance for checking slug/handle uniqueness
+ * across multiple database tables with reserved name protection.
+ *
+ * @param config - Reserved names, data sources, validation pattern, and optional features
+ * @param adapter - Database adapter implementing the `findOne` lookup (use a built-in adapter or write your own)
+ * @returns A guard with `check`, `checkMany`, `assertAvailable`, `validateFormat`, `clearCache`, and `cacheStats` methods
+ *
+ * @example
+ * ```ts
+ * import { createNamespaceGuard } from "namespace-guard";
+ * import { createPrismaAdapter } from "namespace-guard/adapters/prisma";
+ *
+ * const guard = createNamespaceGuard(
+ *   {
+ *     reserved: ["admin", "api", "settings"],
+ *     sources: [
+ *       { name: "user", column: "handle", scopeKey: "id" },
+ *       { name: "organization", column: "slug", scopeKey: "id" },
+ *     ],
+ *   },
+ *   createPrismaAdapter(prisma)
+ * );
+ *
+ * const result = await guard.check("my-slug");
+ * if (result.available) {
+ *   // safe to use
+ * }
+ * ```
  */
 export function createNamespaceGuard(config: NamespaceConfig, adapter: NamespaceAdapter) {
   const reservedMap = buildReservedMap(config.reserved);
@@ -126,6 +265,8 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   const cacheEnabled = !!config.cache;
   const cacheTtl = config.cache?.ttl ?? 5000;
   const cacheMap = new Map<string, { value: Record<string, unknown> | null; expires: number }>();
+  let cacheHits = 0;
+  let cacheMisses = 0;
 
   function cachedFindOne(
     source: NamespaceSource,
@@ -139,9 +280,11 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
     const cached = cacheMap.get(key);
 
     if (cached && cached.expires > now) {
+      cacheHits++;
       return Promise.resolve(cached.value);
     }
 
+    cacheMisses++;
     return adapter.findOne(source, value, options).then((result) => {
       cacheMap.set(key, { value: result, expires: now + cacheTtl });
       return result;
@@ -156,7 +299,10 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Validate format only (no DB check)
+   * Validate an identifier's format and reserved status without querying the database.
+   *
+   * @param identifier - The raw identifier to validate
+   * @returns An error message string if invalid/reserved, or `null` if the format is OK
    */
   function validateFormat(identifier: string): string | null {
     const normalized = normalize(identifier);
@@ -173,7 +319,13 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Check if an identifier is available
+   * Check if an identifier is available across all configured sources.
+   * Runs format validation, reserved check, async validators, and database lookups.
+   *
+   * @param identifier - The raw identifier to check (will be normalized)
+   * @param scope - Ownership scope to exclude the caller's own records from collision detection
+   * @param options - Internal options (e.g., `skipSuggestions` to prevent recursion)
+   * @returns `{ available: true }` or `{ available: false, reason, message, ... }`
    */
   async function check(
     identifier: string,
@@ -242,7 +394,7 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
 
       // Generate suggestions if configured and not skipped
       if (config.suggest && !options?.skipSuggestions) {
-        const generate = config.suggest.generate ?? defaultSuggest;
+        const generate = config.suggest.generate ?? createDefaultSuggest(pattern);
         const max = config.suggest.max ?? 3;
         const candidates = generate(normalized);
         const suggestions: string[] = [];
@@ -267,7 +419,11 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Assert an identifier is available, throw if not
+   * Assert that an identifier is available. Throws an `Error` with the rejection message if not.
+   *
+   * @param identifier - The raw identifier to check
+   * @param scope - Ownership scope to exclude the caller's own records
+   * @throws {Error} If the identifier is invalid, reserved, or taken
    */
   async function assertAvailable(
     identifier: string,
@@ -280,7 +436,11 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Check multiple identifiers in one call
+   * Check multiple identifiers in parallel. Suggestions are not generated for batch checks.
+   *
+   * @param identifiers - Array of raw identifiers to check
+   * @param scope - Ownership scope applied to all checks
+   * @returns A record mapping each identifier to its `CheckResult`
    */
   async function checkMany(
     identifiers: string[],
@@ -296,10 +456,21 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Clear the in-memory cache (no-op if caching is not enabled)
+   * Clear the in-memory cache and reset hit/miss counters.
+   * No-op if caching is not enabled.
    */
   function clearCache(): void {
     cacheMap.clear();
+    cacheHits = 0;
+    cacheMisses = 0;
+  }
+
+  /**
+   * Get cache performance statistics.
+   * Returns zeros when caching is not enabled.
+   */
+  function cacheStats(): { size: number; hits: number; misses: number } {
+    return { size: cacheMap.size, hits: cacheHits, misses: cacheMisses };
   }
 
   return {
@@ -309,7 +480,9 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
     assertAvailable,
     checkMany,
     clearCache,
+    cacheStats,
   };
 }
 
+/** The guard instance returned by `createNamespaceGuard`. */
 export type NamespaceGuard = ReturnType<typeof createNamespaceGuard>;

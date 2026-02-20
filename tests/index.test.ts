@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   normalize,
   createNamespaceGuard,
+  createProfanityValidator,
   type NamespaceAdapter,
   type NamespaceSource,
 } from "../src/index";
@@ -747,7 +748,7 @@ describe("suggestions", () => {
     if (!result.available) {
       expect(result.suggestions).toBeDefined();
       expect(result.suggestions!.length).toBe(3);
-      expect(result.suggestions).toEqual(["sarah-1", "sarah-2", "sarah-3"]);
+      expect(result.suggestions).toEqual(["sarah-1", "sarah1", "sarah-2"]);
     }
   });
 
@@ -789,8 +790,8 @@ describe("suggestions", () => {
     const result = await guard.check("sarah");
     expect(result.available).toBe(false);
     if (!result.available) {
-      // sarah-1 and sarah-2 are taken, so suggestions start from sarah-3
-      expect(result.suggestions).toEqual(["sarah-3", "sarah-4", "sarah-5"]);
+      // sarah-1 and sarah-2 are taken, so compact and later variants are used
+      expect(result.suggestions).toEqual(["sarah1", "sarah2", "sarah-3"]);
     }
   });
 
@@ -809,8 +810,8 @@ describe("suggestions", () => {
     const result = await guard.check("sarah");
     expect(result.available).toBe(false);
     if (!result.available) {
-      // sarah-1 is reserved, so it's skipped
-      expect(result.suggestions).toEqual(["sarah-2", "sarah-3", "sarah-4"]);
+      // sarah-1 is reserved, so it's skipped; compact variants fill in
+      expect(result.suggestions).toEqual(["sarah1", "sarah-2", "sarah2"]);
     }
   });
 
@@ -1051,5 +1052,202 @@ describe("checkMany", () => {
 
     const results = await guard.checkMany([]);
     expect(results).toEqual({});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createProfanityValidator
+// ---------------------------------------------------------------------------
+describe("createProfanityValidator", () => {
+  it("rejects exact match", async () => {
+    const validator = createProfanityValidator(["badword"]);
+    const result = await validator("badword");
+    expect(result).toEqual({ available: false, message: "That name is not allowed." });
+  });
+
+  it("rejects substring match by default", async () => {
+    const validator = createProfanityValidator(["bad"]);
+    const result = await validator("mybadname");
+    expect(result).toEqual({ available: false, message: "That name is not allowed." });
+  });
+
+  it("skips substring check when checkSubstrings is false", async () => {
+    const validator = createProfanityValidator(["bad"], { checkSubstrings: false });
+    const result = await validator("mybadname");
+    expect(result).toBeNull();
+  });
+
+  it("matches case-insensitively", async () => {
+    const validator = createProfanityValidator(["BadWord"]);
+    expect(await validator("badword")).not.toBeNull();
+    expect(await validator("BADWORD")).not.toBeNull();
+  });
+
+  it("returns null for clean values", async () => {
+    const validator = createProfanityValidator(["badword", "offensive"]);
+    expect(await validator("hello")).toBeNull();
+    expect(await validator("my-cool-slug")).toBeNull();
+  });
+
+  it("uses custom message", async () => {
+    const validator = createProfanityValidator(["nope"], { message: "Try again." });
+    const result = await validator("nope");
+    expect(result).toEqual({ available: false, message: "Try again." });
+  });
+
+  it("works as a validator in createNamespaceGuard", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        validators: [createProfanityValidator(["offensive"])],
+      },
+      createMockAdapter({})
+    );
+
+    const result = await guard.check("offensive");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("invalid");
+      expect(result.message).toBe("That name is not allowed.");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cache stats
+// ---------------------------------------------------------------------------
+describe("cacheStats", () => {
+  it("returns zeros initially", () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      createMockAdapter({})
+    );
+
+    expect(guard.cacheStats()).toEqual({ size: 0, hits: 0, misses: 0 });
+  });
+
+  it("tracks misses on first call", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      createMockAdapter({})
+    );
+
+    await guard.check("sarah");
+    // 2 sources = 2 misses
+    expect(guard.cacheStats().misses).toBe(2);
+    expect(guard.cacheStats().hits).toBe(0);
+  });
+
+  it("tracks hits on cached calls", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      createMockAdapter({})
+    );
+
+    await guard.check("sarah");
+    await guard.check("sarah");
+    // First call: 2 misses; second call: 2 hits
+    expect(guard.cacheStats().misses).toBe(2);
+    expect(guard.cacheStats().hits).toBe(2);
+  });
+
+  it("reports correct cache size", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      createMockAdapter({})
+    );
+
+    await guard.check("sarah");
+    // 2 sources = 2 cached entries
+    expect(guard.cacheStats().size).toBe(2);
+  });
+
+  it("clearCache resets stats", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      createMockAdapter({})
+    );
+
+    await guard.check("sarah");
+    guard.clearCache();
+    expect(guard.cacheStats()).toEqual({ size: 0, hits: 0, misses: 0 });
+  });
+
+  it("returns zeros when cache is not enabled", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    await guard.check("sarah");
+    expect(guard.cacheStats()).toEqual({ size: 0, hits: 0, misses: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Smarter default suggestions
+// ---------------------------------------------------------------------------
+describe("smarter default suggestions", () => {
+  it("includes both hyphenated and compact variants", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { max: 6 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toEqual([
+        "sarah-1", "sarah1", "sarah-2", "sarah2", "sarah-3", "sarah3",
+      ]);
+    }
+  });
+
+  it("generates truncated suggestions near max length", async () => {
+    // Pattern allows max 5 chars
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle", scopeKey: "id" }],
+        pattern: /^[a-z0-9-]{2,5}$/,
+        suggest: { max: 5 },
+      },
+      createMockAdapter({
+        user: { abcde: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("abcde");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      // "abcde" is 5 chars (max), so "abcde-1" (7) and "abcde1" (6) exceed limit
+      // Truncated variants: "abcd1", "abcd2", etc.
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.every((s) => s.length <= 5)).toBe(true);
+    }
+  });
+
+  it("custom generator still overrides defaults", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: {
+          generate: (id) => [`${id}-x`, `${id}-y`],
+        },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toEqual(["sarah-x", "sarah-y"]);
+    }
   });
 });
