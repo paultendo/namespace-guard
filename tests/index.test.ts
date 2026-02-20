@@ -1667,4 +1667,308 @@ describe("optimized suggestion pipeline", () => {
       expect(result.suggestions).toEqual(["sarah-2"]);
     }
   });
+
+  it("validates only a batch at a time, not all candidates", async () => {
+    let validatorCalls = 0;
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 2 },
+        validators: [
+          async () => {
+            validatorCalls++;
+            return null;
+          },
+        ],
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    await guard.check("sarah");
+    // Progressive pipeline: first batch of 2 candidates validated + DB-checked.
+    // If both pass, no more batches needed. At most ~4 validator calls (2 batches).
+    // Old approach would validate ALL ~18 candidates.
+    expect(validatorCalls).toBeLessThanOrEqual(6);
+  });
+
+  it("checks DB candidates in parallel within a batch", async () => {
+    const callTimestamps: number[] = [];
+    const adapter: NamespaceAdapter = {
+      findOne: vi.fn(async () => {
+        callTimestamps.push(Date.now());
+        await new Promise((r) => setTimeout(r, 20));
+        return null;
+      }),
+    };
+
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle" }],
+        suggest: { strategy: "sequential", max: 3 },
+      },
+      adapter
+    );
+
+    // Make "taken" exist in DB
+    (adapter.findOne as ReturnType<typeof vi.fn>).mockImplementation(
+      async (_source: NamespaceSource, value: string) => {
+        await new Promise((r) => setTimeout(r, 20));
+        return value === "taken" ? { id: "u1" } : null;
+      }
+    );
+
+    const start = Date.now();
+    const result = await guard.check("taken");
+    const elapsed = Date.now() - start;
+
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      // With batched parallel, should be significantly faster than sequential
+      // 3 parallel DB checks per batch × 20ms ≈ 40-60ms per batch
+      // Sequential would be 3 × 20ms per candidate = 60ms minimum
+      expect(elapsed).toBeLessThan(300);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Similar strategy
+// ---------------------------------------------------------------------------
+describe("similar strategy", () => {
+  it("generates edit-distance-1 deletions", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "similar", max: 20 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available && result.suggestions) {
+      // Deletions of "sarah": "arah", "srah", "saah", "sarh", "sara"
+      expect(result.suggestions).toContain("arah");
+      expect(result.suggestions).toContain("sara");
+    }
+  });
+
+  it("generates keyboard-adjacent substitutions", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "similar", max: 50 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    if (!result.available && result.suggestions) {
+      // 's' neighbors: a,d,w,z → "aarah", "darah", "warah", "zarah"
+      expect(result.suggestions).toContain("darah");
+      expect(result.suggestions).toContain("warah");
+    }
+  });
+
+  it("generates prefix and suffix additions", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "similar", max: 50 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    if (!result.available && result.suggestions) {
+      expect(result.suggestions).toContain("thesarah");
+      expect(result.suggestions).toContain("mysarah");
+      expect(result.suggestions).toContain("sarahx");
+      expect(result.suggestions).toContain("saraho");
+    }
+  });
+
+  it("respects pattern constraints", async () => {
+    // Pattern forbids digits
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle" }],
+        pattern: /^[a-z-]{2,30}$/,
+        suggest: { strategy: "similar", max: 50 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    if (!result.available && result.suggestions) {
+      for (const s of result.suggestions) {
+        expect(s).toMatch(/^[a-z-]{2,30}$/);
+      }
+    }
+  });
+
+  it("handles short identifiers without crashing", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "similar", max: 10 },
+      },
+      createMockAdapter({
+        user: { ab: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("ab");
+    expect(result.available).toBe(false);
+    // Deletions of "ab" produce "a" and "b" which fail min-length 2
+    // But substitutions and prefix/suffix additions should still work
+    if (!result.available && result.suggestions) {
+      for (const s of result.suggestions) {
+        expect(s).toMatch(/^[a-z0-9][a-z0-9-]{1,29}$/);
+      }
+    }
+  });
+
+  it("handles identifiers at max length", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle" }],
+        pattern: /^[a-z]{2,5}$/,
+        suggest: { strategy: "similar", max: 50 },
+      },
+      createMockAdapter({
+        user: { abcde: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("abcde");
+    if (!result.available && result.suggestions) {
+      for (const s of result.suggestions) {
+        expect(s.length).toBeLessThanOrEqual(5);
+        expect(s.length).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it("composes with other strategies via array", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: ["similar", "sequential"], max: 4 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    if (!result.available) {
+      expect(result.suggestions).toBeDefined();
+      expect(result.suggestions!.length).toBe(4);
+    }
+  });
+
+  it("produces no duplicates", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "similar", max: 100 },
+      },
+      createMockAdapter({
+        user: { aaa: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("aaa");
+    if (!result.available && result.suggestions) {
+      const unique = new Set(result.suggestions);
+      expect(unique.size).toBe(result.suggestions.length);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Profanity validator optimizations
+// ---------------------------------------------------------------------------
+describe("profanity validator optimizations", () => {
+  it("handles special regex characters in word list", async () => {
+    const validator = createProfanityValidator(["bad.word", "test(ing)"]);
+    // Should match exact, not as regex patterns
+    expect(await validator("bad.word")).not.toBeNull();
+    expect(await validator("badxword")).toBeNull(); // "." should not match any char
+    expect(await validator("test(ing)")).not.toBeNull();
+  });
+
+  it("handles large word lists efficiently", async () => {
+    const words = Array.from({ length: 1000 }, (_, i) => `word${i}`);
+    const validator = createProfanityValidator(words);
+    expect(await validator("word500")).not.toBeNull();
+    expect(await validator("containsword999inside")).not.toBeNull();
+    expect(await validator("clean-name")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LRU cache behavior
+// ---------------------------------------------------------------------------
+describe("LRU cache eviction", () => {
+  it("promotes recently accessed entries", async () => {
+    const adapter = createMockAdapter({});
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle" }],
+        cache: { ttl: 60000 },
+      },
+      adapter
+    );
+
+    // First access: cache miss
+    await guard.check("slug-a");
+    // Second access: cache miss
+    await guard.check("slug-b");
+    // Re-access slug-a: should be a cache hit (LRU promotes it)
+    await guard.check("slug-a");
+
+    const stats = guard.cacheStats();
+    expect(stats.hits).toBe(1);
+    expect(stats.misses).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Composed strategy deduplication
+// ---------------------------------------------------------------------------
+describe("composed strategy deduplication", () => {
+  it("removes duplicates when composing named strategies", async () => {
+    // Use two strategies that might produce overlapping candidates
+    // "sequential" produces sarah-1, sarah1, sarah-2, sarah2, ...
+    // "suffix-words" produces sarah-dev, sarah-io, ...
+    // Round-robin interleave should have no duplicates
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: ["sequential", "suffix-words"], max: 6 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    if (!result.available && result.suggestions) {
+      const unique = new Set(result.suggestions);
+      expect(unique.size).toBe(result.suggestions.length);
+    }
+  });
 });

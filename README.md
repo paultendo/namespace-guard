@@ -330,6 +330,7 @@ const result = await guard.check("acme-corp");
 | `"suffix-words"` | `sarah-dev`, `sarah-hq`, `sarah-app` | Common word suffixes |
 | `"short-random"` | `sarah-x7k`, `sarah-m2p` | Short 3-char alphanumeric suffixes |
 | `"scramble"` | `asrah`, `sarha` | Adjacent character transpositions |
+| `"similar"` | `sara`, `darah`, `thesarah` | Edit-distance-1 mutations (deletions, keyboard-adjacent substitutions, prefix/suffix) |
 
 ### Composing Strategies
 

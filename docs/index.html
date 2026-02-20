@@ -658,6 +658,7 @@
             <button class="strategy-chip" aria-pressed="false" data-strategy="suffix-words">suffix-words</button>
             <button class="strategy-chip" aria-pressed="false" data-strategy="short-random">short-random</button>
             <button class="strategy-chip" aria-pressed="false" data-strategy="scramble">scramble</button>
+            <button class="strategy-chip" aria-pressed="false" data-strategy="similar">similar</button>
           </div>
         </div>
 
@@ -965,7 +966,7 @@
   </footer>
 
   <script type="module">
-    // === namespace-guard library (inlined from dist/index.mjs, v0.5.0) ===
+    // === namespace-guard library (inlined from dist/index.mjs, v0.6.0) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
     var DEFAULT_MESSAGES = {
       invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
@@ -1074,6 +1075,44 @@
       };
     }
 
+    function createSimilarStrategy(pattern) {
+      const maxLen = extractMaxLength(pattern) ?? 30;
+      const nearby = {
+        a: "sqwz", b: "vngh", c: "xdfv", d: "sfce", e: "wrd", f: "dgcv",
+        g: "fhtb", h: "gjyn", i: "uko", j: "hknm", k: "jli", l: "kop",
+        m: "njk", n: "bmhj", o: "ipl", p: "ol", q: "wa", r: "eft",
+        s: "adwz", t: "rgy", u: "yij", v: "cfgb", w: "qase", x: "zsdc",
+        y: "tuh", z: "xas",
+        "0": "19", "1": "02", "2": "13", "3": "24", "4": "35",
+        "5": "46", "6": "57", "7": "68", "8": "79", "9": "80",
+      };
+      const prefixes = ["the", "my", "x", "i"];
+      const suffixes = ["x", "o", "i", "z"];
+      return (identifier) => {
+        const seen = new Set();
+        const candidates = [];
+        function add(c) {
+          if (c.length >= 2 && c.length <= maxLen && c !== identifier && pattern.test(c) && !seen.has(c)) {
+            seen.add(c);
+            candidates.push(c);
+          }
+        }
+        for (let i = 0; i < identifier.length; i++) {
+          add(identifier.slice(0, i) + identifier.slice(i + 1));
+        }
+        for (let i = 0; i < identifier.length; i++) {
+          const ch = identifier[i];
+          const neighbours = nearby[ch] ?? "";
+          for (const n of neighbours) {
+            add(identifier.slice(0, i) + n + identifier.slice(i + 1));
+          }
+        }
+        for (const p of prefixes) add(p + identifier);
+        for (const s of suffixes) add(identifier + s);
+        return candidates;
+      };
+    }
+
     function createStrategy(name, pattern) {
       switch (name) {
         case "sequential": return createSequentialStrategy(pattern);
@@ -1081,6 +1120,7 @@
         case "suffix-words": return createSuffixWordsStrategy(pattern);
         case "short-random": return createShortRandomStrategy(pattern);
         case "scramble": return createScrambleStrategy(pattern);
+        case "similar": return createSimilarStrategy(pattern);
         default: return createSequentialStrategy(pattern);
       }
     }

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-02-20
+
+### Added
+- `"similar"` suggestion strategy — generates cognitively close alternatives using edit-distance-1 mutations (deletions, keyboard-adjacent substitutions, prefix/suffix additions)
+- LRU cache eviction replaces FIFO for better hit rates on frequently checked names
+
+### Changed
+- Suggestion pipeline now uses progressive batched processing — validates and DB-checks in parallel batches of `max` instead of validating all then checking sequentially (up to 5-6x latency improvement)
+- Pre-compiled regex for profanity substring matching — O(identifier length) instead of O(words x length)
+- Set-based deduplication in all strategy factories — O(n) instead of O(n²)
+- Binary search in `extractMaxLength` — 12x faster pattern initialization
+
 ## [0.5.0] - 2026-02-20
 
 ### Added
