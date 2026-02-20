@@ -93,7 +93,7 @@ function createNoopAdapter(): NamespaceAdapter {
   };
 }
 
-async function createDatabaseAdapter(url: string): Promise<NamespaceAdapter> {
+async function createDatabaseAdapter(url: string): Promise<{ adapter: NamespaceAdapter; cleanup: () => Promise<void> }> {
   let pg: any;
   try {
     // Dynamic import — pg is an optional peer dependency
@@ -109,7 +109,10 @@ async function createDatabaseAdapter(url: string): Promise<NamespaceAdapter> {
   const Pool = pg.default?.Pool ?? pg.Pool;
   const pool = new Pool({ connectionString: url });
 
-  return createRawAdapter((sql, params) => pool.query(sql, params));
+  return {
+    adapter: createRawAdapter((sql, params) => pool.query(sql, params)),
+    cleanup: () => pool.end(),
+  };
 }
 
 export async function run(argv: string[] = process.argv): Promise<number> {
@@ -135,27 +138,48 @@ export async function run(argv: string[] = process.argv): Promise<number> {
 
   const fileConfig = loadConfig(configPath);
 
+  let parsedPattern: RegExp | undefined;
+  if (fileConfig.pattern) {
+    try {
+      parsedPattern = new RegExp(fileConfig.pattern);
+    } catch {
+      console.error(`Invalid regex pattern in config: ${fileConfig.pattern}`);
+      return 1;
+    }
+  }
+
   const guardConfig: NamespaceConfig = {
     reserved: fileConfig.reserved,
     sources: fileConfig.sources ?? [],
-    ...(fileConfig.pattern ? { pattern: new RegExp(fileConfig.pattern) } : {}),
+    ...(parsedPattern ? { pattern: parsedPattern } : {}),
   };
 
-  const adapter = databaseUrl
-    ? await createDatabaseAdapter(databaseUrl)
-    : createNoopAdapter();
+  let cleanup: (() => Promise<void>) | undefined;
+  let adapter: NamespaceAdapter;
 
-  const guard = createNamespaceGuard(guardConfig, adapter);
-  const normalized = normalize(slug);
-  const result = await guard.check(normalized);
-
-  if (result.available) {
-    console.log(`\u2713 ${normalized} is available`);
-    return 0;
+  if (databaseUrl) {
+    const db = await createDatabaseAdapter(databaseUrl);
+    adapter = db.adapter;
+    cleanup = db.cleanup;
   } else {
-    const suffix = result.source ? ` (source: ${result.source})` : "";
-    console.log(`\u2717 ${normalized} \u2014 ${result.message}${suffix}`);
-    return 1;
+    adapter = createNoopAdapter();
+  }
+
+  try {
+    const guard = createNamespaceGuard(guardConfig, adapter);
+    const normalized = normalize(slug);
+    const result = await guard.check(normalized);
+
+    if (result.available) {
+      console.log(`\u2713 ${normalized} is available`);
+      return 0;
+    } else {
+      const suffix = result.source ? ` (source: ${result.source})` : "";
+      console.log(`\u2717 ${normalized} \u2014 ${result.message}${suffix}`);
+      return 1;
+    }
+  } finally {
+    await cleanup?.();
   }
 }
 

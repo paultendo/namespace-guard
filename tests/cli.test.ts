@@ -135,4 +135,15 @@ describe("CLI with config file", () => {
     expect(errors.join("\n")).toContain("Config file not found");
     mockExit.mockRestore();
   });
+
+  it("handles invalid regex pattern gracefully", async () => {
+    writeFileSync(
+      configPath,
+      JSON.stringify({ pattern: "(?P<invalid>)" })
+    );
+
+    const code = await run(argv("check", "test", "--config", configPath));
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("Invalid regex pattern");
+  });
 });

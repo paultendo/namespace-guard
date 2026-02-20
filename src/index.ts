@@ -85,12 +85,16 @@ const DEFAULT_MESSAGES = {
 
 /**
  * Determine the maximum string length accepted by a regex pattern.
- * Tests strings of decreasing length to find the longest match.
+ * Tests strings of decreasing length against the pattern using several character types.
  */
 function extractMaxLength(pattern: RegExp): number {
-  const testChar = "a";
+  const testStrings = ["a", "1", "a1", "a-1"];
   for (let len = 100; len >= 1; len--) {
-    if (pattern.test(testChar.repeat(len))) return len;
+    for (const chars of testStrings) {
+      // Build a string of the target length by repeating the test chars
+      const s = chars.repeat(Math.ceil(len / chars.length)).slice(0, len);
+      if (pattern.test(s)) return len;
+    }
   }
   return 30;
 }
@@ -264,7 +268,8 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   // In-memory cache for adapter lookups
   const cacheEnabled = !!config.cache;
   const cacheTtl = config.cache?.ttl ?? 5000;
-  const cacheMap = new Map<string, { value: Record<string, unknown> | null; expires: number }>();
+  const cacheMaxSize = 1000;
+  const cacheMap = new Map<string, { promise: Promise<Record<string, unknown> | null>; expires: number }>();
   let cacheHits = 0;
   let cacheMisses = 0;
 
@@ -281,14 +286,20 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
 
     if (cached && cached.expires > now) {
       cacheHits++;
-      return Promise.resolve(cached.value);
+      return cached.promise;
     }
 
     cacheMisses++;
-    return adapter.findOne(source, value, options).then((result) => {
-      cacheMap.set(key, { value: result, expires: now + cacheTtl });
-      return result;
-    });
+
+    // Evict oldest entries when cache exceeds max size
+    if (cacheMap.size >= cacheMaxSize) {
+      const firstKey = cacheMap.keys().next().value as string;
+      cacheMap.delete(firstKey);
+    }
+
+    const promise = adapter.findOne(source, value, options);
+    cacheMap.set(key, { promise, expires: now + cacheTtl });
+    return promise;
   }
 
   function getReservedMessage(category: string): string {
@@ -352,9 +363,14 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
 
     // Async validators
     for (const validator of validators) {
-      const rejection = await validator(normalized);
-      if (rejection) {
-        return { available: false, reason: "invalid", message: rejection.message };
+      try {
+        const rejection = await validator(normalized);
+        if (rejection) {
+          return { available: false, reason: "invalid", message: rejection.message };
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Validation failed.";
+        return { available: false, reason: "invalid", message };
       }
     }
 
@@ -401,6 +417,8 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
 
         for (const candidate of candidates) {
           if (suggestions.length >= max) break;
+          // Skip candidates that don't match the format pattern
+          if (!pattern.test(candidate)) continue;
           const candidateResult = await check(candidate, scope, { skipSuggestions: true });
           if (candidateResult.available) {
             suggestions.push(candidate);

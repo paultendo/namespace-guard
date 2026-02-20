@@ -1250,4 +1250,136 @@ describe("smarter default suggestions", () => {
       expect(result.suggestions).toEqual(["sarah-x", "sarah-y"]);
     }
   });
+
+  it("skips suggestions that don't match the pattern", async () => {
+    // Pattern that forbids hyphens
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle", scopeKey: "id" }],
+        pattern: /^[a-z0-9]{2,30}$/,
+        suggest: { max: 3 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      // "sarah-1" etc. contain hyphens, so only compact variants pass the pattern
+      expect(result.suggestions).toEqual(["sarah1", "sarah2", "sarah3"]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Validator error handling
+// ---------------------------------------------------------------------------
+describe("validator error handling", () => {
+  it("catches validator errors and returns invalid result", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        validators: [
+          async () => { throw new Error("External API failed"); },
+        ],
+      },
+      createMockAdapter({})
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("invalid");
+      expect(result.message).toBe("External API failed");
+    }
+  });
+
+  it("catches non-Error throws", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        validators: [
+          async () => { throw "string error"; },
+        ],
+      },
+      createMockAdapter({})
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("invalid");
+      expect(result.message).toBe("Validation failed.");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cache race condition
+// ---------------------------------------------------------------------------
+describe("cache deduplication", () => {
+  it("deduplicates concurrent calls for the same key", async () => {
+    let callCount = 0;
+    const adapter: NamespaceAdapter = {
+      findOne: vi.fn(async () => {
+        callCount++;
+        // Simulate async delay
+        await new Promise((r) => setTimeout(r, 10));
+        return null;
+      }),
+    };
+
+    const guard = createNamespaceGuard(
+      {
+        sources: [{ name: "user", column: "handle" }],
+        cache: { ttl: 5000 },
+      },
+      adapter
+    );
+
+    // Fire two checks in parallel for the same slug
+    const [r1, r2] = await Promise.all([
+      guard.check("sarah"),
+      guard.check("sarah"),
+    ]);
+
+    expect(r1.available).toBe(true);
+    expect(r2.available).toBe(true);
+    // Should only call adapter once since the second call reuses the pending promise
+    expect(adapter.findOne).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Empty sources
+// ---------------------------------------------------------------------------
+describe("edge cases", () => {
+  it("returns available when sources array is empty", async () => {
+    const guard = createNamespaceGuard(
+      { sources: [] },
+      createMockAdapter({})
+    );
+
+    const result = await guard.check("sarah");
+    expect(result.available).toBe(true);
+  });
+
+  it("scope key mismatch is silently ignored", async () => {
+    const sources: NamespaceSource[] = [
+      { name: "user", column: "handle", scopeKey: "userId" },
+    ];
+
+    const guard = createNamespaceGuard(
+      { sources },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    // Passing wrong scope key — ownership check is skipped, collision detected
+    const result = await guard.check("sarah", { wrongKey: "u1" });
+    expect(result.available).toBe(false);
+  });
 });
