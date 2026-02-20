@@ -358,7 +358,7 @@ suggest: {
 }
 ```
 
-Suggestions are verified against format, reserved names, validators, and database collisions using an optimized three-phase pipeline. Only available suggestions are returned.
+Suggestions are verified against format, reserved names, validators, and database collisions using a progressive batched pipeline. Only available suggestions are returned.
 
 ## Batch Checking
 
