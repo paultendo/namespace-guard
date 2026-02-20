@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -67,9 +67,13 @@
   ],
   "author": "Paul Wood FRSA",
   "license": "MIT",
+  "homepage": "https://paultendo.github.io/namespace-guard/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paultendo/namespace-guard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paultendo/namespace-guard/issues"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
