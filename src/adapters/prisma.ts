@@ -1,4 +1,4 @@
-import type { NamespaceAdapter, NamespaceSource } from "../index";
+import type { NamespaceAdapter, NamespaceSource, FindOneOptions } from "../index";
 
 type PrismaClient = {
   [key: string]: {
@@ -31,7 +31,7 @@ type PrismaClient = {
  */
 export function createPrismaAdapter(prisma: PrismaClient): NamespaceAdapter {
   return {
-    async findOne(source: NamespaceSource, value: string) {
+    async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const model = prisma[source.name];
       if (!model) {
         throw new Error(`Prisma model "${source.name}" not found`);
@@ -39,8 +39,12 @@ export function createPrismaAdapter(prisma: PrismaClient): NamespaceAdapter {
 
       const idColumn = source.idColumn ?? "id";
 
+      const whereValue = options?.caseInsensitive
+        ? { equals: value, mode: "insensitive" as const }
+        : value;
+
       return model.findFirst({
-        where: { [source.column]: value },
+        where: { [source.column]: whereValue },
         select: {
           [idColumn]: true,
           ...(source.scopeKey ? { [source.scopeKey]: true } : {}),

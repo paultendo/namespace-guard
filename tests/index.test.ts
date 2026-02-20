@@ -237,11 +237,13 @@ describe("collision detection", () => {
     expect(adapter.findOne).toHaveBeenCalledTimes(2);
     expect(adapter.findOne).toHaveBeenCalledWith(
       defaultSources[0],
-      "test-slug"
+      "test-slug",
+      undefined
     );
     expect(adapter.findOne).toHaveBeenCalledWith(
       defaultSources[1],
-      "test-slug"
+      "test-slug",
+      undefined
     );
   });
 });
@@ -869,6 +871,134 @@ describe("suggestions", () => {
     if (!result.available) {
       expect(result.suggestions).toBeUndefined();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Case-insensitive matching
+// ---------------------------------------------------------------------------
+describe("caseInsensitive option", () => {
+  it("passes caseInsensitive option to adapter", async () => {
+    const adapter = createMockAdapter({});
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, caseInsensitive: true },
+      adapter
+    );
+
+    await guard.check("test-slug");
+
+    expect(adapter.findOne).toHaveBeenCalledWith(
+      defaultSources[0],
+      "test-slug",
+      { caseInsensitive: true }
+    );
+    expect(adapter.findOne).toHaveBeenCalledWith(
+      defaultSources[1],
+      "test-slug",
+      { caseInsensitive: true }
+    );
+  });
+
+  it("does not pass options when caseInsensitive is not set", async () => {
+    const adapter = createMockAdapter({});
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      adapter
+    );
+
+    await guard.check("test-slug");
+
+    expect(adapter.findOne).toHaveBeenCalledWith(
+      defaultSources[0],
+      "test-slug",
+      undefined
+    );
+  });
+
+  it("detects collisions with case-insensitive matching", async () => {
+    const findOne = vi.fn(async (source: NamespaceSource, value: string) => {
+      // Simulate case-insensitive DB match
+      if (source.name === "user" && value === "sarah") {
+        return { id: "u1" };
+      }
+      return null;
+    });
+
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, caseInsensitive: true },
+      { findOne }
+    );
+
+    const result = await guard.check("Sarah"); // normalizes to "sarah"
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("taken");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cache
+// ---------------------------------------------------------------------------
+describe("cache", () => {
+  it("caches adapter results on subsequent calls", async () => {
+    const adapter = createMockAdapter({
+      user: { sarah: { id: "u1" } },
+    });
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      adapter
+    );
+
+    await guard.check("sarah");
+    await guard.check("sarah");
+
+    // Should only call adapter once per source for the same value
+    // First check: 2 calls (user + organization), second check: 0 (cached)
+    expect(adapter.findOne).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cache when cache is not configured", async () => {
+    const adapter = createMockAdapter({
+      user: { sarah: { id: "u1" } },
+    });
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      adapter
+    );
+
+    await guard.check("sarah");
+    await guard.check("sarah");
+
+    // Without cache, adapter is called every time
+    expect(adapter.findOne).toHaveBeenCalledTimes(4);
+  });
+
+  it("clearCache resets cached entries", async () => {
+    const adapter = createMockAdapter({
+      user: { sarah: { id: "u1" } },
+    });
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, cache: { ttl: 5000 } },
+      adapter
+    );
+
+    await guard.check("sarah");
+    guard.clearCache();
+    await guard.check("sarah");
+
+    // 2 calls for first check + 2 calls after cache clear
+    expect(adapter.findOne).toHaveBeenCalledTimes(4);
+  });
+
+  it("clearCache is a no-op when cache is not configured", () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    // Should not throw
+    guard.clearCache();
   });
 });
 

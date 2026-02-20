@@ -1,8 +1,9 @@
-import type { NamespaceAdapter, NamespaceSource } from "../index";
+import type { NamespaceAdapter, NamespaceSource, FindOneOptions } from "../index";
 
 type KnexQueryBuilder = {
   select: (columns: string[]) => KnexQueryBuilder;
   where: (column: string, value: unknown) => KnexQueryBuilder;
+  whereRaw: (raw: string, bindings: unknown[]) => KnexQueryBuilder;
   first: () => Promise<Record<string, unknown> | undefined>;
 };
 
@@ -35,7 +36,7 @@ type KnexInstance = {
  */
 export function createKnexAdapter(knex: KnexInstance): NamespaceAdapter {
   return {
-    async findOne(source: NamespaceSource, value: string) {
+    async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const idColumn = source.idColumn ?? "id";
 
       const columns =
@@ -43,10 +44,15 @@ export function createKnexAdapter(knex: KnexInstance): NamespaceAdapter {
           ? [idColumn, source.scopeKey]
           : [idColumn];
 
-      const row = await knex(source.name)
-        .select(columns)
-        .where(source.column, value)
-        .first();
+      let query = knex(source.name).select(columns);
+
+      if (options?.caseInsensitive) {
+        query = query.whereRaw(`LOWER("${source.column}") = LOWER(?)`, [value]);
+      } else {
+        query = query.where(source.column, value);
+      }
+
+      const row = await query.first();
 
       return row ?? null;
     },

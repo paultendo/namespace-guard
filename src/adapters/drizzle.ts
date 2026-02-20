@@ -1,4 +1,4 @@
-import type { NamespaceAdapter, NamespaceSource } from "../index";
+import type { NamespaceAdapter, NamespaceSource, FindOneOptions } from "../index";
 
 type DrizzleTable = {
   [key: string]: unknown;
@@ -15,7 +15,14 @@ type DrizzleDb = {
   };
 };
 
-type EqFn = (column: unknown, value: unknown) => unknown;
+type ComparisonFn = (column: unknown, value: unknown) => unknown;
+
+type DrizzleAdapterOptions = {
+  /** The `eq` function from drizzle-orm */
+  eq: ComparisonFn;
+  /** The `ilike` function from drizzle-orm (required when using caseInsensitive) */
+  ilike?: ComparisonFn;
+};
 
 /**
  * Create a namespace adapter for Drizzle ORM
@@ -43,10 +50,14 @@ type EqFn = (column: unknown, value: unknown) => unknown;
 export function createDrizzleAdapter(
   db: DrizzleDb,
   tables: Record<string, DrizzleTable>,
-  eq: EqFn
+  eqOrOptions: ComparisonFn | DrizzleAdapterOptions
 ): NamespaceAdapter {
+  const ops = typeof eqOrOptions === "function"
+    ? { eq: eqOrOptions }
+    : eqOrOptions;
+
   return {
-    async findOne(source: NamespaceSource, value: string) {
+    async findOne(source: NamespaceSource, value: string, findOptions?: FindOneOptions) {
       const queryHandler = db.query[source.name];
       if (!queryHandler) {
         throw new Error(`Drizzle query handler for "${source.name}" not found. Make sure relational queries are set up.`);
@@ -64,8 +75,16 @@ export function createDrizzleAdapter(
 
       const idColumn = source.idColumn ?? "id";
 
+      let compareFn = ops.eq;
+      if (findOptions?.caseInsensitive) {
+        if (!ops.ilike) {
+          throw new Error("caseInsensitive requires passing ilike to createDrizzleAdapter");
+        }
+        compareFn = ops.ilike;
+      }
+
       return queryHandler.findFirst({
-        where: eq(column, value),
+        where: compareFn(column, value),
         columns: {
           [idColumn]: true,
           ...(source.scopeKey && source.scopeKey !== idColumn ? { [source.scopeKey]: true } : {}),

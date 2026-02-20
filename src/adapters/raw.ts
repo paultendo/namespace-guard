@@ -1,4 +1,4 @@
-import type { NamespaceAdapter, NamespaceSource } from "../index";
+import type { NamespaceAdapter, NamespaceSource, FindOneOptions } from "../index";
 
 type QueryExecutor = (
   sql: string,
@@ -33,14 +33,18 @@ type QueryExecutor = (
  */
 export function createRawAdapter(execute: QueryExecutor): NamespaceAdapter {
   return {
-    async findOne(source: NamespaceSource, value: string) {
+    async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const idColumn = source.idColumn ?? "id";
 
       const columns = source.scopeKey && source.scopeKey !== idColumn
         ? `"${idColumn}", "${source.scopeKey}"`
         : `"${idColumn}"`;
 
-      const sql = `SELECT ${columns} FROM "${source.name}" WHERE "${source.column}" = $1 LIMIT 1`;
+      const whereClause = options?.caseInsensitive
+        ? `LOWER("${source.column}") = LOWER($1)`
+        : `"${source.column}" = $1`;
+
+      const sql = `SELECT ${columns} FROM "${source.name}" WHERE ${whereClause} LIMIT 1`;
 
       const result = await execute(sql, [value]);
       return result.rows[0] ?? null;

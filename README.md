@@ -430,52 +430,129 @@ normalize("  @Sarah  "); // "sarah"
 normalize("ACME-Corp"); // "acme-corp"
 ```
 
-## Real-World Example
+## Case-Insensitive Matching
 
-Here's how you might use this in a signup flow:
+By default, slug lookups are case-sensitive. Enable case-insensitive matching to catch collisions regardless of stored casing:
 
 ```typescript
-// In your API route / server action
-async function createUser(handle: string, email: string) {
-  // Normalize first
-  const normalizedHandle = guard.normalize(handle);
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  caseInsensitive: true,
+}, adapter);
+```
 
-  // Check availability (will also validate format)
-  const result = await guard.check(normalizedHandle);
+Each adapter handles this differently:
+- **Prisma**: Uses `mode: "insensitive"` on the where clause
+- **Drizzle**: Uses `ilike` instead of `eq` (pass `ilike` to the adapter: `createDrizzleAdapter(db, tables, { eq, ilike })`)
+- **Kysely**: Uses `ilike` operator
+- **Knex**: Uses `LOWER()` in a raw where clause
+- **Raw SQL**: Wraps both sides in `LOWER()`
 
-  if (!result.available) {
-    return { error: result.message };
-  }
+## Caching
 
-  // Safe to create
+Enable in-memory caching to reduce database calls during rapid checks (e.g., live form validation, suggestion generation):
+
+```typescript
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  cache: {
+    ttl: 5000, // milliseconds (default: 5000)
+  },
+}, adapter);
+
+// Manually clear the cache after writes
+guard.clearCache();
+```
+
+## Framework Integration
+
+### Next.js (Server Actions)
+
+```typescript
+// lib/guard.ts
+import { createNamespaceGuard } from "namespace-guard";
+import { createPrismaAdapter } from "namespace-guard/adapters/prisma";
+import { prisma } from "./db";
+
+export const guard = createNamespaceGuard({
+  reserved: ["admin", "api", "settings"],
+  sources: [
+    { name: "user", column: "handle", scopeKey: "id" },
+    { name: "organization", column: "slug", scopeKey: "id" },
+  ],
+  suggest: {},
+}, createPrismaAdapter(prisma));
+
+// app/signup/actions.ts
+"use server";
+
+import { guard } from "@/lib/guard";
+
+export async function checkHandle(handle: string) {
+  return guard.check(handle);
+}
+
+export async function createUser(handle: string, email: string) {
+  const result = await guard.check(handle);
+  if (!result.available) return { error: result.message };
+
   const user = await prisma.user.create({
-    data: { handle: normalizedHandle, email },
+    data: { handle: guard.normalize(handle), email },
   });
-
   return { user };
 }
 ```
 
-Or in an update flow with ownership scoping:
+### Express Middleware
 
 ```typescript
-async function updateUserHandle(userId: string, newHandle: string) {
-  const normalized = guard.normalize(newHandle);
+import express from "express";
+import { guard } from "./lib/guard";
 
-  // Pass userId to avoid collision with own current handle
-  const result = await guard.check(normalized, { id: userId });
+const app = express();
 
-  if (!result.available) {
-    return { error: result.message };
-  }
+// Reusable middleware
+function validateSlug(req, res, next) {
+  const slug = req.body.handle || req.body.slug;
+  if (!slug) return res.status(400).json({ error: "Slug is required" });
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { handle: normalized },
+  guard.check(slug, { id: req.user?.id }).then((result) => {
+    if (!result.available) return res.status(409).json(result);
+    req.normalizedSlug = guard.normalize(slug);
+    next();
   });
-
-  return { success: true };
 }
+
+app.post("/api/users", validateSlug, async (req, res) => {
+  const user = await db.user.create({ handle: req.normalizedSlug, ... });
+  res.json({ user });
+});
+```
+
+### tRPC
+
+```typescript
+import { z } from "zod";
+import { router, protectedProcedure } from "./trpc";
+import { guard } from "./lib/guard";
+
+export const namespaceRouter = router({
+  check: protectedProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ input, ctx }) => {
+      return guard.check(input.slug, { id: ctx.user.id });
+    }),
+
+  claim: protectedProcedure
+    .input(z.object({ slug: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await guard.assertAvailable(input.slug, { id: ctx.user.id });
+      return ctx.db.user.update({
+        where: { id: ctx.user.id },
+        data: { handle: guard.normalize(input.slug) },
+      });
+    }),
+});
 ```
 
 ## TypeScript
@@ -489,6 +566,7 @@ import type {
   NamespaceAdapter,
   NamespaceGuard,
   CheckResult,
+  FindOneOptions,
   OwnershipScope,
 } from "namespace-guard";
 ```

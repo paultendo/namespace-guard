@@ -16,6 +16,8 @@ export type NamespaceConfig = {
   sources: NamespaceSource[];
   /** Regex pattern for valid identifiers (default: lowercase alphanumeric + hyphens, 2-30 chars) */
   pattern?: RegExp;
+  /** Use case-insensitive matching in database queries (default: false) */
+  caseInsensitive?: boolean;
   /** Custom error messages */
   messages?: {
     invalid?: string;
@@ -31,12 +33,23 @@ export type NamespaceConfig = {
     /** Max suggestions to return (default: 3) */
     max?: number;
   };
+  /** Enable in-memory caching of adapter lookups */
+  cache?: {
+    /** Time-to-live in milliseconds (default: 5000) */
+    ttl?: number;
+  };
+};
+
+export type FindOneOptions = {
+  /** Use case-insensitive matching */
+  caseInsensitive?: boolean;
 };
 
 export type NamespaceAdapter = {
   findOne: (
     source: NamespaceSource,
-    value: string
+    value: string,
+    options?: FindOneOptions
   ) => Promise<Record<string, unknown> | null>;
 };
 
@@ -109,6 +122,32 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
 
   const validators = config.validators ?? [];
 
+  // In-memory cache for adapter lookups
+  const cacheEnabled = !!config.cache;
+  const cacheTtl = config.cache?.ttl ?? 5000;
+  const cacheMap = new Map<string, { value: Record<string, unknown> | null; expires: number }>();
+
+  function cachedFindOne(
+    source: NamespaceSource,
+    value: string,
+    options?: FindOneOptions
+  ): Promise<Record<string, unknown> | null> {
+    if (!cacheEnabled) return adapter.findOne(source, value, options);
+
+    const key = `${source.name}:${value}:${options?.caseInsensitive ? "i" : "s"}`;
+    const now = Date.now();
+    const cached = cacheMap.get(key);
+
+    if (cached && cached.expires > now) {
+      return Promise.resolve(cached.value);
+    }
+
+    return adapter.findOne(source, value, options).then((result) => {
+      cacheMap.set(key, { value: result, expires: now + cacheTtl });
+      return result;
+    });
+  }
+
   function getReservedMessage(category: string): string {
     const rm = configMessages.reserved;
     if (typeof rm === "string") return rm;
@@ -168,8 +207,12 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
     }
 
     // Check each source for collisions
+    const findOptions: FindOneOptions | undefined = config.caseInsensitive
+      ? { caseInsensitive: true }
+      : undefined;
+
     const checks = config.sources.map(async (source) => {
-      const existing = await adapter.findOne(source, normalized);
+      const existing = await cachedFindOne(source, normalized, findOptions);
       if (!existing) return null;
 
       // Check if caller owns this record
@@ -252,12 +295,20 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
     return Object.fromEntries(entries);
   }
 
+  /**
+   * Clear the in-memory cache (no-op if caching is not enabled)
+   */
+  function clearCache(): void {
+    cacheMap.clear();
+  }
+
   return {
     normalize,
     validateFormat,
     check,
     assertAvailable,
     checkMany,
+    clearCache,
   };
 }
 

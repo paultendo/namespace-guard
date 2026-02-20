@@ -1,8 +1,9 @@
-import type { NamespaceAdapter, NamespaceSource } from "../index";
+import type { NamespaceAdapter, NamespaceSource, FindOneOptions } from "../index";
 
 type KyselyQueryBuilder = {
   select: (columns: string[]) => KyselyQueryBuilder;
   where: (column: string, operator: string, value: unknown) => KyselyQueryBuilder;
+  whereRaw: (raw: unknown) => KyselyQueryBuilder;
   limit: (limit: number) => KyselyQueryBuilder;
   executeTakeFirst: () => Promise<Record<string, unknown> | undefined>;
 };
@@ -36,7 +37,7 @@ type KyselyDb = {
  */
 export function createKyselyAdapter(db: KyselyDb): NamespaceAdapter {
   return {
-    async findOne(source: NamespaceSource, value: string) {
+    async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const idColumn = source.idColumn ?? "id";
 
       const columns =
@@ -44,12 +45,17 @@ export function createKyselyAdapter(db: KyselyDb): NamespaceAdapter {
           ? [idColumn, source.scopeKey]
           : [idColumn];
 
-      const row = await db
+      let query = db
         .selectFrom(source.name)
-        .select(columns)
-        .where(source.column, "=", value)
-        .limit(1)
-        .executeTakeFirst();
+        .select(columns);
+
+      if (options?.caseInsensitive) {
+        query = query.where(source.column, "ilike", value);
+      } else {
+        query = query.where(source.column, "=", value);
+      }
+
+      const row = await query.limit(1).executeTakeFirst();
 
       return row ?? null;
     },

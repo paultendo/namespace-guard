@@ -87,6 +87,19 @@ describe("createPrismaAdapter", () => {
       select: { pk: true },
     });
   });
+
+  it("uses case-insensitive mode when option is set", async () => {
+    const findFirst = vi.fn().mockResolvedValue({ id: "u1" });
+    const prisma = { user: { findFirst } };
+
+    const adapter = createPrismaAdapter(prisma);
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { handle: { equals: "sarah", mode: "insensitive" } },
+      select: { id: true },
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -292,6 +305,18 @@ describe("createRawAdapter", () => {
       ["sarah"]
     );
   });
+
+  it("uses LOWER() for case-insensitive matching", async () => {
+    const execute = vi.fn().mockResolvedValue({ rows: [{ id: "u1" }] });
+    const adapter = createRawAdapter(execute);
+
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(execute).toHaveBeenCalledWith(
+      'SELECT "id" FROM "users" WHERE LOWER("handle") = LOWER($1) LIMIT 1',
+      ["sarah"]
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -374,6 +399,15 @@ describe("createKyselyAdapter", () => {
 
     expect(builder.select).toHaveBeenCalledWith(["pk"]);
   });
+
+  it("uses ilike for case-insensitive matching", async () => {
+    const { db, builder } = createMockKyselyDb({ id: "u1" });
+    const adapter = createKyselyAdapter(db);
+
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(builder.where).toHaveBeenCalledWith("handle", "ilike", "sarah");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -390,6 +424,7 @@ describe("createKnexAdapter", () => {
     const builder = {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
+      whereRaw: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue(result),
     };
     const knex = vi.fn().mockReturnValue(builder) as any;
@@ -453,5 +488,18 @@ describe("createKnexAdapter", () => {
     await adapter.findOne(sourceCustomId, "sarah");
 
     expect(builder.select).toHaveBeenCalledWith(["pk"]);
+  });
+
+  it("uses whereRaw with LOWER() for case-insensitive matching", async () => {
+    const { knex, builder } = createMockKnex({ id: "u1" });
+    const adapter = createKnexAdapter(knex);
+
+    await adapter.findOne(source, "sarah", { caseInsensitive: true });
+
+    expect(builder.whereRaw).toHaveBeenCalledWith(
+      'LOWER("handle") = LOWER(?)',
+      ["sarah"]
+    );
+    expect(builder.where).not.toHaveBeenCalled();
   });
 });
