@@ -427,10 +427,44 @@
       font-weight: 700;
       margin-bottom: 1.25rem;
     }
+    .adapter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      padding: 0.35rem;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-bottom: none;
+      border-radius: 0.75rem 0.75rem 0 0;
+    }
+    .adapter-tab {
+      padding: 0.4rem 0.85rem;
+      border-radius: 0.5rem;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink-muted);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .adapter-tab:hover {
+      color: var(--foreground);
+      background: rgba(255,255,255,0.04);
+    }
+    .adapter-tab[aria-selected="true"] {
+      color: var(--foreground);
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .adapter-panel { display: none; }
+    .adapter-panel.active { display: block; }
     .code-block {
       background: rgba(0,0,0,0.4);
       border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 0.75rem;
+      border-radius: 0 0 0.75rem 0.75rem;
       padding: 1.25rem 1.5rem;
       overflow-x: auto;
       font-family: var(--font-mono);
@@ -446,6 +480,7 @@
     .code-block .cm { color: #546e7a; font-style: italic; }
     .code-block .type { color: #ffcb6b; }
     .code-block .br { color: rgba(255,255,255,0.3); }
+    .code-block .var { color: #f78c6c; }
 
     /* Footer */
     footer {
@@ -649,8 +684,19 @@
     <!-- Code example -->
     <section class="code-section" aria-labelledby="code-heading">
       <h2 id="code-heading" class="display-type">Use it in your project</h2>
-      <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+      <div role="tablist" class="adapter-tabs" aria-label="Choose your database adapter">
+        <button role="tab" class="adapter-tab" aria-selected="true" aria-controls="panel-prisma" id="tab-prisma">Prisma</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-drizzle" id="tab-drizzle">Drizzle</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-kysely" id="tab-kysely">Kysely</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-knex" id="tab-knex">Knex</button>
+        <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-raw" id="tab-raw">Raw SQL</button>
+      </div>
+      <div id="panel-prisma" role="tabpanel" aria-labelledby="tab-prisma" class="adapter-panel active">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
 <span class="kw">import</span> <span class="br">{</span> <span class="fn">createPrismaAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/prisma"</span>;
+<span class="kw">import</span> <span class="br">{</span> PrismaClient <span class="br">}</span> <span class="kw">from</span> <span class="str">"@prisma/client"</span>;
+
+<span class="kw">const</span> prisma = <span class="kw">new</span> <span class="fn">PrismaClient</span><span class="br">()</span>;
 
 <span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
   reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
@@ -664,13 +710,115 @@
 <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
 
 <span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
-  <span class="cm">// Create the org</span>
+  <span class="cm">// Safe to create</span>
 <span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;
-  <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>;
-  <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
 <span class="br">}</span></code></pre>
+      </div>
+      <div id="panel-drizzle" role="tabpanel" aria-labelledby="tab-drizzle" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createDrizzleAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/drizzle"</span>;
+<span class="kw">import</span> <span class="br">{</span> eq <span class="br">}</span> <span class="kw">from</span> <span class="str">"drizzle-orm"</span>;
+<span class="kw">import</span> <span class="br">{</span> db <span class="br">}</span> <span class="kw">from</span> <span class="str">"./db"</span>;
+<span class="kw">import</span> <span class="br">{</span> users, organizations <span class="br">}</span> <span class="kw">from</span> <span class="str">"./schema"</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createDrizzleAdapter</span><span class="br">(</span>db, <span class="br">{</span> users, organizations <span class="br">}</span>, eq<span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
+
+<span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
+  <span class="cm">// Safe to create</span>
+<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+<span class="br">}</span></code></pre>
+      </div>
+      <div id="panel-kysely" role="tabpanel" aria-labelledby="tab-kysely" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createKyselyAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/kysely"</span>;
+<span class="kw">import</span> <span class="br">{</span> Kysely, PostgresDialect <span class="br">}</span> <span class="kw">from</span> <span class="str">"kysely"</span>;
+
+<span class="kw">const</span> db = <span class="kw">new</span> <span class="fn">Kysely</span><span class="br">(</span><span class="br">{</span> dialect: <span class="kw">new</span> <span class="fn">PostgresDialect</span><span class="br">(</span><span class="br">{</span> pool <span class="br">}</span><span class="br">)</span> <span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, <span class="fn">createKyselyAdapter</span><span class="br">(</span>db<span class="br">)</span><span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
+
+<span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
+  <span class="cm">// Safe to create</span>
+<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+<span class="br">}</span></code></pre>
+      </div>
+      <div id="panel-knex" role="tabpanel" aria-labelledby="tab-knex" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createKnexAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/knex"</span>;
+<span class="kw">import</span> Knex <span class="kw">from</span> <span class="str">"knex"</span>;
+
+<span class="kw">const</span> knex = <span class="fn">Knex</span><span class="br">(</span><span class="br">{</span> client: <span class="str">"pg"</span>, connection: process.env.<span class="var">DATABASE_URL</span> <span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, <span class="fn">createKnexAdapter</span><span class="br">(</span>knex<span class="br">)</span><span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
+
+<span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
+  <span class="cm">// Safe to create</span>
+<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+<span class="br">}</span></code></pre>
+      </div>
+      <div id="panel-raw" role="tabpanel" aria-labelledby="tab-raw" class="adapter-panel">
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="fn">createRawAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/raw"</span>;
+<span class="kw">import</span> <span class="br">{</span> Pool <span class="br">}</span> <span class="kw">from</span> <span class="str">"pg"</span>;
+
+<span class="kw">const</span> pool = <span class="kw">new</span> <span class="fn">Pool</span><span class="br">()</span>;
+<span class="kw">const</span> adapter = <span class="fn">createRawAdapter</span><span class="br">(</span><span class="br">(</span>sql, params<span class="br">)</span> <span class="kw">=&gt;</span> pool.<span class="fn">query</span><span class="br">(</span>sql, params<span class="br">)</span><span class="br">)</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">"users"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">"organizations"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  suggest: <span class="br">{</span> max: <span class="type">3</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
+
+<span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
+  <span class="cm">// Safe to create</span>
+<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
+  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-2", "acme-corp-3"]</span>
+<span class="br">}</span></code></pre>
+      </div>
     </section>
   </main>
 
@@ -684,7 +832,7 @@
       <a href="https://www.npmjs.com/package/namespace-guard" target="_blank" rel="noopener">npm</a>
       <span style="color: rgba(188,201,223,0.3)">MIT License</span>
     </div>
-    <div class="footer-author">Built by <a href="https://github.com/paultendo" target="_blank" rel="noopener" style="color: rgba(188,201,223,0.6); text-decoration: none;">Paul Wood FRSA</a></div>
+    <div class="footer-author">Built by <a href="https://github.com/paultendo" target="_blank" rel="noopener" style="color: rgba(188,201,223,0.6); text-decoration: none;">Paul Wood FRSA (@paultendo)</a></div>
   </footer>
 
   <script type="module">
@@ -914,6 +1062,31 @@
         checkSlug(pill.dataset.suggestion);
         input.focus();
       }
+    });
+
+    // Adapter tabs
+    const tabList = document.querySelector("[role=tablist]");
+    const tabs = tabList.querySelectorAll("[role=tab]");
+    const panels = document.querySelectorAll("[role=tabpanel]");
+
+    function switchTab(tab) {
+      tabs.forEach(t => t.setAttribute("aria-selected", "false"));
+      panels.forEach(p => p.classList.remove("active"));
+      tab.setAttribute("aria-selected", "true");
+      document.getElementById(tab.getAttribute("aria-controls")).classList.add("active");
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => switchTab(tab));
+      tab.addEventListener("keydown", (e) => {
+        const idx = Array.from(tabs).indexOf(tab);
+        let next;
+        if (e.key === "ArrowRight") next = tabs[(idx + 1) % tabs.length];
+        else if (e.key === "ArrowLeft") next = tabs[(idx - 1 + tabs.length) % tabs.length];
+        else if (e.key === "Home") next = tabs[0];
+        else if (e.key === "End") next = tabs[tabs.length - 1];
+        if (next) { e.preventDefault(); next.focus(); switchTab(next); }
+      });
     });
 
     // Copy button
