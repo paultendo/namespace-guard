@@ -838,7 +838,9 @@
 
     function debounce(fn, ms) {
       let timer;
-      return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+      const debounced = (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+      debounced.cancel = () => clearTimeout(timer);
+      return debounced;
     }
 
     const iconCheck = `<svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="#1ed760" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11.5 14.5 16 10"/></svg>`;
@@ -874,20 +876,25 @@
       resultEl.innerHTML = `<div class="result-card ${cls}">${icon}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong>${extra}<div class="result-msg">${escapeHtml(result.message)}</div>${suggestionsHtml}</div></div>`;
     }
 
+    let lastRendered = "";
     async function checkSlug(value) {
-      if (!value.trim()) { renderResult("", null); return; }
+      if (!value.trim()) { lastRendered = ""; renderResult("", null); return; }
+      const normalized = normalize(value);
+      if (normalized === lastRendered) return;
       const result = await guard.check(value);
+      lastRendered = normalized;
       renderResult(value, result);
     }
 
     const debouncedCheck = debounce(checkSlug, 300);
     input.addEventListener("input", (e) => debouncedCheck(e.target.value));
-    form.addEventListener("submit", (e) => { e.preventDefault(); checkSlug(input.value); });
+    form.addEventListener("submit", (e) => { e.preventDefault(); debouncedCheck.cancel(); checkSlug(input.value); });
 
     // Example pills
     document.querySelectorAll("[data-slug]").forEach(btn => {
       btn.addEventListener("click", () => {
         input.value = btn.dataset.slug;
+        lastRendered = "";
         checkSlug(btn.dataset.slug);
         input.focus();
       });
@@ -898,6 +905,7 @@
       const pill = e.target.closest("[data-suggestion]");
       if (pill) {
         input.value = pill.dataset.suggestion;
+        lastRendered = "";
         checkSlug(pill.dataset.suggestion);
         input.focus();
       }
