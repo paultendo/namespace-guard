@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-02-22
+
+### Added
+- `validateFormatOnly()` method: validates format and purely-numeric restriction without checking reserved names or querying the database, for instant client-side feedback
+- `CheckManyOptions` exported type: `checkMany()` now accepts `{ skipSuggestions?: boolean }` (default: `true`) to opt in to suggestions per batch call
+
+### Changed
+- Removed unnecessary type casts in config message parsing
+- Expanded API reference in README for `validateFormat`, `clearCache`, `cacheStats`, `normalize`
+- Drizzle adapter docs now note `db.query` (relational query API) requirement
+- Raw SQL adapter docs now include MySQL2 and better-sqlite3 wrapper examples
+
 ## [0.10.0] - 2026-02-22
 
 ### Added

@@ -92,6 +92,8 @@ const adapter = createPrismaAdapter(prisma);
 
 ### Drizzle
 
+> **Note:** The Drizzle adapter uses `db.query` (the relational query API). Make sure your Drizzle client is set up with `drizzle(client, { schema })` so that `db.query.<tableName>` is available.
+
 ```typescript
 import { eq } from "drizzle-orm";
 import { createDrizzleAdapter } from "namespace-guard/adapters/drizzle";
@@ -163,7 +165,9 @@ import { User, Organization } from "./models";
 const adapter = createMongooseAdapter({ user: User, organization: Organization });
 ```
 
-### Raw SQL (pg, mysql2, etc.)
+### Raw SQL (pg, mysql2, better-sqlite3, etc.)
+
+The raw adapter generates PostgreSQL-style SQL (`$1` placeholders, double-quoted identifiers). For pg this works directly. For MySQL or SQLite, translate the parameter syntax in your executor wrapper.
 
 ```typescript
 import { Pool } from "pg";
@@ -171,6 +175,34 @@ import { createRawAdapter } from "namespace-guard/adapters/raw";
 
 const pool = new Pool();
 const adapter = createRawAdapter((sql, params) => pool.query(sql, params));
+```
+
+**MySQL2 wrapper** (translates `$1` to `?` and `"col"` to `` `col` ``):
+
+```typescript
+import mysql from "mysql2/promise";
+import { createRawAdapter } from "namespace-guard/adapters/raw";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL });
+const adapter = createRawAdapter(async (sql, params) => {
+  const mysqlSql = sql.replace(/\$\d+/g, "?").replace(/"/g, "`");
+  const [rows] = await pool.execute(mysqlSql, params);
+  return { rows: rows as Record<string, unknown>[] };
+});
+```
+
+**better-sqlite3 wrapper** (translates `$1` to `?` and strips identifier quotes):
+
+```typescript
+import Database from "better-sqlite3";
+import { createRawAdapter } from "namespace-guard/adapters/raw";
+
+const db = new Database("app.db");
+const adapter = createRawAdapter(async (sql, params) => {
+  const sqliteSql = sql.replace(/\$\d+/g, "?").replace(/"/g, "");
+  const rows = db.prepare(sqliteSql).all(...params);
+  return { rows: rows as Record<string, unknown>[] };
+});
 ```
 
 ## Configuration
@@ -623,9 +655,16 @@ Check if an identifier is available.
 
 ---
 
-### `guard.checkMany(identifiers, scope?)`
+### `guard.checkMany(identifiers, scope?, options?)`
 
-Check multiple identifiers in parallel.
+Check multiple identifiers in parallel. Suggestions are skipped by default for performance.
+
+**Parameters:**
+- `identifiers` - Array of slugs/handles to check
+- `scope` - Optional ownership scope applied to all checks
+- `options` - Optional `{ skipSuggestions?: boolean }` (default: `true`)
+
+Pass `{ skipSuggestions: false }` to include suggestions for taken identifiers.
 
 **Returns:** `Record<string, CheckResult>`
 
@@ -639,9 +678,37 @@ Same as `check()`, but throws an `Error` if not available.
 
 ### `guard.validateFormat(identifier)`
 
-Validate format only (no database queries).
+Validate format, purely-numeric restriction, and reserved name status without querying the database.
 
-**Returns:** Error message string if invalid, `null` if valid.
+**Returns:** Error message string if invalid or reserved, `null` if OK.
+
+---
+
+### `guard.validateFormatOnly(identifier)`
+
+Validate only the identifier's format and purely-numeric restriction. Does not check reserved names or query the database. Useful for instant client-side feedback on input shape.
+
+**Returns:** Error message string if the format is invalid, `null` if OK.
+
+---
+
+### `guard.normalize(identifier)`
+
+Convenience re-export of the standalone `normalize()` function. Note: always applies NFKC normalization regardless of the guard's `normalizeUnicode` setting. Use `normalize(id, { unicode: false })` directly if you need to skip NFKC.
+
+---
+
+### `guard.clearCache()`
+
+Clear the in-memory cache and reset hit/miss counters. No-op if caching is not enabled.
+
+---
+
+### `guard.cacheStats()`
+
+Get cache performance statistics.
+
+**Returns:** `{ size: number; hits: number; misses: number }`
 
 ---
 
@@ -813,6 +880,7 @@ import {
   type OwnershipScope,
   type SuggestStrategyName,
   type SkeletonOptions,
+  type CheckManyOptions,
 } from "namespace-guard";
 ```
 

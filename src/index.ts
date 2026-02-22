@@ -96,6 +96,12 @@ export type CheckResult =
       suggestions?: string[];
     };
 
+/** Options for `checkMany()`. */
+export type CheckManyOptions = {
+  /** Skip suggestion generation for taken identifiers (default: `true`). */
+  skipSuggestions?: boolean;
+};
+
 /** Options for the `skeleton()` and `areConfusable()` functions. */
 export type SkeletonOptions = {
   /** Confusable character map to use.
@@ -1860,7 +1866,7 @@ function buildReservedMap(
  *
  * @param config - Reserved names, data sources, validation pattern, and optional features
  * @param adapter - Database adapter implementing the `findOne` lookup (use a built-in adapter or write your own)
- * @returns A guard with `check`, `checkMany`, `assertAvailable`, `validateFormat`, `clearCache`, and `cacheStats` methods
+ * @returns A guard with `check`, `checkMany`, `assertAvailable`, `validateFormat`, `validateFormatOnly`, `clearCache`, and `cacheStats` methods
  *
  * @example
  * ```ts
@@ -1890,15 +1896,14 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   const pattern = config.pattern ?? DEFAULT_PATTERN;
   const configMessages = config.messages ?? {};
   const defaultReservedMsg = DEFAULT_MESSAGES.reserved;
-  const invalidMsg = (configMessages.invalid as string) ?? DEFAULT_MESSAGES.invalid;
-  const takenMsg = (configMessages.taken as ((s: string) => string)) ?? DEFAULT_MESSAGES.taken;
+  const invalidMsg = configMessages.invalid ?? DEFAULT_MESSAGES.invalid;
+  const takenMsg = configMessages.taken ?? DEFAULT_MESSAGES.taken;
 
   const validators = config.validators ?? [];
   const normalizeOpts = { unicode: config.normalizeUnicode ?? true };
   const allowPurelyNumeric = config.allowPurelyNumeric ?? true;
   const purelyNumericMsg =
-    (configMessages as Record<string, unknown>).purelyNumeric as string ??
-    "Identifiers cannot be purely numeric.";
+    configMessages.purelyNumeric ?? "Identifiers cannot be purely numeric.";
 
   // In-memory cache for adapter lookups
   const cacheEnabled = !!config.cache;
@@ -1948,7 +1953,8 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Validate an identifier's format and reserved status without querying the database.
+   * Validate an identifier's format, purely-numeric restriction, and reserved name status
+   * without querying the database.
    *
    * @param identifier - The raw identifier to validate
    * @returns An error message string if invalid/reserved, or `null` if the format is OK
@@ -1966,6 +1972,27 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
 
     if (reservedMap.has(normalized)) {
       return getReservedMessage(reservedMap.get(normalized)!);
+    }
+
+    return null;
+  }
+
+  /**
+   * Validate only the identifier's format and purely-numeric restriction,
+   * without checking reserved names or querying the database.
+   *
+   * @param identifier - The raw identifier to validate
+   * @returns An error message string if the format is invalid, or `null` if the format is OK
+   */
+  function validateFormatOnly(identifier: string): string | null {
+    const normalized = normalize(identifier, normalizeOpts);
+
+    if (!pattern.test(normalized)) {
+      return invalidMsg;
+    }
+
+    if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) {
+      return purelyNumericMsg;
     }
 
     return null;
@@ -2165,19 +2192,23 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
-   * Check multiple identifiers in parallel. Suggestions are not generated for batch checks.
+   * Check multiple identifiers in parallel.
+   * By default, suggestions are skipped for performance. Pass `{ skipSuggestions: false }` to include them.
    *
    * @param identifiers - Array of raw identifiers to check
    * @param scope - Ownership scope applied to all checks
+   * @param options - Optional settings (e.g., `{ skipSuggestions: false }` to include suggestions)
    * @returns A record mapping each identifier to its `CheckResult`
    */
   async function checkMany(
     identifiers: string[],
-    scope: OwnershipScope = {}
+    scope: OwnershipScope = {},
+    options?: CheckManyOptions
   ): Promise<Record<string, CheckResult>> {
+    const skip = options?.skipSuggestions ?? true;
     const entries = await Promise.all(
       identifiers.map(async (id) => {
-        const result = await check(id, scope, { skipSuggestions: true });
+        const result = await check(id, scope, { skipSuggestions: skip });
         return [id, result] as const;
       })
     );
@@ -2205,6 +2236,7 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   return {
     normalize,
     validateFormat,
+    validateFormatOnly,
     check,
     assertAvailable,
     checkMany,

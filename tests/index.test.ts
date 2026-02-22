@@ -119,6 +119,49 @@ describe("format validation", () => {
 });
 
 // ---------------------------------------------------------------------------
+// validateFormatOnly
+// ---------------------------------------------------------------------------
+describe("validateFormatOnly", () => {
+  it("accepts valid slugs", () => {
+    const guard = createNamespaceGuard(
+      { reserved: ["admin"], sources: defaultSources },
+      createMockAdapter({})
+    );
+    expect(guard.validateFormatOnly("sarah")).toBeNull();
+    expect(guard.validateFormatOnly("acme-corp")).toBeNull();
+  });
+
+  it("rejects invalid format", () => {
+    const guard = createNamespaceGuard(
+      { reserved: ["admin"], sources: defaultSources },
+      createMockAdapter({})
+    );
+    expect(guard.validateFormatOnly("a")).not.toBeNull();
+    expect(guard.validateFormatOnly("-bad")).not.toBeNull();
+  });
+
+  it("does NOT check reserved names", () => {
+    const guard = createNamespaceGuard(
+      { reserved: ["admin", "settings"], sources: defaultSources },
+      createMockAdapter({})
+    );
+    // validateFormat rejects reserved names
+    expect(guard.validateFormat("admin")).not.toBeNull();
+    // validateFormatOnly does not
+    expect(guard.validateFormatOnly("admin")).toBeNull();
+    expect(guard.validateFormatOnly("settings")).toBeNull();
+  });
+
+  it("rejects purely numeric when configured", () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, allowPurelyNumeric: false },
+      createMockAdapter({})
+    );
+    expect(guard.validateFormatOnly("12345")).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Reserved name blocking
 // ---------------------------------------------------------------------------
 describe("reserved names", () => {
@@ -1011,6 +1054,35 @@ describe("cache", () => {
     // Should not throw
     guard.clearCache();
   });
+
+  it("expires cached entries after TTL", async () => {
+    vi.useFakeTimers();
+    try {
+      const adapter = createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      });
+      const guard = createNamespaceGuard(
+        { sources: defaultSources, cache: { ttl: 3000 } },
+        adapter
+      );
+
+      await guard.check("sarah");
+      expect(adapter.findOne).toHaveBeenCalledTimes(2); // user + organization
+
+      // Within TTL - should use cache
+      await guard.check("sarah");
+      expect(adapter.findOne).toHaveBeenCalledTimes(2);
+
+      // Advance past TTL
+      vi.advanceTimersByTime(3001);
+
+      // After TTL - should call adapter again
+      await guard.check("sarah");
+      expect(adapter.findOne).toHaveBeenCalledTimes(4); // 2 fresh calls
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1062,6 +1134,49 @@ describe("checkMany", () => {
 
     const results = await guard.checkMany([]);
     expect(results).toEqual({});
+  });
+
+  it("includes suggestions when skipSuggestions is false", async () => {
+    const guard = createNamespaceGuard(
+      {
+        reserved: ["admin"],
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 2 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const results = await guard.checkMany(
+      ["sarah", "bob"],
+      {},
+      { skipSuggestions: false }
+    );
+    expect(results.sarah.available).toBe(false);
+    if (!results.sarah.available) {
+      expect(results.sarah.suggestions).toBeDefined();
+      expect(results.sarah.suggestions!.length).toBeGreaterThan(0);
+    }
+    expect(results.bob.available).toBe(true);
+  });
+
+  it("skips suggestions by default", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        suggest: { strategy: "sequential", max: 2 },
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    const results = await guard.checkMany(["sarah"]);
+    expect(results.sarah.available).toBe(false);
+    if (!results.sarah.available) {
+      expect(results.sarah.suggestions).toBeUndefined();
+    }
   });
 });
 
