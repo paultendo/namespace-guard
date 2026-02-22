@@ -703,7 +703,7 @@
     <div class="hero-phonetic phonetic-serif">
       <span class="pron">/neym-speys gahrd/</span>
       <span class="pos">noun</span>
-      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes &mdash; with built-in Unicode spoofing protection.</span>
+      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes - with built-in Unicode spoofing protection.</span>
     </div>
     <div class="hero-actions">
       <a href="#playground" class="btn-primary">Try it out</a>
@@ -738,7 +738,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
             Collision Detection
           </h3>
-          <p>Checks multiple database tables in parallel. Users, organisations, teams &mdash; one call covers them all, with alternative suggestions.</p>
+          <p>Checks multiple database tables in parallel. Users, organisations, teams - one call covers them all, with alternative suggestions.</p>
           <div class="example"><span class="err">"sarah"</span> &rarr; taken by <small>user</small></div>
         </div>
         <div class="glass-card how-card">
@@ -1122,7 +1122,7 @@
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>NFKC-aware confusable map</h3>
-          <p>Most libraries blindly ship Unicode TR39 mappings. We found 31 entries where TR39 and NFKC disagree &mdash; dead code that encodes the <em>wrong</em> mapping in any pipeline that normalizes first.</p>
+          <p>Most libraries blindly ship Unicode TR39 mappings. We found 31 entries where TR39 and NFKC disagree - dead code that encodes the <em>wrong</em> mapping in any pipeline that normalizes first. Need the full unfiltered map? <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP_FULL</code> (~1,400 entries) is exported for non-NFKC pipelines.</p>
           <div class="example">
             <span class="dim">// TR39 says Long S (&lsaquo;&#x17F;&rsaquo;) &rarr; &ldquo;f&rdquo;</span><br>
             <span class="dim">// NFKC says Long S &rarr; &ldquo;s&rdquo;</span> <span class="val">&larr; correct</span><br>
@@ -1132,7 +1132,7 @@
         </div>
         <div class="glass-card insight-card">
           <h3>Full Unicode script coverage</h3>
-          <p>The confusable map covers 20+ scripts from the Unicode Consortium's authoritative source. Mixed-script detection goes further &mdash; blocking Latin mixed with Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, and more.</p>
+          <p>The confusable map covers 20+ scripts from the Unicode Consortium's authoritative source. Mixed-script detection goes further, blocking Latin mixed with Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, and more.</p>
           <div class="example">
             <span class="err">&#x430;dmin</span> <span class="dim">Cyrillic &ldquo;a&rdquo; + Latin</span><br>
             <span class="err">&#x570;ello</span> <span class="dim">Armenian &ldquo;h&rdquo; + Latin</span><br>
@@ -1146,7 +1146,7 @@
         </div>
         <div class="glass-card insight-card">
           <h3>Defense in depth</h3>
-          <p>The default slug pattern <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">/^[a-z0-9][a-z0-9-]*$/</code> already blocks non-ASCII. The confusable map and mixed-script detection protect apps with permissive patterns that allow Unicode identifiers &mdash; or serve as a second line of defense if a format regex is misconfigured.</p>
+          <p>The default slug pattern <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">/^[a-z0-9][a-z0-9-]*$/</code> already blocks non-ASCII. The confusable map and mixed-script detection protect apps with permissive patterns that allow Unicode identifiers, or serve as a second line of defense if a format regex is misconfigured.</p>
         </div>
       </div>
     </section>

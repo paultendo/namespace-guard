@@ -1,20 +1,20 @@
 /**
- * Generate CONFUSABLE_MAP from Unicode TR39 confusables.txt + supplemental mappings
+ * Generate CONFUSABLE_MAP and CONFUSABLE_MAP_FULL from Unicode TR39 confusables.txt
  *
  * Downloads the official Unicode confusables.txt file and extracts all
  * single-character mappings that target a lowercase Latin letter (a-z)
- * or digit (0-9), excluding characters already collapsed by NFKC normalization.
+ * or digit (0-9).
+ *
+ * Outputs two maps:
+ * - CONFUSABLE_MAP: NFKC-filtered (~613 entries) for pipelines that run NFKC first
+ * - CONFUSABLE_MAP_FULL: unfiltered (~1,400 entries) for standalone use without NFKC
  *
  * Also adds supplemental mappings for characters that are visually identical to
- * Latin letters but absent from confusables.txt (e.g., Latin small capitals,
- * modifier letters). These are characters where:
- * 1. The character is visually identical or near-identical to a Latin letter
- * 2. NFKC normalization does NOT collapse it
- * 3. confusables.txt does NOT list it
+ * Latin letters but absent from confusables.txt (e.g., Latin small capitals).
  *
  * Usage: npx tsx scripts/generate-confusables.ts
  *
- * Output: TypeScript source fragment for CONFUSABLE_MAP (printed to stdout)
+ * Output: TypeScript source fragments for both maps (printed to stdout)
  */
 
 const CONFUSABLES_URL =
@@ -92,9 +92,12 @@ async function main() {
   const text = await response.text();
   console.error(`Downloaded ${(text.length / 1024).toFixed(1)} KB`);
 
-  // Parse mappings
-  const entries: Array<{ source: number; target: string; comment: string }> = [];
+  // Parse mappings - collect both NFKC-filtered and unfiltered sets
+  type Entry = { source: number; target: string; comment: string };
+  const entries: Entry[] = [];       // NFKC-filtered (for CONFUSABLE_MAP)
+  const entriesFull: Entry[] = [];   // Unfiltered (for CONFUSABLE_MAP_FULL)
   const seen = new Set<number>();
+  const seenFull = new Set<number>();
   let nfkcConflicts = 0;
   let nfkcHandled = 0;
 
@@ -143,29 +146,31 @@ async function main() {
 
     if (!normalizedTarget) continue;
 
+    // Always add to full map (dedup only)
+    if (!seenFull.has(sourceCp)) {
+      seenFull.add(sourceCp);
+      entriesFull.push({ source: sourceCp, target: normalizedTarget, comment });
+    }
+
     // NFKC analysis: determine what NFKC + lowercase produces
     const sourceChar = String.fromCodePoint(sourceCp);
     const nfkcResult = sourceChar.normalize("NFKC").toLowerCase();
 
-    // Skip if NFKC already collapses to the same target
+    // Skip from NFKC-filtered map if NFKC already collapses to the same target
     if (nfkcResult === normalizedTarget) continue;
 
-    // Skip if NFKC maps to a DIFFERENT valid Latin letter/digit — the NFKC
-    // mapping takes precedence and our confusable entry would be dead code
-    // that disagrees with the normalize pipeline (e.g., U+017F Long S: TR39
-    // says "f" but NFKC says "s")
+    // Skip from NFKC-filtered map if NFKC maps to a DIFFERENT valid Latin
+    // letter/digit - the NFKC mapping takes precedence (e.g., U+017F Long S:
+    // TR39 says "f" but NFKC says "s")
     if (/^[a-z0-9]$/.test(nfkcResult) && nfkcResult !== normalizedTarget) {
       nfkcConflicts++;
       continue;
     }
 
-    // Skip if NFKC maps to something that the default slug regex ([a-z0-9-])
-    // would reject anyway — the entry is unreachable dead code since normalize()
-    // runs before the confusable check
+    // Skip from NFKC-filtered map if NFKC maps to something that the default
+    // slug regex ([a-z0-9-]) would accept - entry is unreachable dead code
+    // since normalize() runs before the confusable check
     if (nfkcResult.length > 0 && /^[a-z0-9-]+$/.test(nfkcResult)) {
-      // NFKC produced a valid slug fragment — this means normalize() already
-      // handles this character. Only keep if NFKC produces something different
-      // (which we already checked above).
       nfkcHandled++;
       continue;
     }
@@ -181,9 +186,10 @@ async function main() {
     });
   }
 
-  console.error(`\nFiltered to ${entries.length} entries from TR39`);
+  console.error(`\nNFKC-filtered: ${entries.length} entries`);
   console.error(`  Skipped ${nfkcConflicts} NFKC-conflict entries (NFKC maps to different Latin char)`);
   console.error(`  Skipped ${nfkcHandled} NFKC-handled entries (NFKC produces valid slug fragment)`);
+  console.error(`Unfiltered: ${entriesFull.length} entries`);
 
   // ──────────────────────────────────────────────────────────────────────
   // Supplemental mappings: characters visually identical to Latin letters
@@ -191,13 +197,13 @@ async function main() {
   //
   // Rationale: TR39's confusables.txt is designed for the skeleton algorithm
   // which compares two arbitrary strings. Our use case is a static character
-  // map for slug validation — if a character looks like a Latin letter and
+  // map for slug validation - if a character looks like a Latin letter and
   // neither TR39 nor NFKC handles it, we must add it ourselves.
   // ──────────────────────────────────────────────────────────────────────
-  const supplemental: Array<{ source: number; target: string; comment: string }> = [
+  const supplemental: Entry[] = [
     // Latin small capitals (Phonetic Extensions block)
     // These are designed to look exactly like their uppercase Latin counterparts
-    // at a smaller size — visually identical at typical font sizes.
+    // at a smaller size - visually identical at typical font sizes.
     { source: 0x1d00, target: "a", comment: "LATIN LETTER SMALL CAPITAL A" },
     { source: 0x1d05, target: "d", comment: "LATIN LETTER SMALL CAPITAL D" },
     { source: 0x1d07, target: "e", comment: "LATIN LETTER SMALL CAPITAL E" },
@@ -209,10 +215,17 @@ async function main() {
   ];
 
   let supplementalCount = 0;
+  let supplementalFullCount = 0;
   for (const entry of supplemental) {
-    if (seen.has(entry.source)) continue;
+    // Add to full map
+    if (!seenFull.has(entry.source)) {
+      seenFull.add(entry.source);
+      entriesFull.push(entry);
+      supplementalFullCount++;
+    }
 
-    // Safety: verify NFKC doesn't already handle it
+    // Add to NFKC-filtered map (only if NFKC doesn't already handle it)
+    if (seen.has(entry.source)) continue;
     const sourceChar = String.fromCodePoint(entry.source);
     const nfkcResult = sourceChar.normalize("NFKC").toLowerCase();
     if (nfkcResult === entry.target) continue;
@@ -222,62 +235,63 @@ async function main() {
     supplementalCount++;
   }
 
-  console.error(`Added ${supplementalCount} supplemental entries (Latin small capitals)`);
-  console.error(`Total: ${entries.length} entries`);
+  console.error(`Added ${supplementalCount} supplemental entries to NFKC-filtered map`);
+  console.error(`Added ${supplementalFullCount} supplemental entries to full map`);
+  console.error(`\nCONFUSABLE_MAP: ${entries.length} entries`);
+  console.error(`CONFUSABLE_MAP_FULL: ${entriesFull.length} entries`);
 
-  // Group by Unicode block
-  const groups = new Map<string, typeof entries>();
-  for (const entry of entries) {
-    const block = getBlockName(entry.source);
-    if (!groups.has(block)) groups.set(block, []);
-    groups.get(block)!.push(entry);
-  }
-
-  // Sort groups by first codepoint, entries within groups by codepoint
-  const sortedGroups = [...groups.entries()].sort((a, b) => {
-    return a[1][0].source - b[1][0].source;
-  });
-
-  // Print stats
-  console.error("\nEntries per block:");
-  for (const [block, blockEntries] of sortedGroups) {
-    console.error(
-      `  ${block}: ${blockEntries.length} entries (U+${blockEntries[0].source.toString(16).toUpperCase().padStart(4, "0")}–U+${blockEntries[blockEntries.length - 1].source.toString(16).toUpperCase().padStart(4, "0")})`
-    );
-  }
-
-  // Generate TypeScript output
-  console.log("/* prettier-ignore */");
-  console.log("export const CONFUSABLE_MAP: Record<string, string> = {");
-
-  for (const [block, blockEntries] of sortedGroups) {
-    blockEntries.sort((a, b) => a.source - b.source);
-    console.log(`  // ${block} (${blockEntries.length})`);
-
-    // Format entries on lines of ~4 per line for readability
-    const formatted: string[] = [];
-    for (const entry of blockEntries) {
-      const hex = entry.source.toString(16).padStart(4, "0");
-      // Use \uXXXX for BMP, \u{XXXXX} would need different escaping
-      const escape =
-        entry.source <= 0xffff
-          ? `\\u${hex}`
-          : `\\u{${entry.source.toString(16)}}`;
-      formatted.push(`"${escape}": "${entry.target}"`);
+  // Helper: group entries by Unicode block and generate TypeScript output
+  function generateMap(mapEntries: Entry[], name: string) {
+    const groups = new Map<string, Entry[]>();
+    for (const entry of mapEntries) {
+      const block = getBlockName(entry.source);
+      if (!groups.has(block)) groups.set(block, []);
+      groups.get(block)!.push(entry);
     }
 
-    // Print 4 per line
-    for (let i = 0; i < formatted.length; i += 4) {
-      const chunk = formatted.slice(i, i + 4);
-      const isLast =
-        i + 4 >= formatted.length &&
-        sortedGroups[sortedGroups.length - 1][0] === block;
-      console.log(`  ${chunk.join(", ")},`);
+    const sortedGroups = [...groups.entries()].sort((a, b) => {
+      return a[1][0].source - b[1][0].source;
+    });
+
+    // Print stats
+    console.error(`\n${name} entries per block:`);
+    for (const [block, blockEntries] of sortedGroups) {
+      console.error(
+        `  ${block}: ${blockEntries.length} entries (U+${blockEntries[0].source.toString(16).toUpperCase().padStart(4, "0")}–U+${blockEntries[blockEntries.length - 1].source.toString(16).toUpperCase().padStart(4, "0")})`
+      );
     }
+
+    // Generate TypeScript
+    console.log("/* prettier-ignore */");
+    console.log(`export const ${name}: Record<string, string> = {`);
+
+    for (const [block, blockEntries] of sortedGroups) {
+      blockEntries.sort((a, b) => a.source - b.source);
+      console.log(`  // ${block} (${blockEntries.length})`);
+
+      const formatted: string[] = [];
+      for (const entry of blockEntries) {
+        const hex = entry.source.toString(16).padStart(4, "0");
+        const escape =
+          entry.source <= 0xffff
+            ? `\\u${hex}`
+            : `\\u{${entry.source.toString(16)}}`;
+        formatted.push(`"${escape}": "${entry.target}"`);
+      }
+
+      for (let i = 0; i < formatted.length; i += 4) {
+        const chunk = formatted.slice(i, i + 4);
+        console.log(`  ${chunk.join(", ")},`);
+      }
+    }
+
+    console.log("};");
   }
 
-  console.log("};");
-  console.error(`\nTotal: ${entries.length} entries`);
+  // Generate both maps
+  generateMap(entries, "CONFUSABLE_MAP");
+  console.log("");
+  generateMap(entriesFull, "CONFUSABLE_MAP_FULL");
 }
 
 main().catch((err) => {

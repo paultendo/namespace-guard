@@ -4,7 +4,10 @@ import {
   createNamespaceGuard,
   createProfanityValidator,
   createHomoglyphValidator,
+  skeleton,
+  areConfusable,
   CONFUSABLE_MAP,
+  CONFUSABLE_MAP_FULL,
   type NamespaceAdapter,
   type NamespaceSource,
 } from "../src/index";
@@ -320,7 +323,7 @@ describe("ownership scoping", () => {
       })
     );
 
-    // Pass "42" as string — should match the numeric 42 via String()
+    // Pass "42" as string - should match the numeric 42 via String()
     const result = await guard.check("sarah", { id: "42" });
     expect(result.available).toBe(true);
   });
@@ -1385,7 +1388,7 @@ describe("edge cases", () => {
       })
     );
 
-    // Passing wrong scope key — ownership check is skipped, collision detected
+    // Passing wrong scope key - ownership check is skipped, collision detected
     const result = await guard.check("sarah", { wrongKey: "u1" });
     expect(result.available).toBe(false);
   });
@@ -2053,7 +2056,7 @@ describe("createHomoglyphValidator", () => {
 
   it("allows pure Cyrillic without confusable chars when rejectMixedScript is true", async () => {
     const validator = createHomoglyphValidator({ rejectMixedScript: true });
-    // "мид" — all Cyrillic, none in confusable map (м=U+043C, и=U+0438, д=U+0434)
+    // "мид" - all Cyrillic, none in confusable map (м=U+043C, и=U+0438, д=U+0434)
     const result = await validator("\u043c\u0438\u0434");
     expect(result).toBeNull();
   });
@@ -2113,7 +2116,7 @@ describe("createHomoglyphValidator", () => {
   });
 
   it("IPA confusables caught even without rejectMixedScript", async () => {
-    // IPA chars are Latin-script, so mixed-script detection won't help —
+    // IPA chars are Latin-script, so mixed-script detection won't help -
     // only the confusable map catches them
     const validator = createHomoglyphValidator({ rejectMixedScript: false });
     const result = await validator("\u0251dmin"); // IPA alpha looks like "admin"
@@ -2167,7 +2170,7 @@ describe("createHomoglyphValidator", () => {
 
   it("rejects mixed Myanmar+Latin when rejectMixedScript is true", async () => {
     const validator = createHomoglyphValidator({ rejectMixedScript: true });
-    // Myanmar Ka (U+1000, but U+1004 is in confusable map — use U+1001)
+    // Myanmar Ka (U+1000, but U+1004 is in confusable map - use U+1001)
     const result = await validator("hel\u1001o");
     expect(result).not.toBeNull();
   });
@@ -2202,7 +2205,7 @@ describe("createHomoglyphValidator", () => {
 
   it("rejects mixed Coptic+Latin when rejectMixedScript is true", async () => {
     const validator = createHomoglyphValidator({ rejectMixedScript: true });
-    // Coptic Alfa (U+2C80, not in map — U+2C82 is) + Latin
+    // Coptic Alfa (U+2C80, not in map - U+2C82 is) + Latin
     const result = await validator("hel\u2C80o");
     expect(result).not.toBeNull();
   });
@@ -2232,13 +2235,13 @@ describe("createHomoglyphValidator", () => {
 
   it("allows non-confusable non-Latin chars when rejectMixedScript is false", async () => {
     const validator = createHomoglyphValidator({ rejectMixedScript: false });
-    // Hebrew Alef (U+05D0) is not in confusable map — should pass
+    // Hebrew Alef (U+05D0) is not in confusable map - should pass
     expect(await validator("\u05D0")).toBeNull();
-    // Arabic Ba (U+0628) is not in confusable map — should pass
+    // Arabic Ba (U+0628) is not in confusable map - should pass
     expect(await validator("\u0628")).toBeNull();
-    // Devanagari Ka (U+0915) is not in confusable map — should pass
+    // Devanagari Ka (U+0915) is not in confusable map - should pass
     expect(await validator("\u0915")).toBeNull();
-    // Thai Ko Kai (U+0E01) is not in confusable map — should pass
+    // Thai Ko Kai (U+0E01) is not in confusable map - should pass
     expect(await validator("\u0E01")).toBeNull();
   });
 });
@@ -2260,7 +2263,7 @@ describe("CONFUSABLE_MAP", () => {
     expect(CONFUSABLE_MAP["\u13aa"]).toBe("a");
     // IPA
     expect(CONFUSABLE_MAP["\u0251"]).toBe("a");
-    // Latin small capitals (supplemental — not in TR39)
+    // Latin small capitals (supplemental - not in TR39)
     expect(CONFUSABLE_MAP["\u1d00"]).toBe("a");
     expect(CONFUSABLE_MAP["\u1d1b"]).toBe("t");
     // Canadian Syllabics
@@ -2290,7 +2293,7 @@ describe("CONFUSABLE_MAP", () => {
     expect(CONFUSABLE_MAP["\u16b7"]).toBe("x");
     // Khmer
     expect(CONFUSABLE_MAP["\u17e0"]).toBe("o");
-    // Total count — full TR39 + supplemental
+    // Total count - full TR39 + supplemental
     expect(Object.keys(CONFUSABLE_MAP).length).toBeGreaterThanOrEqual(600);
   });
 
@@ -2370,6 +2373,64 @@ describe("CONFUSABLE_MAP", () => {
     expect(normalize("\uff29nbox")).toBe("inbox");
     // Mathematical Bold 0 → should become "0"
     expect(normalize("user\u{1D7CE}")).toBe("user0");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CONFUSABLE_MAP_FULL export
+// ---------------------------------------------------------------------------
+describe("CONFUSABLE_MAP_FULL", () => {
+  it("contains all TR39 single-char mappings plus supplemental", () => {
+    expect(Object.keys(CONFUSABLE_MAP_FULL).length).toBeGreaterThanOrEqual(1300);
+  });
+
+  it("is a superset of CONFUSABLE_MAP", () => {
+    for (const [key, value] of Object.entries(CONFUSABLE_MAP)) {
+      expect(CONFUSABLE_MAP_FULL[key]).toBe(value);
+    }
+  });
+
+  it("contains NFKC-conflict entries that CONFUSABLE_MAP excludes", () => {
+    // Long S: TR39 says "f" (visual), NFKC says "s" (semantic)
+    expect(CONFUSABLE_MAP_FULL["\u017f"]).toBe("f");
+    // Script Capital I → l
+    expect(CONFUSABLE_MAP_FULL["\u2110"]).toBe("l");
+    // Fraktur Capital I → l
+    expect(CONFUSABLE_MAP_FULL["\u2111"]).toBe("l");
+    // Roman Numeral I → l
+    expect(CONFUSABLE_MAP_FULL["\u2160"]).toBe("l");
+    // Fullwidth Latin Capital I → l
+    expect(CONFUSABLE_MAP_FULL["\uff29"]).toBe("l");
+    // Mathematical Bold Digit Zero → o
+    expect(CONFUSABLE_MAP_FULL["\u{1D7CE}"]).toBe("o");
+    // Mathematical Bold Digit One → l
+    expect(CONFUSABLE_MAP_FULL["\u{1D7CF}"]).toBe("l");
+  });
+
+  it("contains NFKC-redundant entries (where NFKC agrees with TR39)", () => {
+    // Mathematical Bold Small A → a (NFKC also maps to "a")
+    expect(CONFUSABLE_MAP_FULL["\u{1D41A}"]).toBe("a");
+    // Fullwidth Latin Small A → a
+    expect(CONFUSABLE_MAP_FULL["\uff41"]).toBe("a");
+    // Fullwidth Latin Small C → c
+    expect(CONFUSABLE_MAP_FULL["\uff43"]).toBe("c");
+  });
+
+  it("contains supplemental entries (Latin small capitals)", () => {
+    expect(CONFUSABLE_MAP_FULL["\u1d00"]).toBe("a");
+    expect(CONFUSABLE_MAP_FULL["\u1d05"]).toBe("d");
+    expect(CONFUSABLE_MAP_FULL["\u1d07"]).toBe("e");
+    expect(CONFUSABLE_MAP_FULL["\u1d0a"]).toBe("j");
+    expect(CONFUSABLE_MAP_FULL["\u1d0b"]).toBe("k");
+    expect(CONFUSABLE_MAP_FULL["\u1d0d"]).toBe("m");
+    expect(CONFUSABLE_MAP_FULL["\u1d18"]).toBe("p");
+    expect(CONFUSABLE_MAP_FULL["\u1d1b"]).toBe("t");
+  });
+
+  it("all values are lowercase Latin letters or digits", () => {
+    for (const value of Object.values(CONFUSABLE_MAP_FULL)) {
+      expect(value).toMatch(/^[a-z0-9]$/);
+    }
   });
 });
 
@@ -2498,12 +2559,148 @@ describe("anti-spoofing integration", () => {
         user: { sarah: { id: "u1" } },
       })
     );
-    // Clean slug that is taken — suggestions should still work
+    // Clean slug that is taken - suggestions should still work
     const result = await guard.check("sarah");
     expect(result.available).toBe(false);
     if (!result.available) {
       expect(result.suggestions).toBeDefined();
       expect(result.suggestions!.length).toBeGreaterThan(0);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// skeleton()
+// ---------------------------------------------------------------------------
+describe("skeleton", () => {
+  it("lowercases ASCII input", () => {
+    expect(skeleton("Hello")).toBe("hello");
+  });
+
+  it("passes through plain ASCII unchanged", () => {
+    expect(skeleton("paypal")).toBe("paypal");
+  });
+
+  it("maps Cyrillic confusables to Latin", () => {
+    // Cyrillic а (U+0430) and о (U+043E)
+    expect(skeleton("\u0430\u043e")).toBe("ao");
+  });
+
+  it("maps Greek confusables to Latin", () => {
+    // Greek alpha (U+03B1) and omicron (U+03BF)
+    expect(skeleton("\u03b1\u03bf")).toBe("ao");
+  });
+
+  it("produces merged skeleton for mixed Latin + Cyrillic", () => {
+    // p + Cyrillic а + yp + Cyrillic а + l
+    expect(skeleton("p\u0430yp\u0430l")).toBe("paypal");
+  });
+
+  it("strips zero-width space (U+200B)", () => {
+    expect(skeleton("pay\u200Bpal")).toBe("paypal");
+  });
+
+  it("strips ZWNJ (U+200C) and ZWJ (U+200D)", () => {
+    expect(skeleton("pa\u200Cy\u200Dpal")).toBe("paypal");
+  });
+
+  it("strips soft hyphen (U+00AD)", () => {
+    expect(skeleton("pay\u00ADpal")).toBe("paypal");
+  });
+
+  it("strips LRM (U+200E) and RLM (U+200F)", () => {
+    expect(skeleton("pay\u200Epal\u200F")).toBe("paypal");
+  });
+
+  it("strips BOM (U+FEFF)", () => {
+    expect(skeleton("\uFEFFpaypal")).toBe("paypal");
+  });
+
+  it("strips variation selectors (U+FE00-FE0F)", () => {
+    expect(skeleton("a\uFE0Fb")).toBe("ab");
+  });
+
+  it("applies NFD decomposition", () => {
+    // e-acute (U+00E9) decomposes to e + combining acute
+    expect(skeleton("\u00e9")).toBe("e\u0301");
+  });
+
+  it("uses CONFUSABLE_MAP_FULL by default: Long S maps to f", () => {
+    // Long S (U+017F) -> "f" in TR39
+    expect(skeleton("\u017f")).toBe("f");
+  });
+
+  it("handles Mathematical Bold Small A (SMP char)", () => {
+    // U+1D41A -> "a" in CONFUSABLE_MAP_FULL
+    expect(skeleton("\u{1d41a}")).toBe("a");
+  });
+
+  it("accepts custom map option", () => {
+    // With CONFUSABLE_MAP (NFKC-filtered), Long S is not in the map
+    // so it stays as Long S, which lowercases to Long S (or s via NFD)
+    const result = skeleton("\u017f", { map: CONFUSABLE_MAP });
+    // Long S is not in CONFUSABLE_MAP, so it passes through unchanged
+    // NFD of Long S is still Long S, lowercase of Long S is still Long S
+    expect(result).toBe("\u017f");
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(skeleton("")).toBe("");
+  });
+
+  it("returns empty string for string of only ignorables", () => {
+    expect(skeleton("\u200B\u200C\u200D\uFEFF")).toBe("");
+  });
+
+  it("handles SMP chars correctly in mixed input", () => {
+    // Mathematical Bold Capital A (U+1D400) -> "a" in CONFUSABLE_MAP_FULL
+    expect(skeleton("\u{1d400}bc")).toBe("abc");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// areConfusable()
+// ---------------------------------------------------------------------------
+describe("areConfusable", () => {
+  it("identical strings are confusable", () => {
+    expect(areConfusable("hello", "hello")).toBe(true);
+  });
+
+  it("case-different strings are confusable", () => {
+    expect(areConfusable("Hello", "hello")).toBe(true);
+  });
+
+  it("detects Cyrillic/Latin confusable pair", () => {
+    // Cyrillic р (U+0440) looks like Latin p
+    expect(areConfusable("paypal", "\u0440aypal")).toBe(true);
+  });
+
+  it("detects Greek/Latin confusable pair", () => {
+    // Greek omicron (U+03BF) looks like Latin o
+    expect(areConfusable("bob", "b\u03bfb")).toBe(true);
+  });
+
+  it("non-confusable strings return false", () => {
+    expect(areConfusable("hello", "world")).toBe(false);
+  });
+
+  it("detects zero-width insertion as confusable", () => {
+    expect(areConfusable("paypal", "pay\u200Bpal")).toBe(true);
+  });
+
+  it("passes custom map option through", () => {
+    // With default (CONFUSABLE_MAP_FULL), Long S maps to "f"
+    expect(areConfusable("\u017f", "f")).toBe(true);
+    // With CONFUSABLE_MAP, Long S is not mapped, so not confusable with "f"
+    expect(areConfusable("\u017f", "f", { map: CONFUSABLE_MAP })).toBe(false);
+  });
+
+  it("empty strings are confusable", () => {
+    expect(areConfusable("", "")).toBe(true);
+  });
+
+  it("detects classic google spoofing", () => {
+    // Cyrillic о (U+043E) for both o's
+    expect(areConfusable("google", "g\u043e\u043egle")).toBe(true);
   });
 });

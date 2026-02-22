@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**[Live Demo](https://paultendo.github.io/namespace-guard/)** — try it in your browser | **[Blog Post](https://paultendo.github.io/posts/namespace-guard-launch/)** — why this exists
+**[Live Demo](https://paultendo.github.io/namespace-guard/)** - try it in your browser | **[Blog Post](https://paultendo.github.io/posts/namespace-guard-launch/)** - why this exists
 
 **Check slug/handle uniqueness across multiple database tables with reserved name protection.**
 
@@ -249,7 +249,7 @@ const result = await guard.check("admin");
 // { available: false, reason: "reserved", category: "system", message: "That's a system route." }
 ```
 
-You can also use a single string message for all categories, or mix — categories without a specific message fall back to the default.
+You can also use a single string message for all categories, or mix - categories without a specific message fall back to the default.
 
 ## Async Validators
 
@@ -279,7 +279,7 @@ Validators run sequentially and stop at the first rejection. They receive the no
 
 ### Built-in Profanity Validator
 
-Use `createProfanityValidator` for a turnkey profanity filter — supply your own word list:
+Use `createProfanityValidator` for a turnkey profanity filter - supply your own word list:
 
 ```typescript
 import { createNamespaceGuard, createProfanityValidator } from "namespace-guard";
@@ -295,7 +295,7 @@ const guard = createNamespaceGuard({
 }, adapter);
 ```
 
-No words are bundled — use any word list you like (e.g., the `bad-words` npm package, your own list, or an external API wrapped in a custom validator).
+No words are bundled - use any word list you like (e.g., the `bad-words` npm package, your own list, or an external API wrapped in a custom validator).
 
 ### Built-in Homoglyph Validator
 
@@ -324,6 +324,44 @@ createHomoglyphValidator({
 
 The built-in `CONFUSABLE_MAP` contains 613 character pairs generated from [Unicode TR39 confusables.txt](https://unicode.org/reports/tr39/) plus supplemental Latin small capitals. It covers Cyrillic, Greek, Armenian, Cherokee, IPA, Coptic, Lisu, Canadian Syllabics, Georgian, and 20+ other scripts. The map is exported for inspection or extension, and is regenerable for new Unicode versions with `npx tsx scripts/generate-confusables.ts`.
 
+#### CONFUSABLE_MAP_FULL
+
+For standalone use without NFKC normalization, `CONFUSABLE_MAP_FULL` (~1,400 entries) includes every single-character-to-Latin mapping from TR39 with no NFKC filtering. This is the right map when your pipeline does not run NFKC before confusable detection, which is the case for most real-world systems: TR39's skeleton algorithm uses NFD, Chromium's IDN spoof checker uses NFD, Rust's `confusable_idents` lint runs on NFC, and django-registration applies the confusable map to raw input with no normalization at all.
+
+```typescript
+import { CONFUSABLE_MAP_FULL } from "namespace-guard";
+
+// Contains everything in CONFUSABLE_MAP, plus:
+// - ~766 entries where NFKC agrees with TR39 (mathematical alphanumerics, fullwidth forms)
+// - 31 entries where TR39 and NFKC disagree on the target letter
+CONFUSABLE_MAP_FULL["\u017f"]; // "f" (Long S: TR39 visual mapping)
+CONFUSABLE_MAP_FULL["\u{1D41A}"]; // "a" (Mathematical Bold Small A)
+```
+
+#### `skeleton()` and `areConfusable()`
+
+The TR39 Section 4 skeleton algorithm computes a normalized form of a string for confusable comparison. Two strings that look alike will produce the same skeleton. This is the same algorithm used by ICU's SpoofChecker, Chromium's IDN spoof checker, and the Rust compiler's `confusable_idents` lint.
+
+```typescript
+import { skeleton, areConfusable, CONFUSABLE_MAP } from "namespace-guard";
+
+// Compute skeletons for comparison
+skeleton("paypal");           // "paypal"
+skeleton("\u0440\u0430ypal"); // "paypal" (Cyrillic р and а)
+skeleton("pay\u200Bpal");     // "paypal" (zero-width space stripped)
+skeleton("\u017f");            // "f"      (Long S via TR39 visual mapping)
+
+// Compare two strings directly
+areConfusable("paypal", "\u0440\u0430ypal"); // true
+areConfusable("google", "g\u043e\u043egle"); // true  (Cyrillic о)
+areConfusable("hello", "world");             // false
+
+// Use CONFUSABLE_MAP for NFKC-first pipelines
+skeleton("\u017f", { map: CONFUSABLE_MAP }); // "\u017f" (Long S not in filtered map)
+```
+
+By default, `skeleton()` uses `CONFUSABLE_MAP_FULL` (the complete TR39 map), which matches the NFD-based pipeline specified by TR39. Pass `{ map: CONFUSABLE_MAP }` if your pipeline runs NFKC normalization before calling `skeleton()`.
+
 ### How the anti-spoofing pipeline works
 
 Most confusable-detection libraries apply a character map in isolation. namespace-guard uses a three-stage pipeline where each stage is aware of the others:
@@ -335,13 +373,13 @@ Input  →  NFKC normalize  →  Confusable map  →  Mixed-script reject
 
 **Stage 1: NFKC normalization** collapses full-width characters (`Ｉ` → `I`), ligatures (`ﬁ` → `fi`), superscripts, and other Unicode compatibility forms to their canonical equivalents. This runs first, before any confusable check.
 
-**Stage 2: Confusable map** catches characters that survive NFKC but visually mimic Latin letters — Cyrillic `а` for `a`, Greek `ο` for `o`, Cherokee `Ꭺ` for `A`, and 600+ others from the Unicode Consortium's [confusables.txt](https://unicode.org/Public/security/latest/confusables.txt).
+**Stage 2: Confusable map** catches characters that survive NFKC but visually mimic Latin letters - Cyrillic `а` for `a`, Greek `ο` for `o`, Cherokee `Ꭺ` for `A`, and 600+ others from the Unicode Consortium's [confusables.txt](https://unicode.org/Public/security/latest/confusables.txt).
 
 **Stage 3: Mixed-script rejection** (`rejectMixedScript: true`) blocks identifiers that mix Latin with non-Latin scripts (Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, etc.) even if the specific characters aren't in the confusable map. This catches novel homoglyphs that the map doesn't cover.
 
 #### Why NFKC-aware filtering matters
 
-The key insight: TR39's confusables.txt and NFKC normalization sometimes disagree. For example, Unicode says capital `I` (U+0049) is confusable with lowercase `l` — visually true in many fonts. But NFKC maps Mathematical Bold `𝐈` (U+1D408) to `I`, not `l`. If you naively ship the TR39 mapping (`𝐈` → `l`), the confusable check will never see that character — NFKC already converted it to `I` in stage 1.
+The key insight: TR39's confusables.txt and NFKC normalization sometimes disagree. For example, Unicode says capital `I` (U+0049) is confusable with lowercase `l` - visually true in many fonts. But NFKC maps Mathematical Bold `𝐈` (U+1D408) to `I`, not `l`. If you naively ship the TR39 mapping (`𝐈` → `l`), the confusable check will never see that character - NFKC already converted it to `I` in stage 1.
 
 We found 31 entries where this happens:
 
@@ -354,7 +392,7 @@ We found 31 entries where this happens:
 | 11 Mathematical I variants | `l` | `i` | NFKC |
 | 12 Mathematical 0/1 variants | `o`/`l` | `0`/`1` | NFKC |
 
-These entries are dead code in any pipeline that runs NFKC first — and worse, they encode the *wrong* mapping. The generate script (`scripts/generate-confusables.ts`) automatically detects and excludes them.
+These entries are dead code in any pipeline that runs NFKC first - and worse, they encode the *wrong* mapping. The generate script (`scripts/generate-confusables.ts`) automatically detects and excludes them.
 
 ## Unicode Normalization
 
@@ -429,7 +467,7 @@ const result = await guard.check("acme-corp");
 
 ### Composing Strategies
 
-Combine multiple strategies — candidates are interleaved round-robin:
+Combine multiple strategies - candidates are interleaved round-robin:
 
 ```typescript
 suggest: {
@@ -503,10 +541,10 @@ npx namespace-guard check acme-corp
 # ✓ acme-corp is available
 
 npx namespace-guard check admin
-# ✗ admin — That name is reserved. Try another one.
+# ✗ admin - That name is reserved. Try another one.
 
 npx namespace-guard check "a"
-# ✗ a — Use 2-30 lowercase letters, numbers, or hyphens.
+# ✗ a - Use 2-30 lowercase letters, numbers, or hyphens.
 ```
 
 ### With a config file
@@ -761,7 +799,10 @@ import {
   createNamespaceGuard,
   createProfanityValidator,
   createHomoglyphValidator,
+  skeleton,
+  areConfusable,
   CONFUSABLE_MAP,
+  CONFUSABLE_MAP_FULL,
   normalize,
   type NamespaceConfig,
   type NamespaceSource,
@@ -771,6 +812,7 @@ import {
   type FindOneOptions,
   type OwnershipScope,
   type SuggestStrategyName,
+  type SkeletonOptions,
 } from "namespace-guard";
 ```
 

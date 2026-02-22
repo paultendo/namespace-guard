@@ -5,10 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-02-22
+
+### Added
+- `skeleton()` function: TR39 Section 4 skeleton algorithm (NFD + ignorable removal + confusable map + NFD) for confusable string comparison - the same algorithm used by ICU SpoofChecker, Chromium, and the Rust compiler
+- `areConfusable()` function: returns true if two strings produce the same skeleton
+- `SkeletonOptions` exported type for configuring the confusable map used by `skeleton()` and `areConfusable()`
+
+## [0.9.0] - 2026-02-22
+
+### Added
+- `CONFUSABLE_MAP_FULL` export: complete TR39 confusable mapping (~1,400 entries) with no NFKC filtering, for use in pipelines that don't run NFKC normalization before confusable detection (TR39 skeleton uses NFD, Chromium uses NFD, Rust uses NFC, django-registration uses no normalization)
+- `scripts/generate-confusables.ts` now outputs both `CONFUSABLE_MAP` (NFKC-filtered, 613 entries) and `CONFUSABLE_MAP_FULL` (unfiltered, ~1,400 entries)
+
 ## [0.8.2] - 2026-02-22
 
 ### Fixed
-- Escape regex metacharacters (`\`, `]`, `^`, `-`) when building the confusable character class in `createHomoglyphValidator` — prevents regex breakage if `additionalMappings` contain these characters
+- Escape regex metacharacters (`\`, `]`, `^`, `-`) when building the confusable character class in `createHomoglyphValidator` - prevents regex breakage if `additionalMappings` contain these characters
 - Same fix applied to the playground's inline validator
 - CLI: guard against undefined `Pool` export from `pg` module
 - Raw SQL adapter: validate table/column identifiers against `[a-zA-Z_][a-zA-Z0-9_]*` to prevent SQL injection via malformed config
@@ -23,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.8.1] - 2026-02-20
 
 ### Fixed
-- Removed 31 NFKC-conflict entries from `CONFUSABLE_MAP` (644 → 613 pairs) — these encoded wrong mappings in any pipeline that runs NFKC normalization first (e.g., Long S `ſ` mapped to `f` by TR39 but correctly to `s` by NFKC; Mathematical Bold I `𝐈` mapped to `l` by TR39 but correctly to `i` by NFKC)
+- Removed 31 NFKC-conflict entries from `CONFUSABLE_MAP` (644 → 613 pairs) - these encoded wrong mappings in any pipeline that runs NFKC normalization first (e.g., Long S `ſ` mapped to `f` by TR39 but correctly to `s` by NFKC; Mathematical Bold I `𝐈` mapped to `l` by TR39 but correctly to `i` by NFKC)
 - `scripts/generate-confusables.ts` now automatically detects and excludes NFKC-conflict entries
 
 ### Changed
@@ -34,9 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.8.0] - 2026-02-20
 
 ### Added
-- Full Unicode TR39 confusables.txt coverage — `CONFUSABLE_MAP` now contains 613 character pairs (up from 30), covering Cyrillic, Greek, Armenian, Cherokee, IPA, Coptic, Lisu, Canadian Syllabics, Georgian, Latin small capitals, and 20+ other scripts
-- `scripts/generate-confusables.ts` — reproducible build script that downloads the official Unicode confusables.txt, filters to Latin-target single-character mappings, excludes NFKC-redundant entries, and adds supplemental Latin small capitals
-- Expanded mixed-script detection — `rejectMixedScript` now covers all scripts with confusable entries (Hebrew, Arabic, Indic, Thai, Myanmar, Georgian, Ethiopic, Cherokee, Canadian Syllabics, Runic, Khmer, Coptic, Tifinagh, Lisu, Bamum, and more) in addition to Cyrillic and Greek
+- Full Unicode TR39 confusables.txt coverage - `CONFUSABLE_MAP` now contains 613 character pairs (up from 30), covering Cyrillic, Greek, Armenian, Cherokee, IPA, Coptic, Lisu, Canadian Syllabics, Georgian, Latin small capitals, and 20+ other scripts
+- `scripts/generate-confusables.ts` - reproducible build script that downloads the official Unicode confusables.txt, filters to Latin-target single-character mappings, excludes NFKC-redundant entries, and adds supplemental Latin small capitals
+- Expanded mixed-script detection - `rejectMixedScript` now covers all scripts with confusable entries (Hebrew, Arabic, Indic, Thai, Myanmar, Georgian, Ethiopic, Cherokee, Canadian Syllabics, Runic, Khmer, Coptic, Tifinagh, Lisu, Bamum, and more) in addition to Cyrillic and Greek
 
 ### Changed
 - `CONFUSABLE_MAP` is now generated from the Unicode Consortium's authoritative source rather than hand-curated
@@ -45,11 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.7.0] - 2026-02-20
 
 ### Added
-- NFKC Unicode normalization in `normalize()` — collapses full-width characters, ligatures, superscripts, and other compatibility forms to canonical equivalents (on by default, opt out with `normalizeUnicode: false`)
-- `createHomoglyphValidator()` — detects Cyrillic and Greek characters that visually mimic Latin letters (e.g., Cyrillic "а" in "аdmin")
-- `CONFUSABLE_MAP` export — ~30 Cyrillic-to-Latin and Greek-to-Latin confusable character pairs
-- `rejectMixedScript` option for homoglyph validator — also rejects strings mixing Latin + Cyrillic/Greek scripts
-- `allowPurelyNumeric` config option — reject purely numeric identifiers like "123" (default: allowed)
+- NFKC Unicode normalization in `normalize()` - collapses full-width characters, ligatures, superscripts, and other compatibility forms to canonical equivalents (on by default, opt out with `normalizeUnicode: false`)
+- `createHomoglyphValidator()` - detects Cyrillic and Greek characters that visually mimic Latin letters (e.g., Cyrillic "а" in "аdmin")
+- `CONFUSABLE_MAP` export - ~30 Cyrillic-to-Latin and Greek-to-Latin confusable character pairs
+- `rejectMixedScript` option for homoglyph validator - also rejects strings mixing Latin + Cyrillic/Greek scripts
+- `allowPurelyNumeric` config option - reject purely numeric identifiers like "123" (default: allowed)
 - `messages.purelyNumeric` for custom rejection message
 
 ### Changed
@@ -59,14 +72,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.6.0] - 2026-02-20
 
 ### Added
-- `"similar"` suggestion strategy — generates cognitively close alternatives using edit-distance-1 mutations (deletions, keyboard-adjacent substitutions, prefix/suffix additions)
+- `"similar"` suggestion strategy - generates cognitively close alternatives using edit-distance-1 mutations (deletions, keyboard-adjacent substitutions, prefix/suffix additions)
 - LRU cache eviction replaces FIFO for better hit rates on frequently checked names
 
 ### Changed
-- Suggestion pipeline now uses progressive batched processing — validates and DB-checks in parallel batches of `max` instead of validating all then checking sequentially (up to 5-6x latency improvement)
-- Pre-compiled regex for profanity substring matching — O(identifier length) instead of O(words x length)
-- Set-based deduplication in all strategy factories — O(n) instead of O(n²)
-- Binary search in `extractMaxLength` — 12x faster pattern initialization
+- Suggestion pipeline now uses progressive batched processing - validates and DB-checks in parallel batches of `max` instead of validating all then checking sequentially (up to 5-6x latency improvement)
+- Pre-compiled regex for profanity substring matching - O(identifier length) instead of O(words x length)
+- Set-based deduplication in all strategy factories - O(n) instead of O(n²)
+- Binary search in `extractMaxLength` - 12x faster pattern initialization
 
 ## [0.5.0] - 2026-02-20
 
@@ -85,8 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.4.0] - 2026-02-20
 
 ### Added
-- `createProfanityValidator()` — convenience factory for blocking offensive names (bring your own word list)
-- `cacheStats()` method — returns `{ size, hits, misses }` for cache performance monitoring
+- `createProfanityValidator()` - convenience factory for blocking offensive names (bring your own word list)
+- `cacheStats()` method - returns `{ size, hits, misses }` for cache performance monitoring
 - Smarter default suggestions: interleaves hyphenated (`sarah-1`) and compact (`sarah1`) variants, with truncation for identifiers near the max length
 - JSDoc on all public types and methods (visible in editor hover tooltips and `.d.ts` output)
 - Bundle size badge in README

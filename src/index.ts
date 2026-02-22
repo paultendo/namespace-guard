@@ -6,7 +6,7 @@ export type NamespaceSource = {
   column: string;
   /** Column name for the primary key (default: "id", or "_id" for Mongoose) */
   idColumn?: string;
-  /** Scope key for ownership checks — allows users to update their own slug without a false collision */
+  /** Scope key for ownership checks - allows users to update their own slug without a false collision */
   scopeKey?: string;
 };
 
@@ -21,7 +21,7 @@ export type SuggestStrategyName =
 
 /** Configuration for a namespace guard instance. */
 export type NamespaceConfig = {
-  /** Reserved names — flat list, Set, or categorized record */
+  /** Reserved names - flat list, Set, or categorized record */
   reserved?: Set<string> | string[] | Record<string, string[]>;
   /** Data sources to check for collisions */
   sources: NamespaceSource[];
@@ -43,7 +43,7 @@ export type NamespaceConfig = {
     /** Message shown when a purely numeric identifier is rejected (default: "Identifiers cannot be purely numeric.") */
     purelyNumeric?: string;
   };
-  /** Async validation hooks — run after format/reserved checks, before DB */
+  /** Async validation hooks - run after format/reserved checks, before DB */
   validators?: Array<(value: string) => Promise<{ available: false; message: string } | null>>;
   /** Enable conflict resolution suggestions when a slug is taken */
   suggest?: {
@@ -69,7 +69,7 @@ export type FindOneOptions = {
   caseInsensitive?: boolean;
 };
 
-/** Database adapter interface — implement this for your ORM or query builder. */
+/** Database adapter interface - implement this for your ORM or query builder. */
 export type NamespaceAdapter = {
   findOne: (
     source: NamespaceSource,
@@ -95,6 +95,14 @@ export type CheckResult =
       category?: string;
       suggestions?: string[];
     };
+
+/** Options for the `skeleton()` and `areConfusable()` functions. */
+export type SkeletonOptions = {
+  /** Confusable character map to use.
+   *  Default: `CONFUSABLE_MAP_FULL` (complete TR39 map, no NFKC filtering).
+   *  Pass `CONFUSABLE_MAP` if your pipeline runs NFKC before calling skeleton(). */
+  map?: Record<string, string>;
+};
 
 const DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
 
@@ -416,7 +424,7 @@ export function normalize(raw: string, options?: { unicode?: boolean }): string 
 /**
  * Create a validator that rejects identifiers containing profanity or offensive words.
  *
- * Supply your own word list — no words are bundled with the library.
+ * Supply your own word list - no words are bundled with the library.
  * The returned function is compatible with `config.validators`.
  *
  * @param words - Array of words to block
@@ -721,6 +729,958 @@ export const CONFUSABLE_MAP: Record<string, string> = {
 };
 
 /**
+ * Complete TR39 confusable mapping: every single-character mapping to a
+ * lowercase Latin letter or digit from confusables.txt, with no NFKC filtering.
+ *
+ * Use this when your pipeline does NOT run NFKC normalization before confusable
+ * detection (which is most real-world systems: TR39 skeleton uses NFD, Chromium
+ * uses NFD, Rust uses NFC, django-registration uses no normalization at all).
+ *
+ * Includes ~1,400 entries vs CONFUSABLE_MAP's ~613 NFKC-deduped entries.
+ * The additional entries cover characters that NFKC normalization would handle
+ * (mathematical alphanumerics, fullwidth forms, etc.) plus the 31 entries where
+ * TR39 and NFKC disagree on the target letter.
+ *
+ * Regenerate: `npx tsx scripts/generate-confusables.ts`
+ */
+/* prettier-ignore */
+export const CONFUSABLE_MAP_FULL: Record<string, string> = {
+  // Latin-1 Supplement (2)
+  "\u00d7": "x", "\u00fe": "p",
+  // Latin Extended-A (2)
+  "\u0131": "i", "\u017f": "f",
+  // Latin Extended-B (14)
+  "\u0184": "b", "\u018d": "g", "\u0192": "f", "\u0196": "l",
+  "\u01a6": "r", "\u01a7": "2", "\u01b7": "3", "\u01bc": "5",
+  "\u01bd": "s", "\u01bf": "p", "\u01c0": "l", "\u021c": "3",
+  "\u0222": "8", "\u0223": "8",
+  // IPA Extensions (8)
+  "\u0251": "a", "\u0261": "g", "\u0263": "y", "\u0269": "i",
+  "\u026a": "i", "\u026f": "w", "\u028b": "u", "\u028f": "y",
+  // Spacing Modifier Letters (1)
+  "\u02db": "i",
+  // Greek and Coptic (35)
+  "\u037a": "i", "\u037f": "j", "\u0391": "a", "\u0392": "b",
+  "\u0395": "e", "\u0396": "z", "\u0397": "h", "\u0399": "l",
+  "\u039a": "k", "\u039c": "m", "\u039d": "n", "\u039f": "o",
+  "\u03a1": "p", "\u03a4": "t", "\u03a5": "y", "\u03a7": "x",
+  "\u03b1": "a", "\u03b3": "y", "\u03b9": "i", "\u03bd": "v",
+  "\u03bf": "o", "\u03c1": "p", "\u03c3": "o", "\u03c5": "u",
+  "\u03d2": "y", "\u03dc": "f", "\u03e8": "2", "\u03ec": "6",
+  "\u03ed": "o", "\u03f1": "p", "\u03f2": "c", "\u03f3": "j",
+  "\u03f8": "p", "\u03f9": "c", "\u03fa": "m",
+  // Cyrillic (40)
+  "\u0405": "s", "\u0406": "l", "\u0408": "j", "\u0410": "a",
+  "\u0412": "b", "\u0415": "e", "\u0417": "3", "\u041a": "k",
+  "\u041c": "m", "\u041d": "h", "\u041e": "o", "\u0420": "p",
+  "\u0421": "c", "\u0422": "t", "\u0423": "y", "\u0425": "x",
+  "\u042c": "b", "\u0430": "a", "\u0431": "6", "\u0433": "r",
+  "\u0435": "e", "\u043e": "o", "\u0440": "p", "\u0441": "c",
+  "\u0443": "y", "\u0445": "x", "\u0448": "w", "\u0455": "s",
+  "\u0456": "i", "\u0458": "j", "\u0461": "w", "\u0474": "v",
+  "\u0475": "v", "\u04ae": "y", "\u04af": "y", "\u04bb": "h",
+  "\u04bd": "e", "\u04c0": "l", "\u04cf": "l", "\u04e0": "3",
+  // Cyrillic Supplement (5)
+  "\u0501": "d", "\u050c": "g", "\u051b": "q", "\u051c": "w",
+  "\u051d": "w",
+  // Armenian (14)
+  "\u054d": "u", "\u054f": "s", "\u0555": "o", "\u0561": "w",
+  "\u0563": "q", "\u0566": "q", "\u0570": "h", "\u0578": "n",
+  "\u057c": "n", "\u057d": "u", "\u0581": "g", "\u0582": "i",
+  "\u0584": "f", "\u0585": "o",
+  // Other (U+05C0) (1)
+  "\u05c0": "l",
+  // Other (U+05D5) (1)
+  "\u05d5": "l",
+  // Other (U+05D8) (1)
+  "\u05d8": "v",
+  // Other (U+05DF) (1)
+  "\u05df": "l",
+  // Other (U+05E1) (1)
+  "\u05e1": "o",
+  // Other (U+0627) (1)
+  "\u0627": "l",
+  // Other (U+0647) (1)
+  "\u0647": "o",
+  // Other (U+0661) (1)
+  "\u0661": "l",
+  // Other (U+0665) (1)
+  "\u0665": "o",
+  // Other (U+0667) (1)
+  "\u0667": "v",
+  // Other (U+06BE) (1)
+  "\u06be": "o",
+  // Other (U+06C1) (1)
+  "\u06c1": "o",
+  // Other (U+06D5) (1)
+  "\u06d5": "o",
+  // Other (U+06F1) (1)
+  "\u06f1": "l",
+  // Other (U+06F5) (1)
+  "\u06f5": "o",
+  // Other (U+06F7) (1)
+  "\u06f7": "v",
+  // Other (U+07C0) (1)
+  "\u07c0": "o",
+  // Other (U+07CA) (1)
+  "\u07ca": "l",
+  // Other (U+0966) (1)
+  "\u0966": "o",
+  // Other (U+0969) (1)
+  "\u0969": "3",
+  // Other (U+09E6) (1)
+  "\u09e6": "o",
+  // Other (U+09EA) (1)
+  "\u09ea": "8",
+  // Other (U+09ED) (1)
+  "\u09ed": "9",
+  // Other (U+0A66) (1)
+  "\u0a66": "o",
+  // Other (U+0A67) (1)
+  "\u0a67": "9",
+  // Other (U+0A6A) (1)
+  "\u0a6a": "8",
+  // Other (U+0AE6) (1)
+  "\u0ae6": "o",
+  // Other (U+0AE9) (1)
+  "\u0ae9": "3",
+  // Other (U+0B03) (1)
+  "\u0b03": "8",
+  // Other (U+0B20) (1)
+  "\u0b20": "o",
+  // Other (U+0B66) (1)
+  "\u0b66": "o",
+  // Other (U+0B68) (1)
+  "\u0b68": "9",
+  // Other (U+0BE6) (1)
+  "\u0be6": "o",
+  // Other (U+0C02) (1)
+  "\u0c02": "o",
+  // Other (U+0C66) (1)
+  "\u0c66": "o",
+  // Other (U+0C82) (1)
+  "\u0c82": "o",
+  // Other (U+0CE6) (1)
+  "\u0ce6": "o",
+  // Other (U+0D02) (1)
+  "\u0d02": "o",
+  // Other (U+0D1F) (1)
+  "\u0d1f": "s",
+  // Other (U+0D20) (1)
+  "\u0d20": "o",
+  // Other (U+0D66) (1)
+  "\u0d66": "o",
+  // Other (U+0D6D) (1)
+  "\u0d6d": "9",
+  // Other (U+0D82) (1)
+  "\u0d82": "o",
+  // Other (U+0E50) (1)
+  "\u0e50": "o",
+  // Other (U+0ED0) (1)
+  "\u0ed0": "o",
+  // Other (U+1004) (1)
+  "\u1004": "c",
+  // Other (U+101D) (1)
+  "\u101d": "o",
+  // Other (U+1040) (1)
+  "\u1040": "o",
+  // Other (U+105A) (1)
+  "\u105a": "c",
+  // Georgian (2)
+  "\u10e7": "y", "\u10ff": "o",
+  // Other (U+1200) (1)
+  "\u1200": "u",
+  // Other (U+12D0) (1)
+  "\u12d0": "o",
+  // Cherokee (30)
+  "\u13a0": "d", "\u13a1": "r", "\u13a2": "t", "\u13a5": "i",
+  "\u13a9": "y", "\u13aa": "a", "\u13ab": "j", "\u13ac": "e",
+  "\u13b3": "w", "\u13b7": "m", "\u13bb": "h", "\u13bd": "y",
+  "\u13c0": "g", "\u13c2": "h", "\u13c3": "z", "\u13ce": "4",
+  "\u13cf": "b", "\u13d2": "r", "\u13d4": "w", "\u13d5": "s",
+  "\u13d9": "v", "\u13da": "s", "\u13de": "l", "\u13df": "c",
+  "\u13e2": "p", "\u13e6": "k", "\u13e7": "d", "\u13ee": "6",
+  "\u13f3": "g", "\u13f4": "b",
+  // Unified Canadian Aboriginal Syllabics (21)
+  "\u142f": "v", "\u144c": "u", "\u146d": "p", "\u146f": "d",
+  "\u1472": "b", "\u148d": "j", "\u14aa": "l", "\u14bf": "2",
+  "\u1541": "x", "\u157c": "h", "\u157d": "x", "\u1587": "r",
+  "\u15af": "b", "\u15b4": "f", "\u15c5": "a", "\u15de": "d",
+  "\u15ea": "d", "\u15f0": "m", "\u15f7": "b", "\u166d": "x",
+  "\u166e": "x",
+  // Other (U+16B7) (1)
+  "\u16b7": "x",
+  // Other (U+16C1) (1)
+  "\u16c1": "l",
+  // Other (U+16D5) (1)
+  "\u16d5": "k",
+  // Other (U+16D6) (1)
+  "\u16d6": "m",
+  // Other (U+17E0) (1)
+  "\u17e0": "o",
+  // Phonetic Extensions (16)
+  "\u1d00": "a", "\u1d04": "c", "\u1d05": "d", "\u1d07": "e",
+  "\u1d0a": "j", "\u1d0b": "k", "\u1d0d": "m", "\u1d0f": "o",
+  "\u1d11": "o", "\u1d18": "p", "\u1d1b": "t", "\u1d1c": "u",
+  "\u1d20": "v", "\u1d21": "w", "\u1d22": "z", "\u1d26": "r",
+  // Other (U+1D83) (1)
+  "\u1d83": "g",
+  // Other (U+1D8C) (1)
+  "\u1d8c": "y",
+  // Latin Extended Additional (2)
+  "\u1e9d": "f", "\u1eff": "y",
+  // Other (U+1FBE) (1)
+  "\u1fbe": "i",
+  // Letterlike Symbols (34)
+  "\u2102": "c", "\u210a": "g", "\u210b": "h", "\u210c": "h",
+  "\u210d": "h", "\u210e": "h", "\u2110": "l", "\u2111": "l",
+  "\u2112": "l", "\u2113": "l", "\u2115": "n", "\u2119": "p",
+  "\u211a": "q", "\u211b": "r", "\u211c": "r", "\u211d": "r",
+  "\u2124": "z", "\u2128": "z", "\u212a": "k", "\u212c": "b",
+  "\u212d": "c", "\u212e": "e", "\u212f": "e", "\u2130": "e",
+  "\u2131": "f", "\u2133": "m", "\u2134": "o", "\u2139": "i",
+  "\u213d": "y", "\u2145": "d", "\u2146": "d", "\u2147": "e",
+  "\u2148": "i", "\u2149": "j",
+  // Number Forms (13)
+  "\u2160": "l", "\u2164": "v", "\u2169": "x", "\u216c": "l",
+  "\u216d": "c", "\u216e": "d", "\u216f": "m", "\u2170": "i",
+  "\u2174": "v", "\u2179": "x", "\u217c": "l", "\u217d": "c",
+  "\u217e": "d",
+  // Mathematical Operators (7)
+  "\u2223": "l", "\u2228": "v", "\u222a": "u", "\u22a4": "t",
+  "\u22c1": "v", "\u22c3": "u", "\u22ff": "e",
+  // Miscellaneous Technical (4)
+  "\u2373": "i", "\u2374": "p", "\u237a": "a", "\u23fd": "l",
+  // Box Drawing (1)
+  "\u2573": "x",
+  // Other (U+27D9) (1)
+  "\u27d9": "t",
+  // Other (U+292B) (1)
+  "\u292b": "x",
+  // Other (U+292C) (1)
+  "\u292c": "x",
+  // Other (U+2A2F) (1)
+  "\u2a2f": "x",
+  // Other (U+2C82) (1)
+  "\u2c82": "b",
+  // Other (U+2C85) (1)
+  "\u2c85": "r",
+  // Other (U+2C8E) (1)
+  "\u2c8e": "h",
+  // Other (U+2C92) (1)
+  "\u2c92": "l",
+  // Other (U+2C93) (1)
+  "\u2c93": "i",
+  // Other (U+2C94) (1)
+  "\u2c94": "k",
+  // Other (U+2C98) (1)
+  "\u2c98": "m",
+  // Other (U+2C9A) (1)
+  "\u2c9a": "n",
+  // Other (U+2C9C) (1)
+  "\u2c9c": "3",
+  // Other (U+2C9E) (1)
+  "\u2c9e": "o",
+  // Other (U+2C9F) (1)
+  "\u2c9f": "o",
+  // Other (U+2CA2) (1)
+  "\u2ca2": "p",
+  // Other (U+2CA3) (1)
+  "\u2ca3": "p",
+  // Other (U+2CA4) (1)
+  "\u2ca4": "c",
+  // Other (U+2CA5) (1)
+  "\u2ca5": "c",
+  // Other (U+2CA6) (1)
+  "\u2ca6": "t",
+  // Other (U+2CA8) (1)
+  "\u2ca8": "y",
+  // Other (U+2CA9) (1)
+  "\u2ca9": "y",
+  // Other (U+2CAC) (1)
+  "\u2cac": "x",
+  // Other (U+2CBD) (1)
+  "\u2cbd": "w",
+  // Other (U+2CC4) (1)
+  "\u2cc4": "3",
+  // Other (U+2CCA) (1)
+  "\u2cca": "9",
+  // Other (U+2CCB) (1)
+  "\u2ccb": "9",
+  // Other (U+2CCC) (1)
+  "\u2ccc": "3",
+  // Other (U+2CCE) (1)
+  "\u2cce": "p",
+  // Other (U+2CCF) (1)
+  "\u2ccf": "p",
+  // Other (U+2CD0) (1)
+  "\u2cd0": "l",
+  // Other (U+2CD2) (1)
+  "\u2cd2": "6",
+  // Other (U+2CD3) (1)
+  "\u2cd3": "6",
+  // Other (U+2CDC) (1)
+  "\u2cdc": "6",
+  // Other (U+2D38) (1)
+  "\u2d38": "v",
+  // Other (U+2D39) (1)
+  "\u2d39": "e",
+  // Other (U+2D4F) (1)
+  "\u2d4f": "l",
+  // Other (U+2D54) (1)
+  "\u2d54": "o",
+  // Other (U+2D55) (1)
+  "\u2d55": "q",
+  // Other (U+2D5D) (1)
+  "\u2d5d": "x",
+  // CJK Symbols and Punctuation (1)
+  "\u3007": "o",
+  // Other (U+A4D0) (1)
+  "\ua4d0": "b",
+  // Other (U+A4D1) (1)
+  "\ua4d1": "p",
+  // Other (U+A4D2) (1)
+  "\ua4d2": "d",
+  // Other (U+A4D3) (1)
+  "\ua4d3": "d",
+  // Other (U+A4D4) (1)
+  "\ua4d4": "t",
+  // Other (U+A4D6) (1)
+  "\ua4d6": "g",
+  // Other (U+A4D7) (1)
+  "\ua4d7": "k",
+  // Other (U+A4D9) (1)
+  "\ua4d9": "j",
+  // Other (U+A4DA) (1)
+  "\ua4da": "c",
+  // Other (U+A4DC) (1)
+  "\ua4dc": "z",
+  // Other (U+A4DD) (1)
+  "\ua4dd": "f",
+  // Other (U+A4DF) (1)
+  "\ua4df": "m",
+  // Other (U+A4E0) (1)
+  "\ua4e0": "n",
+  // Other (U+A4E1) (1)
+  "\ua4e1": "l",
+  // Other (U+A4E2) (1)
+  "\ua4e2": "s",
+  // Other (U+A4E3) (1)
+  "\ua4e3": "r",
+  // Other (U+A4E6) (1)
+  "\ua4e6": "v",
+  // Other (U+A4E7) (1)
+  "\ua4e7": "h",
+  // Other (U+A4EA) (1)
+  "\ua4ea": "w",
+  // Other (U+A4EB) (1)
+  "\ua4eb": "x",
+  // Other (U+A4EC) (1)
+  "\ua4ec": "y",
+  // Other (U+A4EE) (1)
+  "\ua4ee": "a",
+  // Other (U+A4F0) (1)
+  "\ua4f0": "e",
+  // Other (U+A4F2) (1)
+  "\ua4f2": "l",
+  // Other (U+A4F3) (1)
+  "\ua4f3": "o",
+  // Other (U+A4F4) (1)
+  "\ua4f4": "u",
+  // Other (U+A644) (1)
+  "\ua644": "2",
+  // Other (U+A647) (1)
+  "\ua647": "i",
+  // Other (U+A6DF) (1)
+  "\ua6df": "v",
+  // Other (U+A6EF) (1)
+  "\ua6ef": "2",
+  // Latin Extended-D (11)
+  "\ua731": "s", "\ua75a": "2", "\ua76a": "3", "\ua76e": "9",
+  "\ua798": "f", "\ua799": "f", "\ua79f": "u", "\ua7ab": "3",
+  "\ua7b2": "j", "\ua7b3": "x", "\ua7b4": "b",
+  // Latin Extended-E (8)
+  "\uab32": "e", "\uab35": "f", "\uab3d": "o", "\uab47": "r",
+  "\uab48": "r", "\uab4e": "u", "\uab52": "u", "\uab5a": "y",
+  // Cherokee Supplement (7)
+  "\uab75": "i", "\uab81": "r", "\uab83": "w", "\uab93": "z",
+  "\uaba9": "v", "\uabaa": "s", "\uabaf": "c",
+  // Other (U+FBA6) (1)
+  "\ufba6": "o",
+  // Other (U+FBA7) (1)
+  "\ufba7": "o",
+  // Other (U+FBA8) (1)
+  "\ufba8": "o",
+  // Other (U+FBA9) (1)
+  "\ufba9": "o",
+  // Other (U+FBAA) (1)
+  "\ufbaa": "o",
+  // Other (U+FBAB) (1)
+  "\ufbab": "o",
+  // Other (U+FBAC) (1)
+  "\ufbac": "o",
+  // Other (U+FBAD) (1)
+  "\ufbad": "o",
+  // Other (U+FE8D) (1)
+  "\ufe8d": "l",
+  // Other (U+FE8E) (1)
+  "\ufe8e": "l",
+  // Other (U+FEE9) (1)
+  "\ufee9": "o",
+  // Other (U+FEEA) (1)
+  "\ufeea": "o",
+  // Other (U+FEEB) (1)
+  "\ufeeb": "o",
+  // Other (U+FEEC) (1)
+  "\ufeec": "o",
+  // Halfwidth and Fullwidth Forms (32)
+  "\uff21": "a", "\uff22": "b", "\uff23": "c", "\uff25": "e",
+  "\uff28": "h", "\uff29": "l", "\uff2a": "j", "\uff2b": "k",
+  "\uff2d": "m", "\uff2e": "n", "\uff2f": "o", "\uff30": "p",
+  "\uff33": "s", "\uff34": "t", "\uff38": "x", "\uff39": "y",
+  "\uff3a": "z", "\uff41": "a", "\uff43": "c", "\uff45": "e",
+  "\uff47": "g", "\uff48": "h", "\uff49": "i", "\uff4a": "j",
+  "\uff4c": "l", "\uff4f": "o", "\uff50": "p", "\uff53": "s",
+  "\uff56": "v", "\uff58": "x", "\uff59": "y", "\uffe8": "l",
+  // Other (U+10282) (1)
+  "\u{10282}": "b",
+  // Other (U+10286) (1)
+  "\u{10286}": "e",
+  // Other (U+10287) (1)
+  "\u{10287}": "f",
+  // Other (U+1028A) (1)
+  "\u{1028a}": "l",
+  // Other (U+10290) (1)
+  "\u{10290}": "x",
+  // Other (U+10292) (1)
+  "\u{10292}": "o",
+  // Other (U+10295) (1)
+  "\u{10295}": "p",
+  // Other (U+10296) (1)
+  "\u{10296}": "s",
+  // Other (U+10297) (1)
+  "\u{10297}": "t",
+  // Other (U+102A0) (1)
+  "\u{102a0}": "a",
+  // Other (U+102A1) (1)
+  "\u{102a1}": "b",
+  // Other (U+102A2) (1)
+  "\u{102a2}": "c",
+  // Other (U+102A5) (1)
+  "\u{102a5}": "f",
+  // Other (U+102AB) (1)
+  "\u{102ab}": "o",
+  // Other (U+102B0) (1)
+  "\u{102b0}": "m",
+  // Other (U+102B1) (1)
+  "\u{102b1}": "t",
+  // Other (U+102B2) (1)
+  "\u{102b2}": "y",
+  // Other (U+102B4) (1)
+  "\u{102b4}": "x",
+  // Other (U+102CF) (1)
+  "\u{102cf}": "h",
+  // Other (U+102F5) (1)
+  "\u{102f5}": "z",
+  // Other (U+10301) (1)
+  "\u{10301}": "b",
+  // Other (U+10302) (1)
+  "\u{10302}": "c",
+  // Other (U+10309) (1)
+  "\u{10309}": "l",
+  // Other (U+10311) (1)
+  "\u{10311}": "m",
+  // Other (U+10315) (1)
+  "\u{10315}": "t",
+  // Other (U+10317) (1)
+  "\u{10317}": "x",
+  // Other (U+1031A) (1)
+  "\u{1031a}": "8",
+  // Other (U+10320) (1)
+  "\u{10320}": "l",
+  // Other (U+10322) (1)
+  "\u{10322}": "x",
+  // Other (U+10404) (1)
+  "\u{10404}": "o",
+  // Other (U+10415) (1)
+  "\u{10415}": "c",
+  // Other (U+1041B) (1)
+  "\u{1041b}": "l",
+  // Other (U+10420) (1)
+  "\u{10420}": "s",
+  // Other (U+1042C) (1)
+  "\u{1042c}": "o",
+  // Other (U+1043D) (1)
+  "\u{1043d}": "c",
+  // Other (U+10448) (1)
+  "\u{10448}": "s",
+  // Other (U+104B4) (1)
+  "\u{104b4}": "r",
+  // Other (U+104C2) (1)
+  "\u{104c2}": "o",
+  // Other (U+104CE) (1)
+  "\u{104ce}": "u",
+  // Other (U+104D2) (1)
+  "\u{104d2}": "7",
+  // Other (U+104EA) (1)
+  "\u{104ea}": "o",
+  // Other (U+104F6) (1)
+  "\u{104f6}": "u",
+  // Other (U+10513) (1)
+  "\u{10513}": "n",
+  // Other (U+10516) (1)
+  "\u{10516}": "o",
+  // Other (U+10518) (1)
+  "\u{10518}": "k",
+  // Other (U+1051C) (1)
+  "\u{1051c}": "c",
+  // Other (U+1051D) (1)
+  "\u{1051d}": "v",
+  // Other (U+10525) (1)
+  "\u{10525}": "f",
+  // Other (U+10526) (1)
+  "\u{10526}": "l",
+  // Other (U+10527) (1)
+  "\u{10527}": "x",
+  // Other (U+114D0) (1)
+  "\u{114d0}": "o",
+  // Other (U+11706) (1)
+  "\u{11706}": "v",
+  // Other (U+1170A) (1)
+  "\u{1170a}": "w",
+  // Other (U+1170E) (1)
+  "\u{1170e}": "w",
+  // Other (U+1170F) (1)
+  "\u{1170f}": "w",
+  // Other (U+118A0) (1)
+  "\u{118a0}": "v",
+  // Other (U+118A2) (1)
+  "\u{118a2}": "f",
+  // Other (U+118A3) (1)
+  "\u{118a3}": "l",
+  // Other (U+118A4) (1)
+  "\u{118a4}": "y",
+  // Other (U+118A6) (1)
+  "\u{118a6}": "e",
+  // Other (U+118A9) (1)
+  "\u{118a9}": "z",
+  // Other (U+118AC) (1)
+  "\u{118ac}": "9",
+  // Other (U+118AE) (1)
+  "\u{118ae}": "e",
+  // Other (U+118AF) (1)
+  "\u{118af}": "4",
+  // Other (U+118B2) (1)
+  "\u{118b2}": "l",
+  // Other (U+118B5) (1)
+  "\u{118b5}": "o",
+  // Other (U+118B8) (1)
+  "\u{118b8}": "u",
+  // Other (U+118BB) (1)
+  "\u{118bb}": "5",
+  // Other (U+118BC) (1)
+  "\u{118bc}": "t",
+  // Other (U+118C0) (1)
+  "\u{118c0}": "v",
+  // Other (U+118C1) (1)
+  "\u{118c1}": "s",
+  // Other (U+118C2) (1)
+  "\u{118c2}": "f",
+  // Other (U+118C3) (1)
+  "\u{118c3}": "i",
+  // Other (U+118C4) (1)
+  "\u{118c4}": "z",
+  // Other (U+118C6) (1)
+  "\u{118c6}": "7",
+  // Other (U+118C8) (1)
+  "\u{118c8}": "o",
+  // Other (U+118CA) (1)
+  "\u{118ca}": "3",
+  // Other (U+118CC) (1)
+  "\u{118cc}": "9",
+  // Other (U+118D5) (1)
+  "\u{118d5}": "6",
+  // Other (U+118D6) (1)
+  "\u{118d6}": "9",
+  // Other (U+118D7) (1)
+  "\u{118d7}": "o",
+  // Other (U+118D8) (1)
+  "\u{118d8}": "u",
+  // Other (U+118DC) (1)
+  "\u{118dc}": "y",
+  // Other (U+118E0) (1)
+  "\u{118e0}": "o",
+  // Other (U+118E5) (1)
+  "\u{118e5}": "z",
+  // Other (U+118E6) (1)
+  "\u{118e6}": "w",
+  // Other (U+118E9) (1)
+  "\u{118e9}": "c",
+  // Other (U+118EC) (1)
+  "\u{118ec}": "x",
+  // Other (U+118EF) (1)
+  "\u{118ef}": "w",
+  // Other (U+118F2) (1)
+  "\u{118f2}": "c",
+  // Other (U+11DDA) (1)
+  "\u{11dda}": "l",
+  // Other (U+11DE0) (1)
+  "\u{11de0}": "o",
+  // Other (U+11DE1) (1)
+  "\u{11de1}": "l",
+  // Other (U+16EAA) (1)
+  "\u{16eaa}": "l",
+  // Other (U+16EB6) (1)
+  "\u{16eb6}": "b",
+  // Other (U+16F08) (1)
+  "\u{16f08}": "v",
+  // Other (U+16F0A) (1)
+  "\u{16f0a}": "t",
+  // Other (U+16F16) (1)
+  "\u{16f16}": "l",
+  // Other (U+16F28) (1)
+  "\u{16f28}": "l",
+  // Other (U+16F35) (1)
+  "\u{16f35}": "r",
+  // Other (U+16F3A) (1)
+  "\u{16f3a}": "s",
+  // Other (U+16F3B) (1)
+  "\u{16f3b}": "3",
+  // Other (U+16F40) (1)
+  "\u{16f40}": "a",
+  // Other (U+16F42) (1)
+  "\u{16f42}": "u",
+  // Other (U+16F43) (1)
+  "\u{16f43}": "y",
+  // Other (U+1CCD6) (1)
+  "\u{1ccd6}": "a",
+  // Other (U+1CCD7) (1)
+  "\u{1ccd7}": "b",
+  // Other (U+1CCD8) (1)
+  "\u{1ccd8}": "c",
+  // Other (U+1CCD9) (1)
+  "\u{1ccd9}": "d",
+  // Other (U+1CCDA) (1)
+  "\u{1ccda}": "e",
+  // Other (U+1CCDB) (1)
+  "\u{1ccdb}": "f",
+  // Other (U+1CCDC) (1)
+  "\u{1ccdc}": "g",
+  // Other (U+1CCDD) (1)
+  "\u{1ccdd}": "h",
+  // Other (U+1CCDE) (1)
+  "\u{1ccde}": "l",
+  // Other (U+1CCDF) (1)
+  "\u{1ccdf}": "j",
+  // Other (U+1CCE0) (1)
+  "\u{1cce0}": "k",
+  // Other (U+1CCE1) (1)
+  "\u{1cce1}": "l",
+  // Other (U+1CCE2) (1)
+  "\u{1cce2}": "m",
+  // Other (U+1CCE3) (1)
+  "\u{1cce3}": "n",
+  // Other (U+1CCE4) (1)
+  "\u{1cce4}": "o",
+  // Other (U+1CCE5) (1)
+  "\u{1cce5}": "p",
+  // Other (U+1CCE6) (1)
+  "\u{1cce6}": "q",
+  // Other (U+1CCE7) (1)
+  "\u{1cce7}": "r",
+  // Other (U+1CCE8) (1)
+  "\u{1cce8}": "s",
+  // Other (U+1CCE9) (1)
+  "\u{1cce9}": "t",
+  // Other (U+1CCEA) (1)
+  "\u{1ccea}": "u",
+  // Other (U+1CCEB) (1)
+  "\u{1cceb}": "v",
+  // Other (U+1CCEC) (1)
+  "\u{1ccec}": "w",
+  // Other (U+1CCED) (1)
+  "\u{1cced}": "x",
+  // Other (U+1CCEE) (1)
+  "\u{1ccee}": "y",
+  // Other (U+1CCEF) (1)
+  "\u{1ccef}": "z",
+  // Other (U+1CCF0) (1)
+  "\u{1ccf0}": "o",
+  // Other (U+1CCF1) (1)
+  "\u{1ccf1}": "l",
+  // Other (U+1CCF2) (1)
+  "\u{1ccf2}": "2",
+  // Other (U+1CCF3) (1)
+  "\u{1ccf3}": "3",
+  // Other (U+1CCF4) (1)
+  "\u{1ccf4}": "4",
+  // Other (U+1CCF5) (1)
+  "\u{1ccf5}": "5",
+  // Other (U+1CCF6) (1)
+  "\u{1ccf6}": "6",
+  // Other (U+1CCF7) (1)
+  "\u{1ccf7}": "7",
+  // Other (U+1CCF8) (1)
+  "\u{1ccf8}": "8",
+  // Other (U+1CCF9) (1)
+  "\u{1ccf9}": "9",
+  // Other (U+1D206) (1)
+  "\u{1d206}": "3",
+  // Other (U+1D20D) (1)
+  "\u{1d20d}": "v",
+  // Other (U+1D212) (1)
+  "\u{1d212}": "7",
+  // Other (U+1D213) (1)
+  "\u{1d213}": "f",
+  // Other (U+1D216) (1)
+  "\u{1d216}": "r",
+  // Other (U+1D22A) (1)
+  "\u{1d22a}": "l",
+  // Mathematical Alphanumeric Symbols (806)
+  "\u{1d400}": "a", "\u{1d401}": "b", "\u{1d402}": "c", "\u{1d403}": "d",
+  "\u{1d404}": "e", "\u{1d405}": "f", "\u{1d406}": "g", "\u{1d407}": "h",
+  "\u{1d408}": "l", "\u{1d409}": "j", "\u{1d40a}": "k", "\u{1d40b}": "l",
+  "\u{1d40c}": "m", "\u{1d40d}": "n", "\u{1d40e}": "o", "\u{1d40f}": "p",
+  "\u{1d410}": "q", "\u{1d411}": "r", "\u{1d412}": "s", "\u{1d413}": "t",
+  "\u{1d414}": "u", "\u{1d415}": "v", "\u{1d416}": "w", "\u{1d417}": "x",
+  "\u{1d418}": "y", "\u{1d419}": "z", "\u{1d41a}": "a", "\u{1d41b}": "b",
+  "\u{1d41c}": "c", "\u{1d41d}": "d", "\u{1d41e}": "e", "\u{1d41f}": "f",
+  "\u{1d420}": "g", "\u{1d421}": "h", "\u{1d422}": "i", "\u{1d423}": "j",
+  "\u{1d424}": "k", "\u{1d425}": "l", "\u{1d427}": "n", "\u{1d428}": "o",
+  "\u{1d429}": "p", "\u{1d42a}": "q", "\u{1d42b}": "r", "\u{1d42c}": "s",
+  "\u{1d42d}": "t", "\u{1d42e}": "u", "\u{1d42f}": "v", "\u{1d430}": "w",
+  "\u{1d431}": "x", "\u{1d432}": "y", "\u{1d433}": "z", "\u{1d434}": "a",
+  "\u{1d435}": "b", "\u{1d436}": "c", "\u{1d437}": "d", "\u{1d438}": "e",
+  "\u{1d439}": "f", "\u{1d43a}": "g", "\u{1d43b}": "h", "\u{1d43c}": "l",
+  "\u{1d43d}": "j", "\u{1d43e}": "k", "\u{1d43f}": "l", "\u{1d440}": "m",
+  "\u{1d441}": "n", "\u{1d442}": "o", "\u{1d443}": "p", "\u{1d444}": "q",
+  "\u{1d445}": "r", "\u{1d446}": "s", "\u{1d447}": "t", "\u{1d448}": "u",
+  "\u{1d449}": "v", "\u{1d44a}": "w", "\u{1d44b}": "x", "\u{1d44c}": "y",
+  "\u{1d44d}": "z", "\u{1d44e}": "a", "\u{1d44f}": "b", "\u{1d450}": "c",
+  "\u{1d451}": "d", "\u{1d452}": "e", "\u{1d453}": "f", "\u{1d454}": "g",
+  "\u{1d456}": "i", "\u{1d457}": "j", "\u{1d458}": "k", "\u{1d459}": "l",
+  "\u{1d45b}": "n", "\u{1d45c}": "o", "\u{1d45d}": "p", "\u{1d45e}": "q",
+  "\u{1d45f}": "r", "\u{1d460}": "s", "\u{1d461}": "t", "\u{1d462}": "u",
+  "\u{1d463}": "v", "\u{1d464}": "w", "\u{1d465}": "x", "\u{1d466}": "y",
+  "\u{1d467}": "z", "\u{1d468}": "a", "\u{1d469}": "b", "\u{1d46a}": "c",
+  "\u{1d46b}": "d", "\u{1d46c}": "e", "\u{1d46d}": "f", "\u{1d46e}": "g",
+  "\u{1d46f}": "h", "\u{1d470}": "l", "\u{1d471}": "j", "\u{1d472}": "k",
+  "\u{1d473}": "l", "\u{1d474}": "m", "\u{1d475}": "n", "\u{1d476}": "o",
+  "\u{1d477}": "p", "\u{1d478}": "q", "\u{1d479}": "r", "\u{1d47a}": "s",
+  "\u{1d47b}": "t", "\u{1d47c}": "u", "\u{1d47d}": "v", "\u{1d47e}": "w",
+  "\u{1d47f}": "x", "\u{1d480}": "y", "\u{1d481}": "z", "\u{1d482}": "a",
+  "\u{1d483}": "b", "\u{1d484}": "c", "\u{1d485}": "d", "\u{1d486}": "e",
+  "\u{1d487}": "f", "\u{1d488}": "g", "\u{1d489}": "h", "\u{1d48a}": "i",
+  "\u{1d48b}": "j", "\u{1d48c}": "k", "\u{1d48d}": "l", "\u{1d48f}": "n",
+  "\u{1d490}": "o", "\u{1d491}": "p", "\u{1d492}": "q", "\u{1d493}": "r",
+  "\u{1d494}": "s", "\u{1d495}": "t", "\u{1d496}": "u", "\u{1d497}": "v",
+  "\u{1d498}": "w", "\u{1d499}": "x", "\u{1d49a}": "y", "\u{1d49b}": "z",
+  "\u{1d49c}": "a", "\u{1d49e}": "c", "\u{1d49f}": "d", "\u{1d4a2}": "g",
+  "\u{1d4a5}": "j", "\u{1d4a6}": "k", "\u{1d4a9}": "n", "\u{1d4aa}": "o",
+  "\u{1d4ab}": "p", "\u{1d4ac}": "q", "\u{1d4ae}": "s", "\u{1d4af}": "t",
+  "\u{1d4b0}": "u", "\u{1d4b1}": "v", "\u{1d4b2}": "w", "\u{1d4b3}": "x",
+  "\u{1d4b4}": "y", "\u{1d4b5}": "z", "\u{1d4b6}": "a", "\u{1d4b7}": "b",
+  "\u{1d4b8}": "c", "\u{1d4b9}": "d", "\u{1d4bb}": "f", "\u{1d4bd}": "h",
+  "\u{1d4be}": "i", "\u{1d4bf}": "j", "\u{1d4c0}": "k", "\u{1d4c1}": "l",
+  "\u{1d4c3}": "n", "\u{1d4c5}": "p", "\u{1d4c6}": "q", "\u{1d4c7}": "r",
+  "\u{1d4c8}": "s", "\u{1d4c9}": "t", "\u{1d4ca}": "u", "\u{1d4cb}": "v",
+  "\u{1d4cc}": "w", "\u{1d4cd}": "x", "\u{1d4ce}": "y", "\u{1d4cf}": "z",
+  "\u{1d4d0}": "a", "\u{1d4d1}": "b", "\u{1d4d2}": "c", "\u{1d4d3}": "d",
+  "\u{1d4d4}": "e", "\u{1d4d5}": "f", "\u{1d4d6}": "g", "\u{1d4d7}": "h",
+  "\u{1d4d8}": "l", "\u{1d4d9}": "j", "\u{1d4da}": "k", "\u{1d4db}": "l",
+  "\u{1d4dc}": "m", "\u{1d4dd}": "n", "\u{1d4de}": "o", "\u{1d4df}": "p",
+  "\u{1d4e0}": "q", "\u{1d4e1}": "r", "\u{1d4e2}": "s", "\u{1d4e3}": "t",
+  "\u{1d4e4}": "u", "\u{1d4e5}": "v", "\u{1d4e6}": "w", "\u{1d4e7}": "x",
+  "\u{1d4e8}": "y", "\u{1d4e9}": "z", "\u{1d4ea}": "a", "\u{1d4eb}": "b",
+  "\u{1d4ec}": "c", "\u{1d4ed}": "d", "\u{1d4ee}": "e", "\u{1d4ef}": "f",
+  "\u{1d4f0}": "g", "\u{1d4f1}": "h", "\u{1d4f2}": "i", "\u{1d4f3}": "j",
+  "\u{1d4f4}": "k", "\u{1d4f5}": "l", "\u{1d4f7}": "n", "\u{1d4f8}": "o",
+  "\u{1d4f9}": "p", "\u{1d4fa}": "q", "\u{1d4fb}": "r", "\u{1d4fc}": "s",
+  "\u{1d4fd}": "t", "\u{1d4fe}": "u", "\u{1d4ff}": "v", "\u{1d500}": "w",
+  "\u{1d501}": "x", "\u{1d502}": "y", "\u{1d503}": "z", "\u{1d504}": "a",
+  "\u{1d505}": "b", "\u{1d507}": "d", "\u{1d508}": "e", "\u{1d509}": "f",
+  "\u{1d50a}": "g", "\u{1d50d}": "j", "\u{1d50e}": "k", "\u{1d50f}": "l",
+  "\u{1d510}": "m", "\u{1d511}": "n", "\u{1d512}": "o", "\u{1d513}": "p",
+  "\u{1d514}": "q", "\u{1d516}": "s", "\u{1d517}": "t", "\u{1d518}": "u",
+  "\u{1d519}": "v", "\u{1d51a}": "w", "\u{1d51b}": "x", "\u{1d51c}": "y",
+  "\u{1d51e}": "a", "\u{1d51f}": "b", "\u{1d520}": "c", "\u{1d521}": "d",
+  "\u{1d522}": "e", "\u{1d523}": "f", "\u{1d524}": "g", "\u{1d525}": "h",
+  "\u{1d526}": "i", "\u{1d527}": "j", "\u{1d528}": "k", "\u{1d529}": "l",
+  "\u{1d52b}": "n", "\u{1d52c}": "o", "\u{1d52d}": "p", "\u{1d52e}": "q",
+  "\u{1d52f}": "r", "\u{1d530}": "s", "\u{1d531}": "t", "\u{1d532}": "u",
+  "\u{1d533}": "v", "\u{1d534}": "w", "\u{1d535}": "x", "\u{1d536}": "y",
+  "\u{1d537}": "z", "\u{1d538}": "a", "\u{1d539}": "b", "\u{1d53b}": "d",
+  "\u{1d53c}": "e", "\u{1d53d}": "f", "\u{1d53e}": "g", "\u{1d540}": "l",
+  "\u{1d541}": "j", "\u{1d542}": "k", "\u{1d543}": "l", "\u{1d544}": "m",
+  "\u{1d546}": "o", "\u{1d54a}": "s", "\u{1d54b}": "t", "\u{1d54c}": "u",
+  "\u{1d54d}": "v", "\u{1d54e}": "w", "\u{1d54f}": "x", "\u{1d550}": "y",
+  "\u{1d552}": "a", "\u{1d553}": "b", "\u{1d554}": "c", "\u{1d555}": "d",
+  "\u{1d556}": "e", "\u{1d557}": "f", "\u{1d558}": "g", "\u{1d559}": "h",
+  "\u{1d55a}": "i", "\u{1d55b}": "j", "\u{1d55c}": "k", "\u{1d55d}": "l",
+  "\u{1d55f}": "n", "\u{1d560}": "o", "\u{1d561}": "p", "\u{1d562}": "q",
+  "\u{1d563}": "r", "\u{1d564}": "s", "\u{1d565}": "t", "\u{1d566}": "u",
+  "\u{1d567}": "v", "\u{1d568}": "w", "\u{1d569}": "x", "\u{1d56a}": "y",
+  "\u{1d56b}": "z", "\u{1d56c}": "a", "\u{1d56d}": "b", "\u{1d56e}": "c",
+  "\u{1d56f}": "d", "\u{1d570}": "e", "\u{1d571}": "f", "\u{1d572}": "g",
+  "\u{1d573}": "h", "\u{1d574}": "l", "\u{1d575}": "j", "\u{1d576}": "k",
+  "\u{1d577}": "l", "\u{1d578}": "m", "\u{1d579}": "n", "\u{1d57a}": "o",
+  "\u{1d57b}": "p", "\u{1d57c}": "q", "\u{1d57d}": "r", "\u{1d57e}": "s",
+  "\u{1d57f}": "t", "\u{1d580}": "u", "\u{1d581}": "v", "\u{1d582}": "w",
+  "\u{1d583}": "x", "\u{1d584}": "y", "\u{1d585}": "z", "\u{1d586}": "a",
+  "\u{1d587}": "b", "\u{1d588}": "c", "\u{1d589}": "d", "\u{1d58a}": "e",
+  "\u{1d58b}": "f", "\u{1d58c}": "g", "\u{1d58d}": "h", "\u{1d58e}": "i",
+  "\u{1d58f}": "j", "\u{1d590}": "k", "\u{1d591}": "l", "\u{1d593}": "n",
+  "\u{1d594}": "o", "\u{1d595}": "p", "\u{1d596}": "q", "\u{1d597}": "r",
+  "\u{1d598}": "s", "\u{1d599}": "t", "\u{1d59a}": "u", "\u{1d59b}": "v",
+  "\u{1d59c}": "w", "\u{1d59d}": "x", "\u{1d59e}": "y", "\u{1d59f}": "z",
+  "\u{1d5a0}": "a", "\u{1d5a1}": "b", "\u{1d5a2}": "c", "\u{1d5a3}": "d",
+  "\u{1d5a4}": "e", "\u{1d5a5}": "f", "\u{1d5a6}": "g", "\u{1d5a7}": "h",
+  "\u{1d5a8}": "l", "\u{1d5a9}": "j", "\u{1d5aa}": "k", "\u{1d5ab}": "l",
+  "\u{1d5ac}": "m", "\u{1d5ad}": "n", "\u{1d5ae}": "o", "\u{1d5af}": "p",
+  "\u{1d5b0}": "q", "\u{1d5b1}": "r", "\u{1d5b2}": "s", "\u{1d5b3}": "t",
+  "\u{1d5b4}": "u", "\u{1d5b5}": "v", "\u{1d5b6}": "w", "\u{1d5b7}": "x",
+  "\u{1d5b8}": "y", "\u{1d5b9}": "z", "\u{1d5ba}": "a", "\u{1d5bb}": "b",
+  "\u{1d5bc}": "c", "\u{1d5bd}": "d", "\u{1d5be}": "e", "\u{1d5bf}": "f",
+  "\u{1d5c0}": "g", "\u{1d5c1}": "h", "\u{1d5c2}": "i", "\u{1d5c3}": "j",
+  "\u{1d5c4}": "k", "\u{1d5c5}": "l", "\u{1d5c7}": "n", "\u{1d5c8}": "o",
+  "\u{1d5c9}": "p", "\u{1d5ca}": "q", "\u{1d5cb}": "r", "\u{1d5cc}": "s",
+  "\u{1d5cd}": "t", "\u{1d5ce}": "u", "\u{1d5cf}": "v", "\u{1d5d0}": "w",
+  "\u{1d5d1}": "x", "\u{1d5d2}": "y", "\u{1d5d3}": "z", "\u{1d5d4}": "a",
+  "\u{1d5d5}": "b", "\u{1d5d6}": "c", "\u{1d5d7}": "d", "\u{1d5d8}": "e",
+  "\u{1d5d9}": "f", "\u{1d5da}": "g", "\u{1d5db}": "h", "\u{1d5dc}": "l",
+  "\u{1d5dd}": "j", "\u{1d5de}": "k", "\u{1d5df}": "l", "\u{1d5e0}": "m",
+  "\u{1d5e1}": "n", "\u{1d5e2}": "o", "\u{1d5e3}": "p", "\u{1d5e4}": "q",
+  "\u{1d5e5}": "r", "\u{1d5e6}": "s", "\u{1d5e7}": "t", "\u{1d5e8}": "u",
+  "\u{1d5e9}": "v", "\u{1d5ea}": "w", "\u{1d5eb}": "x", "\u{1d5ec}": "y",
+  "\u{1d5ed}": "z", "\u{1d5ee}": "a", "\u{1d5ef}": "b", "\u{1d5f0}": "c",
+  "\u{1d5f1}": "d", "\u{1d5f2}": "e", "\u{1d5f3}": "f", "\u{1d5f4}": "g",
+  "\u{1d5f5}": "h", "\u{1d5f6}": "i", "\u{1d5f7}": "j", "\u{1d5f8}": "k",
+  "\u{1d5f9}": "l", "\u{1d5fb}": "n", "\u{1d5fc}": "o", "\u{1d5fd}": "p",
+  "\u{1d5fe}": "q", "\u{1d5ff}": "r", "\u{1d600}": "s", "\u{1d601}": "t",
+  "\u{1d602}": "u", "\u{1d603}": "v", "\u{1d604}": "w", "\u{1d605}": "x",
+  "\u{1d606}": "y", "\u{1d607}": "z", "\u{1d608}": "a", "\u{1d609}": "b",
+  "\u{1d60a}": "c", "\u{1d60b}": "d", "\u{1d60c}": "e", "\u{1d60d}": "f",
+  "\u{1d60e}": "g", "\u{1d60f}": "h", "\u{1d610}": "l", "\u{1d611}": "j",
+  "\u{1d612}": "k", "\u{1d613}": "l", "\u{1d614}": "m", "\u{1d615}": "n",
+  "\u{1d616}": "o", "\u{1d617}": "p", "\u{1d618}": "q", "\u{1d619}": "r",
+  "\u{1d61a}": "s", "\u{1d61b}": "t", "\u{1d61c}": "u", "\u{1d61d}": "v",
+  "\u{1d61e}": "w", "\u{1d61f}": "x", "\u{1d620}": "y", "\u{1d621}": "z",
+  "\u{1d622}": "a", "\u{1d623}": "b", "\u{1d624}": "c", "\u{1d625}": "d",
+  "\u{1d626}": "e", "\u{1d627}": "f", "\u{1d628}": "g", "\u{1d629}": "h",
+  "\u{1d62a}": "i", "\u{1d62b}": "j", "\u{1d62c}": "k", "\u{1d62d}": "l",
+  "\u{1d62f}": "n", "\u{1d630}": "o", "\u{1d631}": "p", "\u{1d632}": "q",
+  "\u{1d633}": "r", "\u{1d634}": "s", "\u{1d635}": "t", "\u{1d636}": "u",
+  "\u{1d637}": "v", "\u{1d638}": "w", "\u{1d639}": "x", "\u{1d63a}": "y",
+  "\u{1d63b}": "z", "\u{1d63c}": "a", "\u{1d63d}": "b", "\u{1d63e}": "c",
+  "\u{1d63f}": "d", "\u{1d640}": "e", "\u{1d641}": "f", "\u{1d642}": "g",
+  "\u{1d643}": "h", "\u{1d644}": "l", "\u{1d645}": "j", "\u{1d646}": "k",
+  "\u{1d647}": "l", "\u{1d648}": "m", "\u{1d649}": "n", "\u{1d64a}": "o",
+  "\u{1d64b}": "p", "\u{1d64c}": "q", "\u{1d64d}": "r", "\u{1d64e}": "s",
+  "\u{1d64f}": "t", "\u{1d650}": "u", "\u{1d651}": "v", "\u{1d652}": "w",
+  "\u{1d653}": "x", "\u{1d654}": "y", "\u{1d655}": "z", "\u{1d656}": "a",
+  "\u{1d657}": "b", "\u{1d658}": "c", "\u{1d659}": "d", "\u{1d65a}": "e",
+  "\u{1d65b}": "f", "\u{1d65c}": "g", "\u{1d65d}": "h", "\u{1d65e}": "i",
+  "\u{1d65f}": "j", "\u{1d660}": "k", "\u{1d661}": "l", "\u{1d663}": "n",
+  "\u{1d664}": "o", "\u{1d665}": "p", "\u{1d666}": "q", "\u{1d667}": "r",
+  "\u{1d668}": "s", "\u{1d669}": "t", "\u{1d66a}": "u", "\u{1d66b}": "v",
+  "\u{1d66c}": "w", "\u{1d66d}": "x", "\u{1d66e}": "y", "\u{1d66f}": "z",
+  "\u{1d670}": "a", "\u{1d671}": "b", "\u{1d672}": "c", "\u{1d673}": "d",
+  "\u{1d674}": "e", "\u{1d675}": "f", "\u{1d676}": "g", "\u{1d677}": "h",
+  "\u{1d678}": "l", "\u{1d679}": "j", "\u{1d67a}": "k", "\u{1d67b}": "l",
+  "\u{1d67c}": "m", "\u{1d67d}": "n", "\u{1d67e}": "o", "\u{1d67f}": "p",
+  "\u{1d680}": "q", "\u{1d681}": "r", "\u{1d682}": "s", "\u{1d683}": "t",
+  "\u{1d684}": "u", "\u{1d685}": "v", "\u{1d686}": "w", "\u{1d687}": "x",
+  "\u{1d688}": "y", "\u{1d689}": "z", "\u{1d68a}": "a", "\u{1d68b}": "b",
+  "\u{1d68c}": "c", "\u{1d68d}": "d", "\u{1d68e}": "e", "\u{1d68f}": "f",
+  "\u{1d690}": "g", "\u{1d691}": "h", "\u{1d692}": "i", "\u{1d693}": "j",
+  "\u{1d694}": "k", "\u{1d695}": "l", "\u{1d697}": "n", "\u{1d698}": "o",
+  "\u{1d699}": "p", "\u{1d69a}": "q", "\u{1d69b}": "r", "\u{1d69c}": "s",
+  "\u{1d69d}": "t", "\u{1d69e}": "u", "\u{1d69f}": "v", "\u{1d6a0}": "w",
+  "\u{1d6a1}": "x", "\u{1d6a2}": "y", "\u{1d6a3}": "z", "\u{1d6a4}": "i",
+  "\u{1d6a8}": "a", "\u{1d6a9}": "b", "\u{1d6ac}": "e", "\u{1d6ad}": "z",
+  "\u{1d6ae}": "h", "\u{1d6b0}": "l", "\u{1d6b1}": "k", "\u{1d6b3}": "m",
+  "\u{1d6b4}": "n", "\u{1d6b6}": "o", "\u{1d6b8}": "p", "\u{1d6bb}": "t",
+  "\u{1d6bc}": "y", "\u{1d6be}": "x", "\u{1d6c2}": "a", "\u{1d6c4}": "y",
+  "\u{1d6ca}": "i", "\u{1d6ce}": "v", "\u{1d6d0}": "o", "\u{1d6d2}": "p",
+  "\u{1d6d4}": "o", "\u{1d6d6}": "u", "\u{1d6e0}": "p", "\u{1d6e2}": "a",
+  "\u{1d6e3}": "b", "\u{1d6e6}": "e", "\u{1d6e7}": "z", "\u{1d6e8}": "h",
+  "\u{1d6ea}": "l", "\u{1d6eb}": "k", "\u{1d6ed}": "m", "\u{1d6ee}": "n",
+  "\u{1d6f0}": "o", "\u{1d6f2}": "p", "\u{1d6f5}": "t", "\u{1d6f6}": "y",
+  "\u{1d6f8}": "x", "\u{1d6fc}": "a", "\u{1d6fe}": "y", "\u{1d704}": "i",
+  "\u{1d708}": "v", "\u{1d70a}": "o", "\u{1d70c}": "p", "\u{1d70e}": "o",
+  "\u{1d710}": "u", "\u{1d71a}": "p", "\u{1d71c}": "a", "\u{1d71d}": "b",
+  "\u{1d720}": "e", "\u{1d721}": "z", "\u{1d722}": "h", "\u{1d724}": "l",
+  "\u{1d725}": "k", "\u{1d727}": "m", "\u{1d728}": "n", "\u{1d72a}": "o",
+  "\u{1d72c}": "p", "\u{1d72f}": "t", "\u{1d730}": "y", "\u{1d732}": "x",
+  "\u{1d736}": "a", "\u{1d738}": "y", "\u{1d73e}": "i", "\u{1d742}": "v",
+  "\u{1d744}": "o", "\u{1d746}": "p", "\u{1d748}": "o", "\u{1d74a}": "u",
+  "\u{1d754}": "p", "\u{1d756}": "a", "\u{1d757}": "b", "\u{1d75a}": "e",
+  "\u{1d75b}": "z", "\u{1d75c}": "h", "\u{1d75e}": "l", "\u{1d75f}": "k",
+  "\u{1d761}": "m", "\u{1d762}": "n", "\u{1d764}": "o", "\u{1d766}": "p",
+  "\u{1d769}": "t", "\u{1d76a}": "y", "\u{1d76c}": "x", "\u{1d770}": "a",
+  "\u{1d772}": "y", "\u{1d778}": "i", "\u{1d77c}": "v", "\u{1d77e}": "o",
+  "\u{1d780}": "p", "\u{1d782}": "o", "\u{1d784}": "u", "\u{1d78e}": "p",
+  "\u{1d790}": "a", "\u{1d791}": "b", "\u{1d794}": "e", "\u{1d795}": "z",
+  "\u{1d796}": "h", "\u{1d798}": "l", "\u{1d799}": "k", "\u{1d79b}": "m",
+  "\u{1d79c}": "n", "\u{1d79e}": "o", "\u{1d7a0}": "p", "\u{1d7a3}": "t",
+  "\u{1d7a4}": "y", "\u{1d7a6}": "x", "\u{1d7aa}": "a", "\u{1d7ac}": "y",
+  "\u{1d7b2}": "i", "\u{1d7b6}": "v", "\u{1d7b8}": "o", "\u{1d7ba}": "p",
+  "\u{1d7bc}": "o", "\u{1d7be}": "u", "\u{1d7c8}": "p", "\u{1d7ca}": "f",
+  "\u{1d7ce}": "o", "\u{1d7cf}": "l", "\u{1d7d0}": "2", "\u{1d7d1}": "3",
+  "\u{1d7d2}": "4", "\u{1d7d3}": "5", "\u{1d7d4}": "6", "\u{1d7d5}": "7",
+  "\u{1d7d6}": "8", "\u{1d7d7}": "9", "\u{1d7d8}": "o", "\u{1d7d9}": "l",
+  "\u{1d7da}": "2", "\u{1d7db}": "3", "\u{1d7dc}": "4", "\u{1d7dd}": "5",
+  "\u{1d7de}": "6", "\u{1d7df}": "7", "\u{1d7e0}": "8", "\u{1d7e1}": "9",
+  "\u{1d7e2}": "o", "\u{1d7e3}": "l", "\u{1d7e4}": "2", "\u{1d7e5}": "3",
+  "\u{1d7e6}": "4", "\u{1d7e7}": "5", "\u{1d7e8}": "6", "\u{1d7e9}": "7",
+  "\u{1d7ea}": "8", "\u{1d7eb}": "9", "\u{1d7ec}": "o", "\u{1d7ed}": "l",
+  "\u{1d7ee}": "2", "\u{1d7ef}": "3", "\u{1d7f0}": "4", "\u{1d7f1}": "5",
+  "\u{1d7f2}": "6", "\u{1d7f3}": "7", "\u{1d7f4}": "8", "\u{1d7f5}": "9",
+  "\u{1d7f6}": "o", "\u{1d7f7}": "l", "\u{1d7f8}": "2", "\u{1d7f9}": "3",
+  "\u{1d7fa}": "4", "\u{1d7fb}": "5", "\u{1d7fc}": "6", "\u{1d7fd}": "7",
+  "\u{1d7fe}": "8", "\u{1d7ff}": "9",
+  // Other (U+1E8C7) (1)
+  "\u{1e8c7}": "l",
+  // Other (U+1E8CB) (1)
+  "\u{1e8cb}": "8",
+  // Other (U+1EE00) (1)
+  "\u{1ee00}": "l",
+  // Other (U+1EE24) (1)
+  "\u{1ee24}": "o",
+  // Other (U+1EE64) (1)
+  "\u{1ee64}": "o",
+  // Other (U+1EE80) (1)
+  "\u{1ee80}": "l",
+  // Other (U+1EE84) (1)
+  "\u{1ee84}": "o",
+  // Other (U+1F74C) (1)
+  "\u{1f74c}": "c",
+  // Other (U+1F768) (1)
+  "\u{1f768}": "t",
+  // Other (U+1FBF0) (1)
+  "\u{1fbf0}": "o",
+  // Other (U+1FBF1) (1)
+  "\u{1fbf1}": "l",
+  // Other (U+1FBF2) (1)
+  "\u{1fbf2}": "2",
+  // Other (U+1FBF3) (1)
+  "\u{1fbf3}": "3",
+  // Other (U+1FBF4) (1)
+  "\u{1fbf4}": "4",
+  // Other (U+1FBF5) (1)
+  "\u{1fbf5}": "5",
+  // Other (U+1FBF6) (1)
+  "\u{1fbf6}": "6",
+  // Other (U+1FBF7) (1)
+  "\u{1fbf7}": "7",
+  // Other (U+1FBF8) (1)
+  "\u{1fbf8}": "8",
+  // Other (U+1FBF9) (1)
+  "\u{1fbf9}": "9",
+};
+
+
+/**
  * Create a validator that rejects identifiers containing homoglyph/confusable characters.
  *
  * Catches spoofing attacks where characters from other scripts are substituted for
@@ -800,6 +1760,75 @@ export function createHomoglyphValidator(options?: {
 
     return null;
   };
+}
+
+/** Matches Unicode Default_Ignorable_Code_Point characters (TR39 skeleton step 2). */
+const DEFAULT_IGNORABLE_RE =
+  /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\u{1BCA0}-\u{1BCA3}\u{1D173}-\u{1D17A}\u{E0000}-\u{E0FFF}]/gu;
+
+/**
+ * Compute the TR39 Section 4 skeleton of a string for confusable comparison.
+ *
+ * Implements `internalSkeleton`:
+ * 1. NFD normalize
+ * 2. Remove Default_Ignorable_Code_Point characters
+ * 3. Replace each character via the confusable map
+ * 4. Reapply NFD
+ * 5. Lowercase
+ *
+ * The default map is `CONFUSABLE_MAP_FULL` (the complete TR39 mapping without
+ * NFKC filtering), which matches the NFD-based pipeline used by ICU, Chromium,
+ * and the TR39 spec itself. Pass `{ map: CONFUSABLE_MAP }` if your pipeline
+ * runs NFKC normalization before calling skeleton().
+ *
+ * @param input - The string to skeletonize
+ * @param options - Optional settings (custom confusable map)
+ * @returns The skeleton string for comparison
+ *
+ * @example
+ * ```ts
+ * skeleton("paypal") === skeleton("\u0440\u0430ypal") // true (Cyrillic р/а)
+ * skeleton("pay\u200Bpal") === skeleton("paypal")     // true (zero-width stripped)
+ * ```
+ */
+export function skeleton(input: string, options?: SkeletonOptions): string {
+  const map = options?.map ?? CONFUSABLE_MAP_FULL;
+  // Step 1: NFD normalize
+  let s = input.normalize("NFD");
+  // Step 2: Remove Default_Ignorable_Code_Point characters
+  s = s.replace(DEFAULT_IGNORABLE_RE, "");
+  // Step 3: Replace each character via confusable map (for...of iterates by code point)
+  let result = "";
+  for (const ch of s) {
+    result += map[ch] ?? ch;
+  }
+  // Step 4: Reapply NFD
+  result = result.normalize("NFD");
+  // Step 5: Lowercase
+  return result.toLowerCase();
+}
+
+/**
+ * Check whether two strings are visually confusable by comparing their TR39 skeletons.
+ *
+ * @param a - First string
+ * @param b - Second string
+ * @param options - Optional settings (custom confusable map)
+ * @returns `true` if the strings produce the same skeleton
+ *
+ * @example
+ * ```ts
+ * areConfusable("paypal", "\u0440\u0430ypal") // true
+ * areConfusable("google", "g\u043e\u043egle") // true
+ * areConfusable("hello", "world")             // false
+ * ```
+ */
+export function areConfusable(
+  a: string,
+  b: string,
+  options?: SkeletonOptions
+): boolean {
+  return skeleton(a, options) === skeleton(b, options);
 }
 
 /**
@@ -1055,7 +2084,7 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
         const candidates = generate(normalized);
         const suggestions: string[] = [];
 
-        // Phase 1: Cheap sync filter — format + reserved + purely-numeric
+        // Phase 1: Cheap sync filter - format + reserved + purely-numeric
         const passedSync = candidates.filter(
           (c) =>
             pattern.test(c) &&
@@ -1063,7 +2092,7 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
             (allowPurelyNumeric || !/^\d+(-\d+)*$/.test(c))
         );
 
-        // Phase 2+3: Progressive batches — validate + DB-check in batches of `max`
+        // Phase 2+3: Progressive batches - validate + DB-check in batches of `max`
         for (
           let i = 0;
           i < passedSync.length && suggestions.length < max;
