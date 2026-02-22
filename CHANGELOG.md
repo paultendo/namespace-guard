@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - 2026-02-22
+
+### Fixed
+- Escape regex metacharacters (`\`, `]`, `^`, `-`) when building the confusable character class in `createHomoglyphValidator` — prevents regex breakage if `additionalMappings` contain these characters
+- Same fix applied to the playground's inline validator
+- CLI: guard against undefined `Pool` export from `pg` module
+- Raw SQL adapter: validate table/column identifiers against `[a-zA-Z_][a-zA-Z0-9_]*` to prevent SQL injection via malformed config
+
+### Added
+- `cache.maxSize` option to configure maximum cached entries before LRU eviction (default: 1000)
+
+### Changed
+- `scramble` strategy no longer skips identical adjacent character swaps (dedup Set already handles duplicates)
+- `similar` strategy JSDoc now documents QWERTY keyboard layout assumption
+
 ## [0.8.1] - 2026-02-20
 
 ### Fixed

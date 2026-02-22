@@ -107,6 +107,10 @@ async function createDatabaseAdapter(url: string): Promise<{ adapter: NamespaceA
   }
 
   const Pool = pg.default?.Pool ?? pg.Pool;
+  if (!Pool) {
+    console.error("Could not find Pool export from pg package. Check your pg version.");
+    process.exit(1);
+  }
   const pool = new Pool({ connectionString: url });
 
   return {

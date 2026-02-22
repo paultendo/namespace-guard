@@ -1309,7 +1309,7 @@
     function createHomoglyphValidator(options) {
       const map = { ...CONFUSABLE_MAP, ...(options?.additionalMappings ?? {}) };
       const chars = Object.keys(map);
-      const re = new RegExp("[" + chars.join("") + "]");
+      const re = new RegExp("[" + chars.map(c => c.replace(/[\\\]^-]/g, "\\$&")).join("") + "]");
       const mixed = options?.rejectMixedScript ?? false;
       const nonLatinRe = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
       return async (value) => {

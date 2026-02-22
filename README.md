@@ -648,7 +648,8 @@ Enable in-memory caching to reduce database calls during rapid checks (e.g., liv
 const guard = createNamespaceGuard({
   sources: [/* ... */],
   cache: {
-    ttl: 5000, // milliseconds (default: 5000)
+    ttl: 5000,     // milliseconds (default: 5000)
+    maxSize: 1000, // max cached entries before LRU eviction (default: 1000)
   },
 }, adapter);
 

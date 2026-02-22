@@ -58,6 +58,8 @@ export type NamespaceConfig = {
   cache?: {
     /** Time-to-live in milliseconds (default: 5000) */
     ttl?: number;
+    /** Maximum number of cached entries before LRU eviction (default: 1000) */
+    maxSize?: number;
   };
 };
 
@@ -246,14 +248,12 @@ function createScrambleStrategy(_pattern: RegExp): (identifier: string) => strin
     const candidates: string[] = [];
     const chars = identifier.split("");
     for (let i = 0; i < chars.length - 1; i++) {
-      if (chars[i] !== chars[i + 1]) {
-        const swapped = [...chars];
-        [swapped[i], swapped[i + 1]] = [swapped[i + 1], swapped[i]];
-        const candidate = swapped.join("");
-        if (candidate !== identifier && !seen.has(candidate)) {
-          seen.add(candidate);
-          candidates.push(candidate);
-        }
+      const swapped = [...chars];
+      [swapped[i], swapped[i + 1]] = [swapped[i + 1], swapped[i]];
+      const candidate = swapped.join("");
+      if (candidate !== identifier && !seen.has(candidate)) {
+        seen.add(candidate);
+        candidates.push(candidate);
       }
     }
     return candidates;
@@ -263,7 +263,7 @@ function createScrambleStrategy(_pattern: RegExp): (identifier: string) => strin
 /**
  * Create a strategy that generates cognitively similar names using
  * edit-distance-1 mutations: single-char deletions, keyboard-adjacent
- * substitutions, and common prefix/suffix additions.
+ * substitutions (QWERTY layout), and common prefix/suffix additions.
  */
 function createSimilarStrategy(pattern: RegExp): (identifier: string) => string[] {
   const maxLen = extractMaxLength(pattern);
@@ -761,11 +761,18 @@ export function createHomoglyphValidator(options?: {
     Object.assign(map, options.additionalMappings);
   }
 
-  // Pre-build a regex character class from all confusable keys for O(1) detection
+  // Pre-build a regex character class from all confusable keys for O(1) detection.
+  // Escape chars that are special inside [...]: \ ] ^ -
   const confusableChars = Object.keys(map);
   const confusableRegex =
     confusableChars.length > 0
-      ? new RegExp("[" + confusableChars.join("") + "]")
+      ? new RegExp(
+          "[" +
+            confusableChars
+              .map((c) => c.replace(/[\\\]^-]/g, "\\$&"))
+              .join("") +
+            "]"
+        )
       : null;
 
   // Script detection for mixed-script analysis
@@ -867,7 +874,7 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   // In-memory cache for adapter lookups
   const cacheEnabled = !!config.cache;
   const cacheTtl = config.cache?.ttl ?? 5000;
-  const cacheMaxSize = 1000;
+  const cacheMaxSize = config.cache?.maxSize ?? 1000;
   const cacheMap = new Map<string, { promise: Promise<Record<string, unknown> | null>; expires: number }>();
   let cacheHits = 0;
   let cacheMisses = 0;

@@ -31,10 +31,24 @@ type QueryExecutor = (
  * );
  * ```
  */
+const SAFE_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function assertSafeIdentifier(name: string, label: string): void {
+  if (!SAFE_IDENTIFIER.test(name)) {
+    throw new Error(`Unsafe ${label}: ${JSON.stringify(name)}. Use only letters, digits, and underscores.`);
+  }
+}
+
 export function createRawAdapter(execute: QueryExecutor): NamespaceAdapter {
   return {
     async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const idColumn = source.idColumn ?? "id";
+
+      // Validate identifiers to prevent SQL injection via malformed config
+      assertSafeIdentifier(source.name, "table name");
+      assertSafeIdentifier(source.column, "column name");
+      assertSafeIdentifier(idColumn, "id column name");
+      if (source.scopeKey) assertSafeIdentifier(source.scopeKey, "scope key");
 
       const columns = source.scopeKey && source.scopeKey !== idColumn
         ? `"${idColumn}", "${source.scopeKey}"`
