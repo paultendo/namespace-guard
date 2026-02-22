@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**[Live Demo](https://paultendo.github.io/namespace-guard/)** — try it in your browser
+**[Live Demo](https://paultendo.github.io/namespace-guard/)** — try it in your browser | **[Blog Post](https://paultendo.github.io/posts/namespace-guard-launch/)** — why this exists
 
 **Check slug/handle uniqueness across multiple database tables with reserved name protection.**
 
@@ -299,7 +299,7 @@ No words are bundled — use any word list you like (e.g., the `bad-words` npm p
 
 ### Built-in Homoglyph Validator
 
-Prevent spoofing attacks where Cyrillic or Greek characters are substituted for visually identical Latin letters (e.g., Cyrillic "а" for Latin "a" in "admin"):
+Prevent spoofing attacks where visually similar characters from any Unicode script are substituted for Latin letters (e.g., Cyrillic "а" for Latin "a" in "admin"):
 
 ```typescript
 import { createNamespaceGuard, createHomoglyphValidator } from "namespace-guard";
@@ -318,11 +318,43 @@ Options:
 createHomoglyphValidator({
   message: "Custom rejection message.",       // optional
   additionalMappings: { "\u0261": "g" },      // extend the built-in map
-  rejectMixedScript: true,                    // also reject Latin + Cyrillic/Greek mixing
+  rejectMixedScript: true,                    // also reject Latin + non-Latin script mixing
 })
 ```
 
-The built-in `CONFUSABLE_MAP` covers ~30 Cyrillic-to-Latin and Greek-to-Latin pairs — the most common spoofing vectors. It's exported for inspection or extension.
+The built-in `CONFUSABLE_MAP` contains 613 character pairs generated from [Unicode TR39 confusables.txt](https://unicode.org/reports/tr39/) plus supplemental Latin small capitals. It covers Cyrillic, Greek, Armenian, Cherokee, IPA, Coptic, Lisu, Canadian Syllabics, Georgian, and 20+ other scripts. The map is exported for inspection or extension, and is regenerable for new Unicode versions with `npx tsx scripts/generate-confusables.ts`.
+
+### How the anti-spoofing pipeline works
+
+Most confusable-detection libraries apply a character map in isolation. namespace-guard uses a three-stage pipeline where each stage is aware of the others:
+
+```
+Input  →  NFKC normalize  →  Confusable map  →  Mixed-script reject
+           (stage 1)          (stage 2)           (stage 3)
+```
+
+**Stage 1: NFKC normalization** collapses full-width characters (`Ｉ` → `I`), ligatures (`ﬁ` → `fi`), superscripts, and other Unicode compatibility forms to their canonical equivalents. This runs first, before any confusable check.
+
+**Stage 2: Confusable map** catches characters that survive NFKC but visually mimic Latin letters — Cyrillic `а` for `a`, Greek `ο` for `o`, Cherokee `Ꭺ` for `A`, and 600+ others from the Unicode Consortium's [confusables.txt](https://unicode.org/Public/security/latest/confusables.txt).
+
+**Stage 3: Mixed-script rejection** (`rejectMixedScript: true`) blocks identifiers that mix Latin with non-Latin scripts (Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, etc.) even if the specific characters aren't in the confusable map. This catches novel homoglyphs that the map doesn't cover.
+
+#### Why NFKC-aware filtering matters
+
+The key insight: TR39's confusables.txt and NFKC normalization sometimes disagree. For example, Unicode says capital `I` (U+0049) is confusable with lowercase `l` — visually true in many fonts. But NFKC maps Mathematical Bold `𝐈` (U+1D408) to `I`, not `l`. If you naively ship the TR39 mapping (`𝐈` → `l`), the confusable check will never see that character — NFKC already converted it to `I` in stage 1.
+
+We found 31 entries where this happens:
+
+| Character | TR39 says | NFKC says | Winner |
+|-----------|-----------|-----------|--------|
+| `ſ` Long S (U+017F) | `f` | `s` | NFKC (`s` is correct) |
+| `Ⅰ` Roman Numeral I (U+2160) | `l` | `i` | NFKC (`i` is correct) |
+| `Ｉ` Fullwidth I (U+FF29) | `l` | `i` | NFKC (`i` is correct) |
+| `𝟎` Math Bold 0 (U+1D7CE) | `o` | `0` | NFKC (`0` is correct) |
+| 11 Mathematical I variants | `l` | `i` | NFKC |
+| 12 Mathematical 0/1 variants | `o`/`l` | `0`/`1` | NFKC |
+
+These entries are dead code in any pipeline that runs NFKC first — and worse, they encode the *wrong* mapping. The generate script (`scripts/generate-confusables.ts`) automatically detects and excludes them.
 
 ## Unicode Normalization
 

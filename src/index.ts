@@ -472,36 +472,267 @@ export function createProfanityValidator(
 }
 
 /**
- * Default mapping of visually confusable Unicode characters to their Latin equivalents.
- * Covers Cyrillic-to-Latin and Greek-to-Latin lookalikes — the most common spoofing vectors.
- * Exported for advanced users who need to inspect or extend the mapping.
+ * Mapping of visually confusable Unicode characters to their Latin/digit equivalents.
+ * Generated from Unicode TR39 confusables.txt + supplemental Latin small capitals.
+ * Covers every single-character mapping to a lowercase Latin letter or digit,
+ * excluding characters already handled by NFKC normalization (either collapsed
+ * to the same target, or mapped to a different valid Latin char/digit).
+ * Regenerate: `npx tsx scripts/generate-confusables.ts`
  */
 /* prettier-ignore */
 export const CONFUSABLE_MAP: Record<string, string> = {
-  // Cyrillic lowercase → Latin
-  "\u0430": "a", "\u0441": "c", "\u0435": "e", "\u043e": "o",
-  "\u0440": "p", "\u0445": "x", "\u0443": "y", "\u0456": "i",
-  "\u0455": "s", "\u0458": "j", "\u04bb": "h", "\u051d": "w",
-  // Cyrillic uppercase → Latin
-  "\u0410": "A", "\u0412": "B", "\u0421": "C", "\u0415": "E",
-  "\u041d": "H", "\u041a": "K", "\u041c": "M", "\u041e": "O",
-  "\u0420": "P", "\u0422": "T", "\u0425": "X",
-  // Greek lowercase → Latin
-  "\u03b1": "a", "\u03bf": "o", "\u03c1": "p", "\u03bd": "v",
-  "\u03c4": "t", "\u03b9": "i", "\u03ba": "k",
+  // Latin-1 Supplement (2)
+  "\u00d7": "x", "\u00fe": "p",
+  // Latin Extended-A (1)
+  "\u0131": "i",
+  // Latin Extended-B (14)
+  "\u0184": "b", "\u018d": "g", "\u0192": "f", "\u0196": "l",
+  "\u01a6": "r", "\u01a7": "2", "\u01b7": "3", "\u01bc": "5",
+  "\u01bd": "s", "\u01bf": "p", "\u01c0": "l", "\u021c": "3",
+  "\u0222": "8", "\u0223": "8",
+  // IPA Extensions (8)
+  "\u0251": "a", "\u0261": "g", "\u0263": "y", "\u0269": "i",
+  "\u026a": "i", "\u026f": "w", "\u028b": "u", "\u028f": "y",
+  // Spacing Modifier Letters (1)
+  "\u02db": "i",
+  // Greek and Coptic (35)
+  "\u037a": "i", "\u037f": "j", "\u0391": "a", "\u0392": "b",
+  "\u0395": "e", "\u0396": "z", "\u0397": "h", "\u0399": "l",
+  "\u039a": "k", "\u039c": "m", "\u039d": "n", "\u039f": "o",
+  "\u03a1": "p", "\u03a4": "t", "\u03a5": "y", "\u03a7": "x",
+  "\u03b1": "a", "\u03b3": "y", "\u03b9": "i", "\u03bd": "v",
+  "\u03bf": "o", "\u03c1": "p", "\u03c3": "o", "\u03c5": "u",
+  "\u03d2": "y", "\u03dc": "f", "\u03e8": "2", "\u03ec": "6",
+  "\u03ed": "o", "\u03f1": "p", "\u03f2": "c", "\u03f3": "j",
+  "\u03f8": "p", "\u03f9": "c", "\u03fa": "m",
+  // Cyrillic (40)
+  "\u0405": "s", "\u0406": "l", "\u0408": "j", "\u0410": "a",
+  "\u0412": "b", "\u0415": "e", "\u0417": "3", "\u041a": "k",
+  "\u041c": "m", "\u041d": "h", "\u041e": "o", "\u0420": "p",
+  "\u0421": "c", "\u0422": "t", "\u0423": "y", "\u0425": "x",
+  "\u042c": "b", "\u0430": "a", "\u0431": "6", "\u0433": "r",
+  "\u0435": "e", "\u043e": "o", "\u0440": "p", "\u0441": "c",
+  "\u0443": "y", "\u0445": "x", "\u0448": "w", "\u0455": "s",
+  "\u0456": "i", "\u0458": "j", "\u0461": "w", "\u0474": "v",
+  "\u0475": "v", "\u04ae": "y", "\u04af": "y", "\u04bb": "h",
+  "\u04bd": "e", "\u04c0": "l", "\u04cf": "l", "\u04e0": "3",
+  // Cyrillic Supplement (5)
+  "\u0501": "d", "\u050c": "g", "\u051b": "q", "\u051c": "w",
+  "\u051d": "w",
+  // Armenian (14)
+  "\u054d": "u", "\u054f": "s", "\u0555": "o", "\u0561": "w",
+  "\u0563": "q", "\u0566": "q", "\u0570": "h", "\u0578": "n",
+  "\u057c": "n", "\u057d": "u", "\u0581": "g", "\u0582": "i",
+  "\u0584": "f", "\u0585": "o",
+  // Hebrew (5)
+  "\u05c0": "l", "\u05d5": "l", "\u05d8": "v", "\u05df": "l", "\u05e1": "o",
+  // Arabic (13)
+  "\u0627": "l", "\u0647": "o", "\u0661": "l", "\u0665": "o",
+  "\u0667": "v", "\u06be": "o", "\u06c1": "o", "\u06d5": "o",
+  "\u06f1": "l", "\u06f5": "o", "\u06f7": "v",
+  "\u07c0": "o", "\u07ca": "l",
+  // Indic (20)
+  "\u0966": "o", "\u0969": "3", "\u09e6": "o", "\u09ea": "8",
+  "\u09ed": "9", "\u0a66": "o", "\u0a67": "9", "\u0a6a": "8",
+  "\u0ae6": "o", "\u0ae9": "3", "\u0b03": "8", "\u0b20": "o",
+  "\u0b66": "o", "\u0b68": "9", "\u0be6": "o", "\u0c02": "o",
+  "\u0c66": "o", "\u0c82": "o", "\u0ce6": "o", "\u0d02": "o",
+  // Malayalam / Sinhala (5)
+  "\u0d1f": "s", "\u0d20": "o", "\u0d66": "o", "\u0d6d": "9", "\u0d82": "o",
+  // Thai / Lao (2)
+  "\u0e50": "o", "\u0ed0": "o",
+  // Myanmar (4)
+  "\u1004": "c", "\u101d": "o", "\u1040": "o", "\u105a": "c",
+  // Georgian (2)
+  "\u10e7": "y", "\u10ff": "o",
+  // Ethiopic (2)
+  "\u1200": "u", "\u12d0": "o",
+  // Cherokee (30)
+  "\u13a0": "d", "\u13a1": "r", "\u13a2": "t", "\u13a5": "i",
+  "\u13a9": "y", "\u13aa": "a", "\u13ab": "j", "\u13ac": "e",
+  "\u13b3": "w", "\u13b7": "m", "\u13bb": "h", "\u13bd": "y",
+  "\u13c0": "g", "\u13c2": "h", "\u13c3": "z", "\u13ce": "4",
+  "\u13cf": "b", "\u13d2": "r", "\u13d4": "w", "\u13d5": "s",
+  "\u13d9": "v", "\u13da": "s", "\u13de": "l", "\u13df": "c",
+  "\u13e2": "p", "\u13e6": "k", "\u13e7": "d", "\u13ee": "6",
+  "\u13f3": "g", "\u13f4": "b",
+  // Canadian Aboriginal Syllabics (21)
+  "\u142f": "v", "\u144c": "u", "\u146d": "p", "\u146f": "d",
+  "\u1472": "b", "\u148d": "j", "\u14aa": "l", "\u14bf": "2",
+  "\u1541": "x", "\u157c": "h", "\u157d": "x", "\u1587": "r",
+  "\u15af": "b", "\u15b4": "f", "\u15c5": "a", "\u15de": "d",
+  "\u15ea": "d", "\u15f0": "m", "\u15f7": "b", "\u166d": "x",
+  "\u166e": "x",
+  // Runic (4)
+  "\u16b7": "x", "\u16c1": "l", "\u16d5": "k", "\u16d6": "m",
+  // Khmer (1)
+  "\u17e0": "o",
+  // Phonetic Extensions / Latin Small Capitals (16)
+  "\u1d00": "a", "\u1d04": "c", "\u1d05": "d", "\u1d07": "e",
+  "\u1d0a": "j", "\u1d0b": "k", "\u1d0d": "m", "\u1d0f": "o",
+  "\u1d11": "o", "\u1d18": "p", "\u1d1b": "t", "\u1d1c": "u",
+  "\u1d20": "v", "\u1d21": "w", "\u1d22": "z", "\u1d26": "r",
+  // Phonetic Extensions Supplement (2)
+  "\u1d83": "g", "\u1d8c": "y",
+  // Latin Extended Additional (2)
+  "\u1e9d": "f", "\u1eff": "y",
+  // Greek Extended (1)
+  "\u1fbe": "i",
+  // Letterlike Symbols (2)
+  "\u212e": "e", "\u213d": "y",
+  // Mathematical Operators (7)
+  "\u2223": "l", "\u2228": "v", "\u222a": "u", "\u22a4": "t",
+  "\u22c1": "v", "\u22c3": "u", "\u22ff": "e",
+  // Miscellaneous Technical (4)
+  "\u2373": "i", "\u2374": "p", "\u237a": "a", "\u23fd": "l",
+  // Box Drawing (1)
+  "\u2573": "x",
+  // Miscellaneous Mathematical Symbols (3)
+  "\u27d9": "t", "\u292b": "x", "\u292c": "x",
+  // Supplemental Mathematical Operators (1)
+  "\u2a2f": "x",
+  // Coptic (28)
+  "\u2c82": "b", "\u2c85": "r", "\u2c8e": "h", "\u2c92": "l",
+  "\u2c93": "i", "\u2c94": "k", "\u2c98": "m", "\u2c9a": "n",
+  "\u2c9c": "3", "\u2c9e": "o", "\u2c9f": "o", "\u2ca2": "p",
+  "\u2ca3": "p", "\u2ca4": "c", "\u2ca5": "c", "\u2ca6": "t",
+  "\u2ca8": "y", "\u2ca9": "y", "\u2cac": "x", "\u2cbd": "w",
+  "\u2cc4": "3", "\u2cca": "9", "\u2ccb": "9", "\u2ccc": "3",
+  "\u2cce": "p", "\u2ccf": "p", "\u2cd0": "l", "\u2cd2": "6",
+  // Coptic Supplement (2)
+  "\u2cd3": "6", "\u2cdc": "6",
+  // Tifinagh (6)
+  "\u2d38": "v", "\u2d39": "e", "\u2d4f": "l", "\u2d54": "o",
+  "\u2d55": "q", "\u2d5d": "x",
+  // CJK Symbols (1)
+  "\u3007": "o",
+  // Lisu (25)
+  "\ua4d0": "b", "\ua4d1": "p", "\ua4d2": "d", "\ua4d3": "d",
+  "\ua4d4": "t", "\ua4d6": "g", "\ua4d7": "k", "\ua4d9": "j",
+  "\ua4da": "c", "\ua4dc": "z", "\ua4dd": "f", "\ua4df": "m",
+  "\ua4e0": "n", "\ua4e1": "l", "\ua4e2": "s", "\ua4e3": "r",
+  "\ua4e6": "v", "\ua4e7": "h", "\ua4ea": "w", "\ua4eb": "x",
+  "\ua4ec": "y", "\ua4ee": "a", "\ua4f0": "e", "\ua4f2": "l",
+  "\ua4f3": "o", "\ua4f4": "u",
+  // Cyrillic Extended-B (2)
+  "\ua644": "2", "\ua647": "i",
+  // Bamum (2)
+  "\ua6df": "v", "\ua6ef": "2",
+  // Latin Extended-D (11)
+  "\ua731": "s", "\ua75a": "2", "\ua76a": "3", "\ua76e": "9",
+  "\ua798": "f", "\ua799": "f", "\ua79f": "u", "\ua7ab": "3",
+  "\ua7b2": "j", "\ua7b3": "x", "\ua7b4": "b",
+  // Latin Extended-E (8)
+  "\uab32": "e", "\uab35": "f", "\uab3d": "o", "\uab47": "r",
+  "\uab48": "r", "\uab4e": "u", "\uab52": "u", "\uab5a": "y",
+  // Cherokee Supplement (7)
+  "\uab75": "i", "\uab81": "r", "\uab83": "w", "\uab93": "z",
+  "\uaba9": "v", "\uabaa": "s", "\uabaf": "c",
+  // Arabic Presentation Forms (14)
+  "\ufba6": "o", "\ufba7": "o", "\ufba8": "o", "\ufba9": "o",
+  "\ufbaa": "o", "\ufbab": "o", "\ufbac": "o", "\ufbad": "o",
+  "\ufe8d": "l", "\ufe8e": "l", "\ufee9": "o", "\ufeea": "o",
+  "\ufeeb": "o", "\ufeec": "o",
+  // Halfwidth and Fullwidth Forms (1)
+  "\uffe8": "l",
+  // Lycian (9)
+  "\u{10282}": "b", "\u{10286}": "e", "\u{10287}": "f", "\u{1028a}": "l",
+  "\u{10290}": "x", "\u{10292}": "o", "\u{10295}": "p", "\u{10296}": "s",
+  "\u{10297}": "t",
+  // Carian (11)
+  "\u{102a0}": "a", "\u{102a1}": "b", "\u{102a2}": "c", "\u{102a5}": "f",
+  "\u{102ab}": "o", "\u{102b0}": "m", "\u{102b1}": "t", "\u{102b2}": "y",
+  "\u{102b4}": "x", "\u{102cf}": "h", "\u{102f5}": "z",
+  // Old Italic (10)
+  "\u{10301}": "b", "\u{10302}": "c", "\u{10309}": "l", "\u{10311}": "m",
+  "\u{10315}": "t", "\u{10317}": "x", "\u{1031a}": "8", "\u{10320}": "l",
+  "\u{10322}": "x",
+  // Deseret (7)
+  "\u{10404}": "o", "\u{10415}": "c", "\u{1041b}": "l", "\u{10420}": "s",
+  "\u{1042c}": "o", "\u{1043d}": "c", "\u{10448}": "s",
+  // Osage (6)
+  "\u{104b4}": "r", "\u{104c2}": "o", "\u{104ce}": "u", "\u{104d2}": "7",
+  "\u{104ea}": "o", "\u{104f6}": "u",
+  // Elbasan (8)
+  "\u{10513}": "n", "\u{10516}": "o", "\u{10518}": "k", "\u{1051c}": "c",
+  "\u{1051d}": "v", "\u{10525}": "f", "\u{10526}": "l", "\u{10527}": "x",
+  // Tirhuta (1)
+  "\u{114d0}": "o",
+  // Ahom (4)
+  "\u{11706}": "v", "\u{1170a}": "w", "\u{1170e}": "w", "\u{1170f}": "w",
+  // Warang Citi (35)
+  "\u{118a0}": "v", "\u{118a2}": "f", "\u{118a3}": "l", "\u{118a4}": "y",
+  "\u{118a6}": "e", "\u{118a9}": "z", "\u{118ac}": "9", "\u{118ae}": "e",
+  "\u{118af}": "4", "\u{118b2}": "l", "\u{118b5}": "o", "\u{118b8}": "u",
+  "\u{118bb}": "5", "\u{118bc}": "t", "\u{118c0}": "v", "\u{118c1}": "s",
+  "\u{118c2}": "f", "\u{118c3}": "i", "\u{118c4}": "z", "\u{118c6}": "7",
+  "\u{118c8}": "o", "\u{118ca}": "3", "\u{118cc}": "9", "\u{118d5}": "6",
+  "\u{118d6}": "9", "\u{118d7}": "o", "\u{118d8}": "u", "\u{118dc}": "y",
+  "\u{118e0}": "o", "\u{118e5}": "z", "\u{118e6}": "w", "\u{118e9}": "c",
+  "\u{118ec}": "x", "\u{118ef}": "w", "\u{118f2}": "c",
+  // Masaram Gondi (3)
+  "\u{11dda}": "l", "\u{11de0}": "o", "\u{11de1}": "l",
+  // Medefaidrin (2)
+  "\u{16eaa}": "l", "\u{16eb6}": "b",
+  // Miao (12)
+  "\u{16f08}": "v", "\u{16f0a}": "t", "\u{16f16}": "l", "\u{16f28}": "l",
+  "\u{16f35}": "r", "\u{16f3a}": "s", "\u{16f3b}": "3", "\u{16f40}": "a",
+  "\u{16f42}": "u", "\u{16f43}": "y",
+  // Greek Musical Notation (6)
+  "\u{1d206}": "3", "\u{1d20d}": "v", "\u{1d212}": "7", "\u{1d213}": "f",
+  "\u{1d216}": "r", "\u{1d22a}": "l",
+  // Mathematical Alphanumeric Symbols (117)
+  "\u{1d6a4}": "i", "\u{1d6a8}": "a", "\u{1d6a9}": "b", "\u{1d6ac}": "e",
+  "\u{1d6ad}": "z", "\u{1d6ae}": "h", "\u{1d6b0}": "l", "\u{1d6b1}": "k",
+  "\u{1d6b3}": "m", "\u{1d6b4}": "n", "\u{1d6b6}": "o", "\u{1d6b8}": "p",
+  "\u{1d6bb}": "t", "\u{1d6bc}": "y", "\u{1d6be}": "x", "\u{1d6c2}": "a",
+  "\u{1d6c4}": "y", "\u{1d6ca}": "i", "\u{1d6ce}": "v", "\u{1d6d0}": "o",
+  "\u{1d6d2}": "p", "\u{1d6d4}": "o", "\u{1d6d6}": "u", "\u{1d6e0}": "p",
+  "\u{1d6e2}": "a", "\u{1d6e3}": "b", "\u{1d6e6}": "e", "\u{1d6e7}": "z",
+  "\u{1d6e8}": "h", "\u{1d6ea}": "l", "\u{1d6eb}": "k", "\u{1d6ed}": "m",
+  "\u{1d6ee}": "n", "\u{1d6f0}": "o", "\u{1d6f2}": "p", "\u{1d6f5}": "t",
+  "\u{1d6f6}": "y", "\u{1d6f8}": "x", "\u{1d6fc}": "a", "\u{1d6fe}": "y",
+  "\u{1d704}": "i", "\u{1d708}": "v", "\u{1d70a}": "o", "\u{1d70c}": "p",
+  "\u{1d70e}": "o", "\u{1d710}": "u", "\u{1d71a}": "p", "\u{1d71c}": "a",
+  "\u{1d71d}": "b", "\u{1d720}": "e", "\u{1d721}": "z", "\u{1d722}": "h",
+  "\u{1d724}": "l", "\u{1d725}": "k", "\u{1d727}": "m", "\u{1d728}": "n",
+  "\u{1d72a}": "o", "\u{1d72c}": "p", "\u{1d72f}": "t", "\u{1d730}": "y",
+  "\u{1d732}": "x", "\u{1d736}": "a", "\u{1d738}": "y", "\u{1d73e}": "i",
+  "\u{1d742}": "v", "\u{1d744}": "o", "\u{1d746}": "p", "\u{1d748}": "o",
+  "\u{1d74a}": "u", "\u{1d754}": "p", "\u{1d756}": "a", "\u{1d757}": "b",
+  "\u{1d75a}": "e", "\u{1d75b}": "z", "\u{1d75c}": "h", "\u{1d75e}": "l",
+  "\u{1d75f}": "k", "\u{1d761}": "m", "\u{1d762}": "n", "\u{1d764}": "o",
+  "\u{1d766}": "p", "\u{1d769}": "t", "\u{1d76a}": "y", "\u{1d76c}": "x",
+  "\u{1d770}": "a", "\u{1d772}": "y", "\u{1d778}": "i", "\u{1d77c}": "v",
+  "\u{1d77e}": "o", "\u{1d780}": "p", "\u{1d782}": "o", "\u{1d784}": "u",
+  "\u{1d78e}": "p", "\u{1d790}": "a", "\u{1d791}": "b", "\u{1d794}": "e",
+  "\u{1d795}": "z", "\u{1d796}": "h", "\u{1d798}": "l", "\u{1d799}": "k",
+  "\u{1d79b}": "m", "\u{1d79c}": "n", "\u{1d79e}": "o", "\u{1d7a0}": "p",
+  "\u{1d7a3}": "t", "\u{1d7a4}": "y", "\u{1d7a6}": "x", "\u{1d7aa}": "a",
+  "\u{1d7ac}": "y", "\u{1d7b2}": "i", "\u{1d7b6}": "v", "\u{1d7b8}": "o",
+  "\u{1d7ba}": "p", "\u{1d7bc}": "o", "\u{1d7be}": "u", "\u{1d7c8}": "p",
+  "\u{1d7ca}": "f",
+  // Mende Kikakui (2)
+  "\u{1e8c7}": "l", "\u{1e8cb}": "8",
+  // Arabic Mathematical Alphabetic Symbols (5)
+  "\u{1ee00}": "l", "\u{1ee24}": "o", "\u{1ee64}": "o", "\u{1ee80}": "l", "\u{1ee84}": "o",
+  // Miscellaneous Symbols and Pictographs (2)
+  "\u{1f74c}": "c", "\u{1f768}": "t",
 };
 
 /**
  * Create a validator that rejects identifiers containing homoglyph/confusable characters.
  *
- * Catches spoofing attacks where Cyrillic or Greek characters are substituted for
+ * Catches spoofing attacks where characters from other scripts are substituted for
  * visually identical Latin characters (e.g., Cyrillic "а" for Latin "a" in "admin").
- * Uses a curated mapping of ~30 character pairs that covers 95%+ of real impersonation attempts.
+ * Uses a comprehensive mapping of 613 character pairs generated from Unicode TR39
+ * confusables.txt, covering Cyrillic, Greek, Armenian, Cherokee, IPA, Latin small
+ * capitals, Canadian Syllabics, Georgian, Lisu, Coptic, and many other scripts.
  *
  * @param options - Optional settings
  * @param options.message - Custom rejection message (default: "That name contains characters that could be confused with other letters.")
  * @param options.additionalMappings - Extra confusable pairs to merge with the built-in map
- * @param options.rejectMixedScript - Also reject identifiers that mix Latin with Cyrillic/Greek characters (default: false)
+ * @param options.rejectMixedScript - Also reject identifiers that mix Latin with non-Latin characters from any covered script (Cyrillic, Greek, Armenian, Hebrew, Arabic, Georgian, Cherokee, Canadian Syllabics, Ethiopic, Coptic, Lisu, and more) (default: false)
  * @returns An async validator function for use in `config.validators`
  *
  * @example
@@ -538,7 +769,11 @@ export function createHomoglyphValidator(options?: {
       : null;
 
   // Script detection for mixed-script analysis
-  const cyrillicOrGreekRegex = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F]/;
+  // Covers all non-Latin scripts present in CONFUSABLE_MAP:
+  // Greek, Cyrillic, Armenian, Hebrew, Arabic (+Thaana), Indic (Devanagari–Sinhala),
+  // Thai/Lao, Myanmar, Georgian, Ethiopic, Cherokee, Canadian Syllabics,
+  // Runic, Khmer, Coptic, Tifinagh, Lisu, Bamum, Cherokee Supplement
+  const nonLatinRegex = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
   const latinRegex = /[a-zA-Z]/;
 
   return async (value: string) => {
@@ -550,8 +785,8 @@ export function createHomoglyphValidator(options?: {
     // Check 2: Mixed-script detection (optional)
     if (rejectMixedScript) {
       const hasLatin = latinRegex.test(value);
-      const hasCyrillicOrGreek = cyrillicOrGreekRegex.test(value);
-      if (hasLatin && hasCyrillicOrGreek) {
+      const hasNonLatin = nonLatinRegex.test(value);
+      if (hasLatin && hasNonLatin) {
         return { available: false, message };
       }
     }

@@ -2036,10 +2036,11 @@ describe("createHomoglyphValidator", () => {
   });
 
   it("supports additional mappings", async () => {
+    // Use a char not in the built-in map to test additional mappings
     const validator = createHomoglyphValidator({
-      additionalMappings: { "\u0261": "g" },
+      additionalMappings: { "\u2603": "x" },
     });
-    const result = await validator("te\u0261t");
+    const result = await validator("te\u2603t");
     expect(result).not.toBeNull();
   });
 
@@ -2061,6 +2062,185 @@ describe("createHomoglyphValidator", () => {
     const validator = createHomoglyphValidator({ rejectMixedScript: true });
     expect(await validator("hello")).toBeNull();
   });
+
+  // New script category tests (TR39 expansion)
+  it("rejects Armenian հ (ho) as confusable with Latin h", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u0570ello"); // Armenian ho + "ello"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects Cherokee Ꭺ (go) as confusable with Latin a", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u13AAdmin"); // Cherokee A + "dmin"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects IPA ɑ (alpha) as confusable with Latin a", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u0251dmin"); // IPA alpha + "dmin"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects IPA ɡ (script g) as confusable with Latin g", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("lo\u0261in"); // "lo" + IPA script g + "in"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects Greek uppercase Α as confusable with Latin a", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u0391dmin"); // Greek Alpha + "dmin"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects Canadian Syllabics ᕼ as confusable with Latin h", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u157Cello"); // Canadian Syllabics H + "ello"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects Latin small capital ᴀ as confusable with Latin a", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("\u1D00dmin"); // Latin small cap A + "dmin"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects Latin small capital ᴛ as confusable with Latin t", async () => {
+    const validator = createHomoglyphValidator();
+    const result = await validator("admin\u1D1B"); // "admin" + Latin small cap T
+    expect(result).not.toBeNull();
+  });
+
+  it("IPA confusables caught even without rejectMixedScript", async () => {
+    // IPA chars are Latin-script, so mixed-script detection won't help —
+    // only the confusable map catches them
+    const validator = createHomoglyphValidator({ rejectMixedScript: false });
+    const result = await validator("\u0251dmin"); // IPA alpha looks like "admin"
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Armenian+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Armenian ի (U+056B, not in confusable map) + Latin text
+    const result = await validator("hel\u056Bo");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Cherokee+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Cherokee Ꮃ (U+13B3, in confusable map as "w") is caught by map,
+    // but Cherokee Ꮊ (U+13CA, not in map) + Latin = mixed script
+    const result = await validator("hel\u13CAo");
+    expect(result).not.toBeNull();
+  });
+
+  // --- Expanded mixed-script regex: all new script ranges ---
+
+  it("rejects mixed Hebrew+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Hebrew Alef (U+05D0, not in confusable map) + Latin
+    const result = await validator("hel\u05D0o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Arabic+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Arabic Ba (U+0628, not in confusable map) + Latin
+    const result = await validator("hel\u0628o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Devanagari+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Devanagari Ka (U+0915) + Latin
+    const result = await validator("hel\u0915o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Thai+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Thai Ko Kai (U+0E01) + Latin
+    const result = await validator("hel\u0E01o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Myanmar+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Myanmar Ka (U+1000, but U+1004 is in confusable map — use U+1001)
+    const result = await validator("hel\u1001o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Georgian+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Georgian An (U+10A0) + Latin
+    const result = await validator("hel\u10A0o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Ethiopic+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Ethiopic Ha (U+1210) + Latin
+    const result = await validator("hel\u1210o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Runic+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Runic Fehu (U+16A0) + Latin
+    const result = await validator("hel\u16A0o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Khmer+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Khmer Ka (U+1780) + Latin
+    const result = await validator("hel\u1780o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Coptic+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Coptic Alfa (U+2C80, not in map — U+2C82 is) + Latin
+    const result = await validator("hel\u2C80o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Tifinagh+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Tifinagh Ya (U+2D30) + Latin
+    const result = await validator("hel\u2D30o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Lisu+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Lisu A (U+A4D5, not in map) + Latin
+    const result = await validator("hel\uA4D5o");
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects mixed Bamum+Latin when rejectMixedScript is true", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: true });
+    // Bamum A (U+A6A0) + Latin
+    const result = await validator("hel\uA6A0o");
+    expect(result).not.toBeNull();
+  });
+
+  // --- Negative: non-confusable non-Latin chars pass without rejectMixedScript ---
+
+  it("allows non-confusable non-Latin chars when rejectMixedScript is false", async () => {
+    const validator = createHomoglyphValidator({ rejectMixedScript: false });
+    // Hebrew Alef (U+05D0) is not in confusable map — should pass
+    expect(await validator("\u05D0")).toBeNull();
+    // Arabic Ba (U+0628) is not in confusable map — should pass
+    expect(await validator("\u0628")).toBeNull();
+    // Devanagari Ka (U+0915) is not in confusable map — should pass
+    expect(await validator("\u0915")).toBeNull();
+    // Thai Ko Kai (U+0E01) is not in confusable map — should pass
+    expect(await validator("\u0E01")).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2068,10 +2248,128 @@ describe("createHomoglyphValidator", () => {
 // ---------------------------------------------------------------------------
 describe("CONFUSABLE_MAP", () => {
   it("is exported and contains expected mappings", () => {
+    // Cyrillic
     expect(CONFUSABLE_MAP["\u0430"]).toBe("a");
-    expect(CONFUSABLE_MAP["\u03b1"]).toBe("a");
     expect(CONFUSABLE_MAP["\u0441"]).toBe("c");
-    expect(Object.keys(CONFUSABLE_MAP).length).toBeGreaterThanOrEqual(28);
+    // Greek
+    expect(CONFUSABLE_MAP["\u03b1"]).toBe("a");
+    expect(CONFUSABLE_MAP["\u0391"]).toBe("a"); // Greek uppercase Alpha
+    // Armenian
+    expect(CONFUSABLE_MAP["\u0570"]).toBe("h");
+    // Cherokee
+    expect(CONFUSABLE_MAP["\u13aa"]).toBe("a");
+    // IPA
+    expect(CONFUSABLE_MAP["\u0251"]).toBe("a");
+    // Latin small capitals (supplemental — not in TR39)
+    expect(CONFUSABLE_MAP["\u1d00"]).toBe("a");
+    expect(CONFUSABLE_MAP["\u1d1b"]).toBe("t");
+    // Canadian Syllabics
+    expect(CONFUSABLE_MAP["\u157c"]).toBe("h");
+    // Coptic
+    expect(CONFUSABLE_MAP["\u2c82"]).toBe("b");
+    expect(CONFUSABLE_MAP["\u2c9e"]).toBe("o");
+    // Lisu
+    expect(CONFUSABLE_MAP["\ua4d0"]).toBe("b");
+    expect(CONFUSABLE_MAP["\ua4f3"]).toBe("o");
+    // Bamum
+    expect(CONFUSABLE_MAP["\ua6df"]).toBe("v");
+    // Georgian
+    expect(CONFUSABLE_MAP["\u10e7"]).toBe("y");
+    expect(CONFUSABLE_MAP["\u10ff"]).toBe("o");
+    // Hebrew
+    expect(CONFUSABLE_MAP["\u05c0"]).toBe("l");
+    expect(CONFUSABLE_MAP["\u05e1"]).toBe("o");
+    // Arabic
+    expect(CONFUSABLE_MAP["\u0647"]).toBe("o");
+    expect(CONFUSABLE_MAP["\u0627"]).toBe("l");
+    // Tifinagh
+    expect(CONFUSABLE_MAP["\u2d54"]).toBe("o");
+    expect(CONFUSABLE_MAP["\u2d5d"]).toBe("x");
+    // Runic
+    expect(CONFUSABLE_MAP["\u16c1"]).toBe("l");
+    expect(CONFUSABLE_MAP["\u16b7"]).toBe("x");
+    // Khmer
+    expect(CONFUSABLE_MAP["\u17e0"]).toBe("o");
+    // Total count — full TR39 + supplemental
+    expect(Object.keys(CONFUSABLE_MAP).length).toBeGreaterThanOrEqual(600);
+  });
+
+  // --- NFKC-conflict exclusions: entries removed because NFKC maps to a different letter ---
+
+  it("excludes U+017F Long S (TR39 says f, NFKC says s)", () => {
+    expect(CONFUSABLE_MAP["\u017f"]).toBeUndefined();
+  });
+
+  it("excludes U+2110 Script Capital I (TR39 says l, NFKC says i)", () => {
+    expect(CONFUSABLE_MAP["\u2110"]).toBeUndefined();
+  });
+
+  it("excludes U+2111 Fraktur Capital I (TR39 says l, NFKC says i)", () => {
+    expect(CONFUSABLE_MAP["\u2111"]).toBeUndefined();
+  });
+
+  it("excludes U+2160 Roman Numeral I (TR39 says l, NFKC says i)", () => {
+    expect(CONFUSABLE_MAP["\u2160"]).toBeUndefined();
+  });
+
+  it("excludes U+FF29 Fullwidth Latin I (TR39 says l, NFKC says i)", () => {
+    expect(CONFUSABLE_MAP["\uff29"]).toBeUndefined();
+  });
+
+  it("excludes Mathematical Bold/Italic/Script I variants (NFKC → i, not l)", () => {
+    // All 11 Mathematical I variants: TR39 maps to "l" but NFKC normalizes to "i"
+    const mathI = [
+      "\u{1D408}", "\u{1D43C}", "\u{1D470}", "\u{1D4D8}", "\u{1D540}",
+      "\u{1D574}", "\u{1D5A8}", "\u{1D5DC}", "\u{1D610}", "\u{1D644}",
+      "\u{1D678}",
+    ];
+    for (const ch of mathI) {
+      expect(CONFUSABLE_MAP[ch]).toBeUndefined();
+    }
+  });
+
+  it("excludes Mathematical digit 0 variants (NFKC → 0, not o)", () => {
+    const mathZero = [
+      "\u{1D7CE}", "\u{1D7D8}", "\u{1D7E2}", "\u{1D7EC}", "\u{1D7F6}",
+      "\u{1FBF0}",
+    ];
+    for (const ch of mathZero) {
+      expect(CONFUSABLE_MAP[ch]).toBeUndefined();
+    }
+  });
+
+  it("excludes Mathematical digit 1 variants (NFKC → 1, not l)", () => {
+    const mathOne = [
+      "\u{1D7CF}", "\u{1D7D9}", "\u{1D7E3}", "\u{1D7ED}", "\u{1D7F7}",
+      "\u{1FBF1}",
+    ];
+    for (const ch of mathOne) {
+      expect(CONFUSABLE_MAP[ch]).toBeUndefined();
+    }
+  });
+
+  // --- NFKC pipeline integration: excluded chars still get caught by normalize ---
+
+  it("NFKC-excluded chars are still handled by the normalize pipeline", () => {
+    // U+017F Long S → NFKC → "s" (not "f" as TR39 says)
+    expect("\u017f".normalize("NFKC").toLowerCase()).toBe("s");
+    // U+2160 Roman Numeral I → NFKC → "i"
+    expect("\u2160".normalize("NFKC").toLowerCase()).toBe("i");
+    // U+FF29 Fullwidth I → NFKC → "i"
+    expect("\uff29".normalize("NFKC").toLowerCase()).toBe("i");
+    // U+1D7CE Mathematical Bold 0 → NFKC → "0"
+    expect("\u{1D7CE}".normalize("NFKC").toLowerCase()).toBe("0");
+    // U+1D7CF Mathematical Bold 1 → NFKC → "1"
+    expect("\u{1D7CF}".normalize("NFKC").toLowerCase()).toBe("1");
+  });
+
+  it("normalize() correctly handles NFKC-excluded chars end-to-end", () => {
+    // Long S in a slug → normalize should produce "s", not "f"
+    expect(normalize("te\u017ft")).toBe("test");
+    // Fullwidth I → should become "i"
+    expect(normalize("\uff29nbox")).toBe("inbox");
+    // Mathematical Bold 0 → should become "0"
+    expect(normalize("user\u{1D7CE}")).toBe("user0");
   });
 });
 

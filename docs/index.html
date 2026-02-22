@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>namespace-guard — Slug Uniqueness Checker</title>
-  <meta name="description" content="Interactive playground for namespace-guard. Check slug/handle uniqueness across multiple database tables with reserved name protection.">
+  <meta name="description" content="Interactive playground for namespace-guard. Check slug/handle uniqueness across multiple database tables with reserved name protection and Unicode anti-spoofing.">
   <meta property="og:title" content="namespace-guard Playground">
-  <meta property="og:description" content="Try the slug uniqueness checker in your browser.">
+  <meta property="og:description" content="Try the slug uniqueness checker in your browser. Built-in Unicode spoofing detection across 20+ scripts.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://paultendo.github.io/namespace-guard/">
   <meta property="og:image" content="https://paultendo.github.io/namespace-guard/og.svg">
@@ -14,7 +14,7 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="namespace-guard Playground">
-  <meta name="twitter:description" content="Try the slug uniqueness checker in your browser.">
+  <meta name="twitter:description" content="Try the slug uniqueness checker in your browser. Built-in Unicode spoofing detection across 20+ scripts.">
   <meta name="twitter:image" content="https://paultendo.github.io/namespace-guard/og.svg">
   <meta name="theme-color" content="#090e17">
   <link rel="canonical" href="https://paultendo.github.io/namespace-guard/">
@@ -195,7 +195,7 @@
       grid-template-columns: 1fr;
     }
     @media (min-width: 768px) {
-      .how-grid { grid-template-columns: repeat(3, 1fr); }
+      .how-grid { grid-template-columns: repeat(4, 1fr); }
     }
     .how-card { text-align: left; }
     .how-card h3 {
@@ -517,6 +517,125 @@
     .code-block .br { color: rgba(255,255,255,0.3); }
     .code-block .var { color: #f78c6c; }
 
+    /* Pipeline explainer */
+    .pipeline-section { text-align: center; }
+    .pipeline-section h2 {
+      font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .pipeline-section .subtitle {
+      color: var(--ink-muted);
+      font-size: 0.92rem;
+      margin-bottom: 1.5rem;
+    }
+    .pipeline-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.75rem;
+    }
+    .pipeline-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.75rem 1rem;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      min-width: 8rem;
+    }
+    .pipeline-stage .stage-num {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .pipeline-stage .stage-name {
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .pipeline-stage .stage-desc {
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+    }
+    .pipeline-arrow {
+      color: rgba(188,201,223,0.3);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .insight-cards {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    @media (min-width: 768px) {
+      .insight-cards { grid-template-columns: 1fr 1fr; }
+    }
+    .insight-card {
+      padding: clamp(1rem, 2vw, 1.5rem);
+    }
+    .insight-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .insight-card p {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      line-height: 1.55;
+    }
+    .insight-card .example {
+      margin-top: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0,0,0,0.3);
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255,255,255,0.06);
+      line-height: 1.6;
+    }
+    .insight-card .example .val { color: var(--accent); }
+    .insight-card .example .err { color: var(--red); }
+    .insight-card .example .dim { color: rgba(188,201,223,0.4); }
+
+    /* Confusable highlight in result */
+    .confusable-detail {
+      margin-top: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0,0,0,0.25);
+      border-radius: 0.4rem;
+      border: 1px solid rgba(255,90,90,0.15);
+      line-height: 1.6;
+    }
+    .confusable-detail .char-highlight {
+      color: var(--red);
+      font-weight: 600;
+      text-decoration: underline;
+      text-decoration-color: rgba(255,90,90,0.5);
+      text-underline-offset: 2px;
+    }
+    .confusable-detail .char-latin {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .confusable-detail .char-meta {
+      color: var(--ink-muted);
+      font-size: 0.78rem;
+    }
+    .slug-annotated .spoof-char {
+      color: var(--red);
+      text-decoration: underline wavy rgba(255,90,90,0.7);
+      text-underline-offset: 3px;
+    }
+
     /* Footer */
     footer {
       margin-top: clamp(2.5rem, 5vh, 4rem);
@@ -584,11 +703,12 @@
     <div class="hero-phonetic phonetic-serif">
       <span class="pron">/neym-speys gahrd/</span>
       <span class="pos">noun</span>
-      <span class="def">A utility that prevents slug collisions across users, organisations, and reserved routes.</span>
+      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes &mdash; with built-in Unicode spoofing protection.</span>
     </div>
     <div class="hero-actions">
       <a href="#playground" class="btn-primary">Try it out</a>
       <a href="https://github.com/paultendo/namespace-guard" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+      <a href="https://paultendo.github.io/posts/namespace-guard-launch/" class="btn-secondary" target="_blank" rel="noopener">Read the blog post</a>
     </div>
   </header>
 
@@ -620,6 +740,14 @@
           </h3>
           <p>Checks multiple database tables in parallel. Users, organisations, teams &mdash; one call covers them all, with alternative suggestions.</p>
           <div class="example"><span class="err">"sarah"</span> &rarr; taken by <small>user</small></div>
+        </div>
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Anti-Spoofing
+          </h3>
+          <p>Detects visually deceptive Unicode characters from 20+ scripts using a 613-pair confusable map generated from Unicode TR39.</p>
+          <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"</div>
         </div>
       </div>
     </section>
@@ -665,7 +793,7 @@
         <div class="strategy-section">
           <div class="strategy-label">Security options:</div>
           <div class="strategy-row" role="group" aria-label="Toggle security features">
-            <button class="strategy-chip" aria-pressed="false" id="toggle-homoglyph">homoglyph detection</button>
+            <button class="strategy-chip" aria-pressed="true" id="toggle-homoglyph">homoglyph detection</button>
             <button class="strategy-chip" aria-pressed="false" id="toggle-numeric">reject purely numeric</button>
           </div>
         </div>
@@ -684,6 +812,10 @@
             <button class="example-pill" data-slug="@Bob">@Bob</button>
             <button class="example-pill" data-slug="namespace-guard">namespace-guard</button>
             <button class="example-pill" data-slug="&#x430;dmin" title="Cyrillic а + Latin dmin">\u0430dmin</button>
+            <button class="example-pill" data-slug="&#x570;ello" title="Armenian հ + Latin ello">&#x570;ello</button>
+            <button class="example-pill" data-slug="&#x13AA;dmin" title="Cherokee Ꭺ + Latin dmin">&#x13AA;dmin</button>
+            <button class="example-pill" data-slug="&#x251;dmin" title="IPA ɑ + Latin dmin">&#x251;dmin</button>
+            <button class="example-pill" data-slug="&#x1D00;dmin" title="Latin small cap ᴀ + Latin dmin">&#x1D00;dmin</button>
             <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">ｈｅｌｌｏ</button>
             <button class="example-pill" data-slug="123456">123456</button>
           </div>
@@ -959,6 +1091,65 @@
 <span class="br">}</span></code></pre>
       </div>
     </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Anti-spoofing pipeline -->
+    <section class="pipeline-section" aria-labelledby="pipeline-heading">
+      <h2 id="pipeline-heading" class="display-type">Anti-spoofing pipeline</h2>
+      <p class="subtitle">Three stages, each aware of the others. No dead code, no wrong mappings.</p>
+
+      <div class="pipeline-flow">
+        <div class="pipeline-stage">
+          <span class="stage-num">Stage 1</span>
+          <span class="stage-name">NFKC normalize</span>
+          <span class="stage-desc">Collapses compatibility forms</span>
+        </div>
+        <span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
+        <div class="pipeline-stage">
+          <span class="stage-num">Stage 2</span>
+          <span class="stage-name">Confusable map</span>
+          <span class="stage-desc">613 TR39 character pairs</span>
+        </div>
+        <span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
+        <div class="pipeline-stage">
+          <span class="stage-num">Stage 3</span>
+          <span class="stage-name">Mixed-script reject</span>
+          <span class="stage-desc">19+ script families</span>
+        </div>
+      </div>
+
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <h3>NFKC-aware confusable map</h3>
+          <p>Most libraries blindly ship Unicode TR39 mappings. We found 31 entries where TR39 and NFKC disagree &mdash; dead code that encodes the <em>wrong</em> mapping in any pipeline that normalizes first.</p>
+          <div class="example">
+            <span class="dim">// TR39 says Long S (&lsaquo;&#x17F;&rsaquo;) &rarr; &ldquo;f&rdquo;</span><br>
+            <span class="dim">// NFKC says Long S &rarr; &ldquo;s&rdquo;</span> <span class="val">&larr; correct</span><br>
+            <span class="dim">// TR39 says Math Bold I (&lsaquo;&#x1D408;&rsaquo;) &rarr; &ldquo;l&rdquo;</span><br>
+            <span class="dim">// NFKC says Math Bold I &rarr; &ldquo;i&rdquo;</span> <span class="val">&larr; correct</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Full Unicode script coverage</h3>
+          <p>The confusable map covers 20+ scripts from the Unicode Consortium's authoritative source. Mixed-script detection goes further &mdash; blocking Latin mixed with Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, and more.</p>
+          <div class="example">
+            <span class="err">&#x430;dmin</span> <span class="dim">Cyrillic &ldquo;a&rdquo; + Latin</span><br>
+            <span class="err">&#x570;ello</span> <span class="dim">Armenian &ldquo;h&rdquo; + Latin</span><br>
+            <span class="err">&#x251;dmin</span> <span class="dim">IPA &ldquo;a&rdquo; + Latin</span><br>
+            <span class="err">&#x13AA;dmin</span> <span class="dim">Cherokee &ldquo;A&rdquo; + Latin</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Reproducible from source</h3>
+          <p>The map is generated from Unicode's official <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">confusables.txt</code>, not hand-curated. Run <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">npx tsx scripts/generate-confusables.ts</code> to regenerate for new Unicode versions. The script automatically excludes NFKC conflicts.</p>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Defense in depth</h3>
+          <p>The default slug pattern <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">/^[a-z0-9][a-z0-9-]*$/</code> already blocks non-ASCII. The confusable map and mixed-script detection protect apps with permissive patterns that allow Unicode identifiers &mdash; or serve as a second line of defense if a format regex is misconfigured.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="shell">
@@ -987,30 +1178,177 @@
     };
     var SUFFIX_WORDS = ["dev", "io", "app", "hq", "pro", "team", "labs", "hub", "go", "one"];
 
+    // Generated from Unicode TR39 confusables.txt + supplemental Latin small capitals (613 entries)
+    // NFKC-conflict entries excluded (NFKC normalization runs first in the pipeline)
     var CONFUSABLE_MAP = {
-      "\u0430":"a","\u0441":"c","\u0435":"e","\u043e":"o",
-      "\u0440":"p","\u0445":"x","\u0443":"y","\u0456":"i",
-      "\u0455":"s","\u0458":"j","\u04bb":"h","\u051d":"w",
-      "\u0410":"A","\u0412":"B","\u0421":"C","\u0415":"E",
-      "\u041d":"H","\u041a":"K","\u041c":"M","\u041e":"O",
-      "\u0420":"P","\u0422":"T","\u0425":"X",
-      "\u03b1":"a","\u03bf":"o","\u03c1":"p","\u03bd":"v",
-      "\u03c4":"t","\u03b9":"i","\u03ba":"k",
+      "\u00d7":"x","\u00fe":"p","\u0131":"i","\u0184":"b","\u018d":"g","\u0192":"f","\u0196":"l",
+      "\u01a6":"r","\u01a7":"2","\u01b7":"3","\u01bc":"5","\u01bd":"s","\u01bf":"p","\u01c0":"l","\u021c":"3",
+      "\u0222":"8","\u0223":"8","\u0251":"a","\u0261":"g","\u0263":"y","\u0269":"i","\u026a":"i","\u026f":"w",
+      "\u028b":"u","\u028f":"y","\u02db":"i","\u037a":"i","\u037f":"j","\u0391":"a","\u0392":"b","\u0395":"e",
+      "\u0396":"z","\u0397":"h","\u0399":"l","\u039a":"k","\u039c":"m","\u039d":"n","\u039f":"o","\u03a1":"p",
+      "\u03a4":"t","\u03a5":"y","\u03a7":"x","\u03b1":"a","\u03b3":"y","\u03b9":"i","\u03bd":"v","\u03bf":"o",
+      "\u03c1":"p","\u03c3":"o","\u03c5":"u","\u03d2":"y","\u03dc":"f","\u03e8":"2","\u03ec":"6","\u03ed":"o",
+      "\u03f1":"p","\u03f2":"c","\u03f3":"j","\u03f8":"p","\u03f9":"c","\u03fa":"m","\u0405":"s","\u0406":"l",
+      "\u0408":"j","\u0410":"a","\u0412":"b","\u0415":"e","\u0417":"3","\u041a":"k","\u041c":"m","\u041d":"h",
+      "\u041e":"o","\u0420":"p","\u0421":"c","\u0422":"t","\u0423":"y","\u0425":"x","\u042c":"b","\u0430":"a",
+      "\u0431":"6","\u0433":"r","\u0435":"e","\u043e":"o","\u0440":"p","\u0441":"c","\u0443":"y","\u0445":"x",
+      "\u0448":"w","\u0455":"s","\u0456":"i","\u0458":"j","\u0461":"w","\u0474":"v","\u0475":"v","\u04ae":"y",
+      "\u04af":"y","\u04bb":"h","\u04bd":"e","\u04c0":"l","\u04cf":"l","\u04e0":"3","\u0501":"d","\u050c":"g",
+      "\u051b":"q","\u051c":"w","\u051d":"w","\u054d":"u","\u054f":"s","\u0555":"o","\u0561":"w","\u0563":"q",
+      "\u0566":"q","\u0570":"h","\u0578":"n","\u057c":"n","\u057d":"u","\u0581":"g","\u0582":"i","\u0584":"f",
+      "\u0585":"o","\u05c0":"l","\u05d5":"l","\u05d8":"v","\u05df":"l","\u05e1":"o","\u0627":"l","\u0647":"o",
+      "\u0661":"l","\u0665":"o","\u0667":"v","\u06be":"o","\u06c1":"o","\u06d5":"o","\u06f1":"l","\u06f5":"o",
+      "\u06f7":"v","\u07c0":"o","\u07ca":"l","\u0966":"o","\u0969":"3","\u09e6":"o","\u09ea":"8","\u09ed":"9",
+      "\u0a66":"o","\u0a67":"9","\u0a6a":"8","\u0ae6":"o","\u0ae9":"3","\u0b03":"8","\u0b20":"o","\u0b66":"o",
+      "\u0b68":"9","\u0be6":"o","\u0c02":"o","\u0c66":"o","\u0c82":"o","\u0ce6":"o","\u0d02":"o","\u0d1f":"s",
+      "\u0d20":"o","\u0d66":"o","\u0d6d":"9","\u0d82":"o","\u0e50":"o","\u0ed0":"o","\u1004":"c","\u101d":"o",
+      "\u1040":"o","\u105a":"c","\u10e7":"y","\u10ff":"o","\u1200":"u","\u12d0":"o","\u13a0":"d","\u13a1":"r",
+      "\u13a2":"t","\u13a5":"i","\u13a9":"y","\u13aa":"a","\u13ab":"j","\u13ac":"e","\u13b3":"w","\u13b7":"m",
+      "\u13bb":"h","\u13bd":"y","\u13c0":"g","\u13c2":"h","\u13c3":"z","\u13ce":"4","\u13cf":"b","\u13d2":"r",
+      "\u13d4":"w","\u13d5":"s","\u13d9":"v","\u13da":"s","\u13de":"l","\u13df":"c","\u13e2":"p","\u13e6":"k",
+      "\u13e7":"d","\u13ee":"6","\u13f3":"g","\u13f4":"b","\u142f":"v","\u144c":"u","\u146d":"p","\u146f":"d",
+      "\u1472":"b","\u148d":"j","\u14aa":"l","\u14bf":"2","\u1541":"x","\u157c":"h","\u157d":"x","\u1587":"r",
+      "\u15af":"b","\u15b4":"f","\u15c5":"a","\u15de":"d","\u15ea":"d","\u15f0":"m","\u15f7":"b","\u166d":"x",
+      "\u166e":"x","\u16b7":"x","\u16c1":"l","\u16d5":"k","\u16d6":"m","\u17e0":"o","\u1d00":"a","\u1d04":"c",
+      "\u1d05":"d","\u1d07":"e","\u1d0a":"j","\u1d0b":"k","\u1d0d":"m","\u1d0f":"o","\u1d11":"o","\u1d18":"p",
+      "\u1d1b":"t","\u1d1c":"u","\u1d20":"v","\u1d21":"w","\u1d22":"z","\u1d26":"r","\u1d83":"g","\u1d8c":"y",
+      "\u1e9d":"f","\u1eff":"y","\u1fbe":"i","\u212e":"e","\u213d":"y",
+      "\u2223":"l","\u2228":"v","\u222a":"u","\u22a4":"t","\u22c1":"v","\u22c3":"u","\u22ff":"e","\u2373":"i",
+      "\u2374":"p","\u237a":"a","\u23fd":"l","\u2573":"x","\u27d9":"t","\u292b":"x","\u292c":"x","\u2a2f":"x",
+      "\u2c82":"b","\u2c85":"r","\u2c8e":"h","\u2c92":"l","\u2c93":"i","\u2c94":"k","\u2c98":"m","\u2c9a":"n",
+      "\u2c9c":"3","\u2c9e":"o","\u2c9f":"o","\u2ca2":"p","\u2ca3":"p","\u2ca4":"c","\u2ca5":"c","\u2ca6":"t",
+      "\u2ca8":"y","\u2ca9":"y","\u2cac":"x","\u2cbd":"w","\u2cc4":"3","\u2cca":"9","\u2ccb":"9","\u2ccc":"3",
+      "\u2cce":"p","\u2ccf":"p","\u2cd0":"l","\u2cd2":"6","\u2cd3":"6","\u2cdc":"6","\u2d38":"v","\u2d39":"e",
+      "\u2d4f":"l","\u2d54":"o","\u2d55":"q","\u2d5d":"x","\u3007":"o","\ua4d0":"b","\ua4d1":"p","\ua4d2":"d",
+      "\ua4d3":"d","\ua4d4":"t","\ua4d6":"g","\ua4d7":"k","\ua4d9":"j","\ua4da":"c","\ua4dc":"z","\ua4dd":"f",
+      "\ua4df":"m","\ua4e0":"n","\ua4e1":"l","\ua4e2":"s","\ua4e3":"r","\ua4e6":"v","\ua4e7":"h","\ua4ea":"w",
+      "\ua4eb":"x","\ua4ec":"y","\ua4ee":"a","\ua4f0":"e","\ua4f2":"l","\ua4f3":"o","\ua4f4":"u","\ua644":"2",
+      "\ua647":"i","\ua6df":"v","\ua6ef":"2","\ua731":"s","\ua75a":"2","\ua76a":"3","\ua76e":"9","\ua798":"f",
+      "\ua799":"f","\ua79f":"u","\ua7ab":"3","\ua7b2":"j","\ua7b3":"x","\ua7b4":"b","\uab32":"e","\uab35":"f",
+      "\uab3d":"o","\uab47":"r","\uab48":"r","\uab4e":"u","\uab52":"u","\uab5a":"y","\uab75":"i","\uab81":"r",
+      "\uab83":"w","\uab93":"z","\uaba9":"v","\uabaa":"s","\uabaf":"c","\ufba6":"o","\ufba7":"o","\ufba8":"o",
+      "\ufba9":"o","\ufbaa":"o","\ufbab":"o","\ufbac":"o","\ufbad":"o","\ufe8d":"l","\ufe8e":"l","\ufee9":"o",
+      "\ufeea":"o","\ufeeb":"o","\ufeec":"o","\uffe8":"l",
+      "\u{10282}":"b","\u{10286}":"e","\u{10287}":"f","\u{1028a}":"l","\u{10290}":"x","\u{10292}":"o",
+      "\u{10295}":"p","\u{10296}":"s","\u{10297}":"t","\u{102a0}":"a","\u{102a1}":"b","\u{102a2}":"c",
+      "\u{102a5}":"f","\u{102ab}":"o","\u{102b0}":"m","\u{102b1}":"t","\u{102b2}":"y","\u{102b4}":"x",
+      "\u{102cf}":"h","\u{102f5}":"z","\u{10301}":"b","\u{10302}":"c","\u{10309}":"l","\u{10311}":"m",
+      "\u{10315}":"t","\u{10317}":"x","\u{1031a}":"8","\u{10320}":"l","\u{10322}":"x","\u{10404}":"o",
+      "\u{10415}":"c","\u{1041b}":"l","\u{10420}":"s","\u{1042c}":"o","\u{1043d}":"c","\u{10448}":"s",
+      "\u{104b4}":"r","\u{104c2}":"o","\u{104ce}":"u","\u{104d2}":"7","\u{104ea}":"o","\u{104f6}":"u",
+      "\u{10513}":"n","\u{10516}":"o","\u{10518}":"k","\u{1051c}":"c","\u{1051d}":"v","\u{10525}":"f",
+      "\u{10526}":"l","\u{10527}":"x","\u{114d0}":"o","\u{11706}":"v","\u{1170a}":"w","\u{1170e}":"w",
+      "\u{1170f}":"w","\u{118a0}":"v","\u{118a2}":"f","\u{118a3}":"l","\u{118a4}":"y","\u{118a6}":"e",
+      "\u{118a9}":"z","\u{118ac}":"9","\u{118ae}":"e","\u{118af}":"4","\u{118b2}":"l","\u{118b5}":"o",
+      "\u{118b8}":"u","\u{118bb}":"5","\u{118bc}":"t","\u{118c0}":"v","\u{118c1}":"s","\u{118c2}":"f",
+      "\u{118c3}":"i","\u{118c4}":"z","\u{118c6}":"7","\u{118c8}":"o","\u{118ca}":"3","\u{118cc}":"9",
+      "\u{118d5}":"6","\u{118d6}":"9","\u{118d7}":"o","\u{118d8}":"u","\u{118dc}":"y","\u{118e0}":"o",
+      "\u{118e5}":"z","\u{118e6}":"w","\u{118e9}":"c","\u{118ec}":"x","\u{118ef}":"w","\u{118f2}":"c",
+      "\u{11dda}":"l","\u{11de0}":"o","\u{11de1}":"l","\u{16eaa}":"l","\u{16eb6}":"b","\u{16f08}":"v",
+      "\u{16f0a}":"t","\u{16f16}":"l","\u{16f28}":"l","\u{16f35}":"r","\u{16f3a}":"s","\u{16f3b}":"3",
+      "\u{16f40}":"a","\u{16f42}":"u","\u{16f43}":"y","\u{1d206}":"3","\u{1d20d}":"v","\u{1d212}":"7",
+      "\u{1d213}":"f","\u{1d216}":"r","\u{1d22a}":"l","\u{1d6a4}":"i",
+      "\u{1d6a8}":"a","\u{1d6a9}":"b","\u{1d6ac}":"e","\u{1d6ad}":"z","\u{1d6ae}":"h","\u{1d6b0}":"l",
+      "\u{1d6b1}":"k","\u{1d6b3}":"m","\u{1d6b4}":"n","\u{1d6b6}":"o","\u{1d6b8}":"p","\u{1d6bb}":"t",
+      "\u{1d6bc}":"y","\u{1d6be}":"x","\u{1d6c2}":"a","\u{1d6c4}":"y","\u{1d6ca}":"i","\u{1d6ce}":"v",
+      "\u{1d6d0}":"o","\u{1d6d2}":"p","\u{1d6d4}":"o","\u{1d6d6}":"u","\u{1d6e0}":"p","\u{1d6e2}":"a",
+      "\u{1d6e3}":"b","\u{1d6e6}":"e","\u{1d6e7}":"z","\u{1d6e8}":"h","\u{1d6ea}":"l","\u{1d6eb}":"k",
+      "\u{1d6ed}":"m","\u{1d6ee}":"n","\u{1d6f0}":"o","\u{1d6f2}":"p","\u{1d6f5}":"t","\u{1d6f6}":"y",
+      "\u{1d6f8}":"x","\u{1d6fc}":"a","\u{1d6fe}":"y","\u{1d704}":"i","\u{1d708}":"v","\u{1d70a}":"o",
+      "\u{1d70c}":"p","\u{1d70e}":"o","\u{1d710}":"u","\u{1d71a}":"p","\u{1d71c}":"a","\u{1d71d}":"b",
+      "\u{1d720}":"e","\u{1d721}":"z","\u{1d722}":"h","\u{1d724}":"l","\u{1d725}":"k","\u{1d727}":"m",
+      "\u{1d728}":"n","\u{1d72a}":"o","\u{1d72c}":"p","\u{1d72f}":"t","\u{1d730}":"y","\u{1d732}":"x",
+      "\u{1d736}":"a","\u{1d738}":"y","\u{1d73e}":"i","\u{1d742}":"v","\u{1d744}":"o","\u{1d746}":"p",
+      "\u{1d748}":"o","\u{1d74a}":"u","\u{1d754}":"p","\u{1d756}":"a","\u{1d757}":"b","\u{1d75a}":"e",
+      "\u{1d75b}":"z","\u{1d75c}":"h","\u{1d75e}":"l","\u{1d75f}":"k","\u{1d761}":"m","\u{1d762}":"n",
+      "\u{1d764}":"o","\u{1d766}":"p","\u{1d769}":"t","\u{1d76a}":"y","\u{1d76c}":"x","\u{1d770}":"a",
+      "\u{1d772}":"y","\u{1d778}":"i","\u{1d77c}":"v","\u{1d77e}":"o","\u{1d780}":"p","\u{1d782}":"o",
+      "\u{1d784}":"u","\u{1d78e}":"p","\u{1d790}":"a","\u{1d791}":"b","\u{1d794}":"e","\u{1d795}":"z",
+      "\u{1d796}":"h","\u{1d798}":"l","\u{1d799}":"k","\u{1d79b}":"m","\u{1d79c}":"n","\u{1d79e}":"o",
+      "\u{1d7a0}":"p","\u{1d7a3}":"t","\u{1d7a4}":"y","\u{1d7a6}":"x","\u{1d7aa}":"a","\u{1d7ac}":"y",
+      "\u{1d7b2}":"i","\u{1d7b6}":"v","\u{1d7b8}":"o","\u{1d7ba}":"p","\u{1d7bc}":"o","\u{1d7be}":"u",
+      "\u{1d7c8}":"p","\u{1d7ca}":"f","\u{1e8c7}":"l","\u{1e8cb}":"8","\u{1ee00}":"l","\u{1ee24}":"o",
+      "\u{1ee64}":"o","\u{1ee80}":"l","\u{1ee84}":"o","\u{1f74c}":"c","\u{1f768}":"t",
     };
+
+    // Script name lookup for rich homoglyph detail
+    function getScriptName(cp) {
+      if (cp >= 0x0370 && cp <= 0x03FF) return "Greek";
+      if (cp >= 0x0400 && cp <= 0x052F) return "Cyrillic";
+      if (cp >= 0x0530 && cp <= 0x058F) return "Armenian";
+      if (cp >= 0x0590 && cp <= 0x05FF) return "Hebrew";
+      if (cp >= 0x0600 && cp <= 0x074F) return "Arabic";
+      if (cp >= 0x0900 && cp <= 0x097F) return "Devanagari";
+      if (cp >= 0x0980 && cp <= 0x09FF) return "Bengali";
+      if (cp >= 0x0A00 && cp <= 0x0A7F) return "Gurmukhi";
+      if (cp >= 0x0A80 && cp <= 0x0AFF) return "Gujarati";
+      if (cp >= 0x0B00 && cp <= 0x0B7F) return "Oriya";
+      if (cp >= 0x0B80 && cp <= 0x0BFF) return "Tamil";
+      if (cp >= 0x0C00 && cp <= 0x0C7F) return "Telugu";
+      if (cp >= 0x0C80 && cp <= 0x0CFF) return "Kannada";
+      if (cp >= 0x0D00 && cp <= 0x0DFF) return "Malayalam";
+      if (cp >= 0x0E00 && cp <= 0x0E7F) return "Thai";
+      if (cp >= 0x0E80 && cp <= 0x0EFF) return "Lao";
+      if (cp >= 0x1000 && cp <= 0x109F) return "Myanmar";
+      if (cp >= 0x10A0 && cp <= 0x10FF) return "Georgian";
+      if (cp >= 0x1200 && cp <= 0x137F) return "Ethiopic";
+      if (cp >= 0x13A0 && cp <= 0x13FF) return "Cherokee";
+      if (cp >= 0x1400 && cp <= 0x167F) return "Canadian Syllabics";
+      if (cp >= 0x16A0 && cp <= 0x16FF) return "Runic";
+      if (cp >= 0x1780 && cp <= 0x17FF) return "Khmer";
+      if (cp >= 0x1D00 && cp <= 0x1D7F) return "Latin Small Capital";
+      if (cp >= 0x0250 && cp <= 0x02AF) return "IPA";
+      if (cp >= 0x2C80 && cp <= 0x2CFF) return "Coptic";
+      if (cp >= 0x2D30 && cp <= 0x2D7F) return "Tifinagh";
+      if (cp >= 0xA4D0 && cp <= 0xA4FF) return "Lisu";
+      if (cp >= 0xA6A0 && cp <= 0xA6FF) return "Bamum";
+      if (cp >= 0xAB70 && cp <= 0xABBF) return "Cherokee";
+      return "non-Latin";
+    }
 
     function createHomoglyphValidator(options) {
       const map = { ...CONFUSABLE_MAP, ...(options?.additionalMappings ?? {}) };
       const chars = Object.keys(map);
       const re = new RegExp("[" + chars.join("") + "]");
-      const msg = options?.message ?? "That name contains characters that could be confused with other letters.";
       const mixed = options?.rejectMixedScript ?? false;
+      const nonLatinRe = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
       return async (value) => {
-        if (re.test(value)) return { available: false, message: msg };
+        // Check confusable map — find the first offending character
+        for (const ch of value) {
+          if (map[ch]) {
+            const cp = ch.codePointAt(0);
+            const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+            const script = getScriptName(cp);
+            return {
+              available: false,
+              message: `Contains ${script} "${ch}" (${hex}) which looks like Latin "${map[ch]}".`,
+              _confusableChar: ch,
+              _confusableTarget: map[ch],
+              _confusableScript: script,
+            };
+          }
+        }
+        // Check mixed-script
         if (mixed) {
           const hasLatin = /[a-zA-Z]/.test(value);
-          const hasCyrillic = /[\u0400-\u04FF]/.test(value);
-          const hasGreek = /[\u0370-\u03FF]/.test(value);
-          if (hasLatin && (hasCyrillic || hasGreek)) return { available: false, message: msg };
+          const hasNonLatin = nonLatinRe.test(value);
+          if (hasLatin && hasNonLatin) {
+            // Find the first non-Latin char for detail
+            for (const ch of value) {
+              const cp = ch.codePointAt(0);
+              if (nonLatinRe.test(ch)) {
+                const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+                const script = getScriptName(cp);
+                return {
+                  available: false,
+                  message: `Mixes Latin with ${script} characters — possible spoofing attempt.`,
+                  _mixedScriptChar: ch,
+                  _mixedScript: script,
+                };
+              }
+            }
+            return { available: false, message: "Mixes Latin with non-Latin characters." };
+          }
         }
         return null;
       };
@@ -1299,7 +1637,7 @@
 
     // === Guard factory (recreated when strategy/options change) ===
     let currentStrategy = ["sequential", "random-digits"];
-    let homoglyphEnabled = false;
+    let homoglyphEnabled = true;
     let rejectNumeric = false;
 
     function createGuard(strategy) {
@@ -1358,6 +1696,21 @@
     const iconX = `<svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="#ff5a5a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
     const iconShield = `<svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="#ffbe3c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
 
+    // Build an annotated slug display highlighting the offending character
+    function annotateSlug(value, spoofChar) {
+      if (!spoofChar) return `<span class="slug-name">${escapeHtml(value)}</span>`;
+      let html = '<span class="slug-annotated">';
+      for (const ch of value) {
+        if (ch === spoofChar) {
+          html += `<span class="spoof-char">${escapeHtml(ch)}</span>`;
+        } else {
+          html += escapeHtml(ch);
+        }
+      }
+      html += '</span>';
+      return html;
+    }
+
     function renderResult(value, result) {
       if (!value) { resultEl.innerHTML = ""; return; }
       const normalized = escapeHtml(normalize(value));
@@ -1384,7 +1737,30 @@
         suggestionsHtml = `<div class="suggestions"><div class="suggestions-label">Try instead:</div><div class="suggestion-pills">${pills}</div></div>`;
       }
 
-      resultEl.innerHTML = `<div class="result-card ${cls}">${icon}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong>${extra}<div class="result-msg">${escapeHtml(result.message)}</div>${suggestionsHtml}</div></div>`;
+      // Rich confusable detail
+      let confusableHtml = "";
+      const spoofChar = result._confusableChar || result._mixedScriptChar || null;
+      if (result._confusableChar) {
+        const ch = result._confusableChar;
+        const target = result._confusableTarget;
+        const script = result._confusableScript;
+        const cp = ch.codePointAt(0);
+        const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+        confusableHtml = `<div class="confusable-detail"><span class="char-highlight">${escapeHtml(ch)}</span> <span class="char-meta">(${script} ${hex})</span> looks like <span class="char-latin">${escapeHtml(target)}</span> <span class="char-meta">(Latin)</span></div>`;
+      } else if (result._mixedScriptChar) {
+        const ch = result._mixedScriptChar;
+        const script = result._mixedScript;
+        const cp = ch.codePointAt(0);
+        const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+        confusableHtml = `<div class="confusable-detail">Found <span class="char-highlight">${escapeHtml(ch)}</span> <span class="char-meta">(${script} ${hex})</span> mixed with Latin characters</div>`;
+      }
+
+      // Use annotated slug for confusable results, plain normalized for others
+      const slugDisplay = spoofChar
+        ? annotateSlug(value, spoofChar)
+        : `<span class="slug-name">${normalized}</span>`;
+
+      resultEl.innerHTML = `<div class="result-card ${cls}">${icon}<div class="result-body"><strong>${slugDisplay}</strong>${extra}<div class="result-msg">${escapeHtml(result.message)}</div>${confusableHtml}${suggestionsHtml}</div></div>`;
     }
 
     let lastRendered = "";

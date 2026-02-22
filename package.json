@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.7.0",
+  "version": "0.8.1",
   "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

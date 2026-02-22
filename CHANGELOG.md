@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-02-20
+
+### Fixed
+- Removed 31 NFKC-conflict entries from `CONFUSABLE_MAP` (644 → 613 pairs) — these encoded wrong mappings in any pipeline that runs NFKC normalization first (e.g., Long S `ſ` mapped to `f` by TR39 but correctly to `s` by NFKC; Mathematical Bold I `𝐈` mapped to `l` by TR39 but correctly to `i` by NFKC)
+- `scripts/generate-confusables.ts` now automatically detects and excludes NFKC-conflict entries
+
+### Changed
+- Expanded `rejectMixedScript` regex from 7 script ranges to 19+ (added Hebrew, Arabic, Indic, Thai, Myanmar, Ethiopic, Runic, Khmer, Coptic, Tifinagh, Lisu, Bamum)
+- README now documents the three-stage anti-spoofing pipeline and NFKC-aware filtering rationale
+- Playground now includes an anti-spoofing pipeline explainer section
+
+## [0.8.0] - 2026-02-20
+
+### Added
+- Full Unicode TR39 confusables.txt coverage — `CONFUSABLE_MAP` now contains 613 character pairs (up from 30), covering Cyrillic, Greek, Armenian, Cherokee, IPA, Coptic, Lisu, Canadian Syllabics, Georgian, Latin small capitals, and 20+ other scripts
+- `scripts/generate-confusables.ts` — reproducible build script that downloads the official Unicode confusables.txt, filters to Latin-target single-character mappings, excludes NFKC-redundant entries, and adds supplemental Latin small capitals
+- Expanded mixed-script detection — `rejectMixedScript` now covers all scripts with confusable entries (Hebrew, Arabic, Indic, Thai, Myanmar, Georgian, Ethiopic, Cherokee, Canadian Syllabics, Runic, Khmer, Coptic, Tifinagh, Lisu, Bamum, and more) in addition to Cyrillic and Greek
+
+### Changed
+- `CONFUSABLE_MAP` is now generated from the Unicode Consortium's authoritative source rather than hand-curated
+- All `CONFUSABLE_MAP` targets are now lowercase (uppercase Cyrillic targets like `"A"` → `"a"` are lowercased to match the normalize pipeline)
+
 ## [0.7.0] - 2026-02-20
 
 ### Added
@@ -109,6 +131,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI (`npx namespace-guard check <slug>`)
 - Interactive playground page (GitHub Pages)
 
+[0.8.1]: https://github.com/paultendo/namespace-guard/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/paultendo/namespace-guard/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/paultendo/namespace-guard/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/paultendo/namespace-guard/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/paultendo/namespace-guard/compare/v0.4.0...v0.5.0
