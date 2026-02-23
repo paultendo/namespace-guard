@@ -159,6 +159,23 @@ describe("validateFormatOnly", () => {
     );
     expect(guard.validateFormatOnly("12345")).not.toBeNull();
   });
+
+  it("normalizes full-width input before format check", () => {
+    const guard = createNamespaceGuard(
+      { reserved: ["admin"], sources: defaultSources },
+      createMockAdapter({})
+    );
+    // Full-width "hello" - NFKC normalizes to ASCII, format passes
+    expect(guard.validateFormatOnly("\uff48\uff45\uff4c\uff4c\uff4f")).toBeNull();
+  });
+
+  it("strips leading @ before format check", () => {
+    const guard = createNamespaceGuard(
+      { reserved: ["admin"], sources: defaultSources },
+      createMockAdapter({})
+    );
+    expect(guard.validateFormatOnly("@sarah")).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2771,6 +2788,36 @@ describe("skeleton", () => {
     // Mathematical Bold Capital A (U+1D400) -> "a" in CONFUSABLE_MAP_FULL
     expect(skeleton("\u{1d400}bc")).toBe("abc");
   });
+
+  it("works with empty custom map (no substitutions)", () => {
+    expect(skeleton("\u0430\u043e", { map: {} })).toBe("\u0430\u043e");
+  });
+
+  it("handles input already in NFD form", () => {
+    // Pre-decomposed e + combining acute should produce same result
+    expect(skeleton("e\u0301")).toBe("e\u0301");
+    expect(skeleton("\u00e9")).toBe("e\u0301");
+  });
+
+  it("strips Tag characters (U+E0000-E0FFF)", () => {
+    expect(skeleton("a\u{E0001}b")).toBe("ab");
+  });
+
+  it("strips Hangul fillers (U+115F, U+1160, U+FFA0)", () => {
+    expect(skeleton("a\u115Fb\u1160c\uFFA0d")).toBe("abcd");
+  });
+
+  it("handles multiple consecutive ignorables", () => {
+    expect(skeleton("a\u200B\u200C\u200D\u00ADb")).toBe("ab");
+  });
+
+  it("handles Armenian confusables", () => {
+    // Armenian Small Letter Ini (U+056B) -> "h" in CONFUSABLE_MAP_FULL
+    const armenianH = CONFUSABLE_MAP_FULL["\u056B"];
+    if (armenianH) {
+      expect(skeleton("\u056B")).toBe(armenianH);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2817,5 +2864,25 @@ describe("areConfusable", () => {
   it("detects classic google spoofing", () => {
     // Cyrillic о (U+043E) for both o's
     expect(areConfusable("google", "g\u043e\u043egle")).toBe(true);
+  });
+
+  it("is symmetric", () => {
+    expect(areConfusable("paypal", "\u0440aypal")).toBe(true);
+    expect(areConfusable("\u0440aypal", "paypal")).toBe(true);
+    expect(areConfusable("hello", "world")).toBe(false);
+    expect(areConfusable("world", "hello")).toBe(false);
+  });
+
+  it("detects soft-hyphen insertion as confusable", () => {
+    expect(areConfusable("admin", "ad\u00ADmin")).toBe(true);
+  });
+
+  it("detects BOM-prefixed string as confusable", () => {
+    expect(areConfusable("test", "\uFEFFtest")).toBe(true);
+  });
+
+  it("treats different scripts as non-confusable when no mapping exists", () => {
+    // CJK character has no confusable mapping to Latin
+    expect(areConfusable("hello", "\u4e16\u754c")).toBe(false);
   });
 });
