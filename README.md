@@ -331,7 +331,7 @@ No words are bundled - use any word list you like (e.g., the `bad-words` npm pac
 
 ### Built-in Homoglyph Validator
 
-Prevent spoofing attacks where visually similar characters from any Unicode script are substituted for Latin letters (e.g., Cyrillic "а" for Latin "a" in "admin"):
+Prevent spoofing attacks where visually similar characters from any Unicode script are substituted for Latin letters (e.g., Cyrillic "а" for Latin "a" in "admin"). Note: with the default ASCII-only pattern (`[a-z0-9-]`), non-Latin characters are already rejected by the format check. The homoglyph validator is most useful when your `pattern` allows Unicode characters, or as defense-in-depth alongside `rejectMixedScript`:
 
 ```typescript
 import { createNamespaceGuard, createHomoglyphValidator } from "namespace-guard";
@@ -424,7 +424,7 @@ We found 31 entries where this happens:
 | 11 Mathematical I variants | `l` | `i` | NFKC |
 | 12 Mathematical 0/1 variants | `o`/`l` | `0`/`1` | NFKC |
 
-These entries are dead code in any pipeline that runs NFKC first - and worse, they encode the *wrong* mapping. The generate script (`scripts/generate-confusables.ts`) automatically detects and excludes them.
+These entries are unreachable in any pipeline that runs NFKC first - NFKC has already transformed the character before the confusable map sees it. In a non-NFKC pipeline (which is what TR39 specifies), these entries are correct visual judgments. The generate script (`scripts/generate-confusables.ts`) produces both `CONFUSABLE_MAP` (NFKC-filtered) and `CONFUSABLE_MAP_FULL` (unfiltered) so you can match the map to your normalization strategy.
 
 ## Unicode Normalization
 
