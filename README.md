@@ -7,7 +7,7 @@
 
 **[Live Demo](https://paultendo.github.io/namespace-guard/)** - try it in your browser | **[Blog Post](https://paultendo.github.io/posts/namespace-guard-launch/)** - why this exists
 
-**Check slug/handle uniqueness across multiple database tables with reserved name protection.**
+**Check slug/handle claimability across multiple database tables, with reserved-name and anti-spoofing protection.**
 
 Perfect for multi-tenant apps where usernames, organization slugs, and reserved routes all share one URL namespace - like Twitter (`@username`), GitHub (`github.com/username`), or any SaaS with vanity URLs.
 
@@ -23,8 +23,9 @@ When someone signs up or creates an org, you need to check that their chosen slu
 2. Isn't already taken by an organization
 3. Isn't a reserved system route
 4. Follows your naming rules
+5. Isn't confusable with protected names (anti-impersonation)
 
-This library handles all of that in one call.
+This library handles all of that in one guard call.
 
 ## Installation
 
@@ -35,14 +36,15 @@ npm install namespace-guard
 ## Quick Start
 
 ```typescript
-import { createNamespaceGuard } from "namespace-guard";
+import { createNamespaceGuardWithProfile } from "namespace-guard";
 import { createPrismaAdapter } from "namespace-guard/adapters/prisma";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Define your namespace rules once
-const guard = createNamespaceGuard(
+// One-liner-ready guard with practical defaults
+const guard = createNamespaceGuardWithProfile(
+  "consumer-handle",
   {
     reserved: ["admin", "api", "settings", "dashboard", "login", "signup"],
     sources: [
@@ -53,15 +55,9 @@ const guard = createNamespaceGuard(
   createPrismaAdapter(prisma)
 );
 
-// Check if a slug is available
-const result = await guard.check("acme-corp");
-
-if (result.available) {
-  // Create the org
-} else {
-  // Show error: result.message
-  // e.g., "That name is reserved. Try another one." or "That name is already in use."
-}
+// One-liner: format/reserved/taken + anti-spoofing policy
+await guard.assertClaimable("acme-corp");
+// throws on failure, otherwise safe to create
 ```
 
 ## Why namespace-guard?
@@ -76,7 +72,7 @@ if (result.available) {
 | Async validators | Custom hooks (profanity, etc.) | Manual wiring |
 | Batch checking | `checkMany()` | Loop it yourself |
 | ORM agnostic | Prisma, Drizzle, Kysely, Knex, TypeORM, MikroORM, Sequelize, Mongoose, raw SQL | Tied to your ORM |
-| CLI | `npx namespace-guard check` | None |
+| CLI | `check`, `risk`, `calibrate`, `recommend`, `drift` | None |
 
 ## Adapters
 
@@ -577,6 +573,10 @@ npx namespace-guard check admin
 
 npx namespace-guard check "a"
 # ✗ a - Use 2-30 lowercase letters, numbers, or hyphens.
+
+# Risk scoring against protected targets
+npx namespace-guard risk paуpal --protect paypal
+# ⛔ paуpal — risk 100/100 (block)
 ```
 
 ### With a config file
@@ -619,6 +619,84 @@ Requires `pg` to be installed (`npm install pg`).
 
 Exit code 0 = available, 1 = unavailable.
 
+### Risk command options
+
+```bash
+# Warn/block thresholds (0-100)
+npx namespace-guard risk paypa1 --protect paypal --warn-threshold 45 --block-threshold 80
+
+# Fail CI on warn or block (default fail mode is block only)
+npx namespace-guard risk paypa1 --protect paypal --fail-on warn
+
+# JSON output for automation
+npx namespace-guard risk paуpal --protect paypal --json
+```
+
+### Calibrate command
+
+Use labeled examples to recommend warn/block thresholds for your namespace:
+
+```json
+[
+  { "identifier": "paуpal", "label": "malicious", "target": "paypal" },
+  { "identifier": "teamspace", "label": "benign", "target": "paypal" }
+]
+```
+
+```bash
+npx namespace-guard calibrate ./risk-dataset.json
+npx namespace-guard calibrate ./risk-dataset.json --json
+
+# Cost-aware calibration (optimize expected harm, not just F1)
+npx namespace-guard calibrate ./risk-dataset.json \
+  --cost-block-benign 8 \
+  --cost-warn-benign 1 \
+  --cost-allow-malicious 12 \
+  --cost-warn-malicious 3 \
+  --malicious-prior 0.05
+```
+
+### Recommend command
+
+Run calibration + drift together and get a ready-to-paste risk config plus CI gate command:
+
+```bash
+npx namespace-guard recommend ./risk-dataset.json
+npx namespace-guard recommend ./risk-dataset.json --json
+```
+
+This is the fastest onboarding path when you already have labeled examples.  
+It calibrates thresholds from your dataset, then derives CI gate budgets from the built-in NFKC/TR39 divergence corpus.
+
+### Drift command
+
+Quantify composability drift between TR39-full mapping (`CONFUSABLE_MAP_FULL`) and NFKC-filtered mapping (`CONFUSABLE_MAP`):
+
+```bash
+# Built-in NFKC/TR39 divergence corpus
+npx namespace-guard drift
+
+# Your own dataset (same shape as calibrate)
+npx namespace-guard drift ./risk-dataset.json --json
+```
+
+### CI drift gate
+
+Use the included drift gate script to fail CI if drift metrics exceed your budget:
+
+```bash
+# Build first so dist/cli.js exists
+npm run build
+
+# Fail when drift exceeds these limits
+npm run ci:drift-gate -- \
+  --max-action-flips 29 \
+  --max-average-score-delta 95 \
+  --max-abs-score-delta 100
+```
+
+GitHub Actions workflow is included at `.github/workflows/drift-gate.yml`.
+
 ## API Reference
 
 ### `createNamespaceGuard(config, adapter)`
@@ -626,6 +704,23 @@ Exit code 0 = available, 1 = unavailable.
 Creates a guard instance with your configuration and database adapter.
 
 **Returns:** `NamespaceGuard` instance
+
+---
+
+### `createNamespaceGuardWithProfile(profile, config, adapter)`
+
+Create a guard with practical profile defaults, then apply your explicit config overrides.
+
+Built-in profiles:
+- `consumer-handle`
+- `org-slug`
+- `developer-id`
+
+Each profile sets defaults for:
+- `pattern`
+- `normalizeUnicode`
+- `allowPurelyNumeric`
+- `risk` thresholds (`warnThreshold`, `blockThreshold`, etc.)
 
 ---
 
@@ -670,9 +765,53 @@ Pass `{ skipSuggestions: false }` to include suggestions for taken identifiers.
 
 ---
 
+### `guard.checkRisk(identifier, options?)`
+
+Score spoofing/confusability risk against protected targets using weighted confusable distance + chain depth.
+
+**Parameters:**
+- `identifier` - Candidate slug/handle to assess
+- `options` - Optional:
+  - `protect?: string[]` additional high-value targets to compare against
+  - `includeReserved?: boolean` include configured reserved names as protected targets (default: `true`)
+  - `warnThreshold?: number` threshold for `action: "warn"` (default: `45`)
+  - `blockThreshold?: number` threshold for `action: "block"` (default: `70`)
+  - `maxMatches?: number` number of top matches to return (default: `3`)
+  - `map?: Record<string, string>` custom confusable map
+
+**Returns:** `{ score, level, action, reasons, matches, ... }`
+
+---
+
+### `guard.enforceRisk(identifier, options?)`
+
+Apply a deny policy on top of risk scoring.
+
+**Options:**
+- All `checkRisk` options
+- `failOn?: "block" | "warn"` (`"block"` default)
+- `messages?: { warn?: string; block?: string }`
+- If `protect` is omitted, uses `config.risk.protect`, then falls back to `DEFAULT_PROTECTED_TOKENS`
+
+**Returns:** `{ allowed, action, message?, risk }`
+
+---
+
 ### `guard.assertAvailable(identifier, scope?)`
 
 Same as `check()`, but throws an `Error` if not available.
+
+---
+
+### `guard.assertClaimable(identifier, scope?, options?)`
+
+One-liner guard for production claim checks.
+
+Runs:
+- `check()` (format/reserved/validators/database)
+- `enforceRisk()` (confusable risk policy)
+
+Throws an `Error` if the identifier should not be claimed.
 
 ---
 
@@ -722,6 +861,30 @@ import { normalize } from "namespace-guard";
 normalize("  @Sarah  "); // "sarah"
 normalize("ACME-Corp"); // "acme-corp"
 ```
+
+---
+
+### `confusableDistance(a, b, options?)`
+
+Compute weighted confusable distance between two strings.
+
+Outputs:
+- `distance` (lower means closer)
+- `similarity` (`0..1`)
+- `chainDepth` (number of non-trivial edit steps)
+- `crossScriptCount`, `ignorableCount`, `divergenceCount`
+- `steps` (explainable shortest-path operations)
+- `skeletonEqual` / `normalizedEqual`
+
+---
+
+### `deriveNfkcTr39DivergenceVectors(map?)`
+
+Derive the composability regression corpus: characters where TR39 mapping and NFKC lowercase disagree.
+
+### `NFKC_TR39_DIVERGENCE_VECTORS`
+
+Built-in divergence vectors derived from `CONFUSABLE_MAP_FULL`, useful for drift and pipeline regression tests.
 
 ## Case-Insensitive Matching
 
@@ -848,7 +1011,7 @@ export const namespaceRouter = router({
   claim: protectedProcedure
     .input(z.object({ slug: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await guard.assertAvailable(input.slug, { id: ctx.user.id });
+      await guard.assertClaimable(input.slug, { id: ctx.user.id });
       return ctx.db.user.update({
         where: { id: ctx.user.id },
         data: { handle: guard.normalize(input.slug) },
@@ -864,10 +1027,16 @@ Full TypeScript support with exported types:
 ```typescript
 import {
   createNamespaceGuard,
+  createNamespaceGuardWithProfile,
   createProfanityValidator,
   createHomoglyphValidator,
   skeleton,
   areConfusable,
+  confusableDistance,
+  deriveNfkcTr39DivergenceVectors,
+  NAMESPACE_PROFILES,
+  DEFAULT_PROTECTED_TOKENS,
+  NFKC_TR39_DIVERGENCE_VECTORS,
   CONFUSABLE_MAP,
   CONFUSABLE_MAP_FULL,
   normalize,
@@ -881,6 +1050,21 @@ import {
   type SuggestStrategyName,
   type SkeletonOptions,
   type CheckManyOptions,
+  type CheckRiskOptions,
+  type RiskCheckResult,
+  type AssertClaimableOptions,
+  type EnforceRiskOptions,
+  type EnforceRiskResult,
+  type RiskReason,
+  type RiskMatch,
+  type RiskLevel,
+  type RiskAction,
+  type NamespaceProfileName,
+  type NamespaceProfilePreset,
+  type ConfusableDistanceOptions,
+  type ConfusableDistanceResult,
+  type ConfusableDistanceStep,
+  type NfkcTr39DivergenceVector,
 } from "namespace-guard";
 ```
 

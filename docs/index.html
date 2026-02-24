@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>namespace-guard - Slug Uniqueness Checker</title>
-  <meta name="description" content="Interactive playground for namespace-guard. Check slug/handle uniqueness across multiple database tables with reserved name protection and Unicode anti-spoofing.">
+  <title>namespace-guard - Slug Claimability Guard</title>
+  <meta name="description" content="Interactive playground for namespace-guard. Validate slug claimability with reserved-name checks, anti-spoofing risk policy, threshold calibration, and drift-safe CI gating.">
   <meta property="og:title" content="namespace-guard Playground">
-  <meta property="og:description" content="Try the slug uniqueness checker in your browser. Built-in Unicode spoofing detection across 20+ scripts.">
+  <meta property="og:description" content="Try the slug claimability playground in your browser. Built-in Unicode spoofing detection plus CLI calibration and drift gating.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://paultendo.github.io/namespace-guard/">
   <meta property="og:image" content="https://paultendo.github.io/namespace-guard/og.svg">
@@ -14,7 +14,7 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="namespace-guard Playground">
-  <meta name="twitter:description" content="Try the slug uniqueness checker in your browser. Built-in Unicode spoofing detection across 20+ scripts.">
+  <meta name="twitter:description" content="Try the slug claimability playground in your browser. Built-in Unicode spoofing detection plus CLI calibration and drift gating.">
   <meta name="twitter:image" content="https://paultendo.github.io/namespace-guard/og.svg">
   <meta name="theme-color" content="#090e17">
   <link rel="canonical" href="https://paultendo.github.io/namespace-guard/">
@@ -303,6 +303,14 @@
     .result-reserved {
       background: var(--amber-soft);
       border-color: rgba(255,190,60,0.25);
+    }
+    .result-riskwarn {
+      background: var(--amber-soft);
+      border-color: rgba(255,190,60,0.35);
+    }
+    .result-riskblock {
+      background: rgba(255,90,90,0.16);
+      border-color: rgba(255,90,90,0.35);
     }
     .result-icon { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin-top: 0.1rem; }
     .result-body { flex: 1; min-width: 0; }
@@ -699,7 +707,7 @@
 
   <header class="shell hero">
     <h1 class="display-type">namespace-guard</h1>
-    <p class="hero-tagline">Check slug uniqueness across multiple tables in one call.</p>
+    <p class="hero-tagline">Claim safe slugs in one line: availability plus anti-spoofing risk policy.</p>
     <div class="hero-phonetic phonetic-serif">
       <span class="pron">/neym-speys gahrd/</span>
       <span class="pos">noun</span>
@@ -758,7 +766,7 @@
     <section id="playground" class="playground" aria-labelledby="playground-heading">
       <h2 id="playground-heading" class="display-type">Try it out</h2>
       <div class="glass-card playground-card">
-        <form id="check-form" role="search" aria-label="Check slug availability">
+        <form id="check-form" role="search" aria-label="Check slug claimability">
           <div class="input-group">
             <span class="input-prefix" aria-hidden="true">yourapp.com/</span>
             <input
@@ -772,10 +780,10 @@
               aria-label="Slug to check"
               autofocus
             >
-            <button type="submit" class="btn-primary check-btn">Check</button>
+            <button type="submit" class="btn-primary check-btn">Claim check</button>
           </div>
         </form>
-        <p id="playground-desc" class="sr-only">Type a slug to check its availability against a simulated database of users and organisations.</p>
+        <p id="playground-desc" class="sr-only">Type a slug to run one-liner claim checks (availability plus anti-spoofing risk policy) against simulated data.</p>
 
         <div class="strategy-section">
           <div class="strategy-label">Suggestion strategy:</div>
@@ -795,6 +803,7 @@
           <div class="strategy-row" role="group" aria-label="Toggle security features">
             <button class="strategy-chip" aria-pressed="true" id="toggle-homoglyph">homoglyph detection</button>
             <button class="strategy-chip" aria-pressed="false" id="toggle-numeric">reject purely numeric</button>
+            <button class="strategy-chip" aria-pressed="false" id="toggle-fail-warn">fail on warn</button>
           </div>
         </div>
 
@@ -807,6 +816,7 @@
             <button class="example-pill" data-slug="admin">admin</button>
             <button class="example-pill" data-slug="acme-corp">acme-corp</button>
             <button class="example-pill" data-slug="my-new-app">my-new-app</button>
+            <button class="example-pill" data-slug="paypa1">paypa1</button>
             <button class="example-pill" data-slug="a">a</button>
             <button class="example-pill" data-slug="hello!">hello!</button>
             <button class="example-pill" data-slug="@Bob">@Bob</button>
@@ -887,29 +897,22 @@
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-raw" id="tab-raw">Raw SQL</button>
       </div>
       <div id="panel-prisma" role="tabpanel" aria-labelledby="tab-prisma" class="adapter-panel active">
-        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
+        <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuardWithProfile</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
 <span class="kw">import</span> <span class="br">{</span> <span class="fn">createPrismaAdapter</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/adapters/prisma"</span>;
 <span class="kw">import</span> <span class="br">{</span> PrismaClient <span class="br">}</span> <span class="kw">from</span> <span class="str">"@prisma/client"</span>;
 
 <span class="kw">const</span> prisma = <span class="kw">new</span> <span class="fn">PrismaClient</span><span class="br">()</span>;
 
-<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span><span class="br">(</span><span class="br">{</span>
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span><span class="br">(</span><span class="str">"consumer-handle"</span>, <span class="br">{</span>
   reserved: <span class="br">[</span><span class="str">"admin"</span>, <span class="str">"api"</span>, <span class="str">"settings"</span><span class="br">]</span>,
   sources: <span class="br">[</span>
     <span class="br">{</span> name: <span class="str">"user"</span>, column: <span class="str">"handle"</span> <span class="br">}</span>,
     <span class="br">{</span> name: <span class="str">"organization"</span>, column: <span class="str">"slug"</span> <span class="br">}</span>,
   <span class="br">]</span>,
-  suggest: <span class="br">{</span> strategy: <span class="br">[</span><span class="str">"sequential"</span>, <span class="str">"random-digits"</span><span class="br">]</span>, max: <span class="type">3</span> <span class="br">}</span>,
 <span class="br">}</span>, <span class="fn">createPrismaAdapter</span><span class="br">(</span>prisma<span class="br">)</span><span class="br">)</span>;
 
-<span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
-
-<span class="kw">if</span> <span class="br">(</span>result.available<span class="br">)</span> <span class="br">{</span>
-  <span class="cm">// Safe to create</span>
-<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.message<span class="br">)</span>;      <span class="cm">// "That name is already in use."</span>
-  console.<span class="fn">log</span><span class="br">(</span>result.suggestions<span class="br">)</span>; <span class="cm">// ["acme-corp-1", "acme-corp-4821", "acme-corp1"]</span>
-<span class="br">}</span></code></pre>
+<span class="kw">await</span> guard.<span class="fn">assertClaimable</span><span class="br">(</span><span class="str">"acme-corp"</span><span class="br">)</span>;
+<span class="cm">// throws if invalid, reserved, taken, or too confusable</span></code></pre>
       </div>
       <div id="panel-drizzle" role="tabpanel" aria-labelledby="tab-drizzle" class="adapter-panel">
         <pre class="code-block" tabindex="0"><code><span class="kw">import</span> <span class="br">{</span> <span class="fn">createNamespaceGuard</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;
@@ -1094,6 +1097,49 @@
 
     <div class="divider" aria-hidden="true"></div>
 
+    <!-- CLI workflow -->
+    <section class="pipeline-section" aria-labelledby="workflow-heading">
+      <h2 id="workflow-heading" class="display-type">Operational CLI workflow</h2>
+      <p class="subtitle">Go from labeled examples to enforced regression budgets in a few commands.</p>
+
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <h3>1. Recommend in one command</h3>
+          <p>Generate practical warn/block thresholds and a suggested CI drift gate budget from your dataset.</p>
+          <div class="example">
+            <span class="dim">$</span> npx namespace-guard recommend ./risk-dataset.json<br>
+            <span class="dim"># emits recommended risk config + CI gate command</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>2. Cost-aware tuning when needed</h3>
+          <p>Override default costs and class priors to tune for your domain's false-positive and false-negative tradeoffs.</p>
+          <div class="example">
+            <span class="dim">$</span> npx namespace-guard calibrate ./risk-dataset.json \<br>
+            &nbsp;&nbsp;--cost-block-benign 8 --cost-allow-malicious 12 --malicious-prior 0.05
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>3. Quantify composability drift</h3>
+          <p>Compare behavior under <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP_FULL</code> vs <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP</code>.</p>
+          <div class="example">
+            <span class="dim">$</span> npx namespace-guard drift --json<br>
+            <span class="dim"># includes actionFlips, averageScoreDelta, maxAbsScoreDelta</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>4. Enforce in CI</h3>
+          <p>Fail pull requests when drift exceeds your accepted budget.</p>
+          <div class="example">
+            <span class="dim">$</span> npm run ci:drift-gate -- \<br>
+            &nbsp;&nbsp;--max-action-flips 29 --max-average-score-delta 95 --max-abs-score-delta 100
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
     <!-- Anti-spoofing pipeline -->
     <section class="pipeline-section" aria-labelledby="pipeline-heading">
       <h2 id="pipeline-heading" class="display-type">Anti-spoofing pipeline</h2>
@@ -1168,7 +1214,7 @@
   </footer>
 
   <script type="module">
-    // === namespace-guard library (inlined from dist/index.mjs, v0.7.0) ===
+    // === namespace-guard playground runtime (v0.11.1-aligned subset) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
     var DEFAULT_MESSAGES = {
       invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
@@ -1354,9 +1400,59 @@
       };
     }
 
-    function normalize(raw) {
-      return raw.trim().normalize("NFKC").toLowerCase().replace(/^@+/, "");
+    var DEFAULT_PROTECTED_TOKENS = [
+      "admin", "administrator", "support", "help", "security", "billing", "payments",
+      "staff", "moderator", "root", "system", "api", "www", "mail", "login",
+    ];
+
+    var NAMESPACE_PROFILES = {
+      "consumer-handle": {
+        pattern: /^[a-z0-9][a-z0-9-]{1,29}$/,
+        normalizeUnicode: true,
+        allowPurelyNumeric: false,
+        risk: {
+          includeReserved: true,
+          protect: [],
+          maxMatches: 3,
+          warnThreshold: 45,
+          blockThreshold: 70,
+        },
+      },
+      "org-slug": {
+        pattern: /^[a-z0-9][a-z0-9-]{1,39}$/,
+        normalizeUnicode: true,
+        allowPurelyNumeric: false,
+        risk: {
+          includeReserved: true,
+          protect: [],
+          maxMatches: 5,
+          warnThreshold: 40,
+          blockThreshold: 65,
+        },
+      },
+      "developer-id": {
+        pattern: /^[a-z0-9][a-z0-9-]{1,49}$/,
+        normalizeUnicode: true,
+        allowPurelyNumeric: true,
+        risk: {
+          includeReserved: true,
+          protect: [],
+          maxMatches: 5,
+          warnThreshold: 35,
+          blockThreshold: 60,
+        },
+      },
+    };
+
+    var NON_LATIN_RE = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
+    var DEFAULT_IGNORABLE_RE = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF0-\uFFF8]/gu;
+
+    function normalize(raw, options = {}) {
+      const trimmed = raw.trim();
+      const nfkc = (options.unicode ?? true) ? trimmed.normalize("NFKC") : trimmed;
+      return nfkc.toLowerCase().replace(/^@+/, "");
     }
+
     function buildReservedMap(reserved) {
       const map = new Map();
       if (!reserved) return map;
@@ -1370,6 +1466,105 @@
         }
       }
       return map;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function uniqueNonEmptyStrings(values) {
+      const seen = new Set();
+      const result = [];
+      for (const value of values) {
+        if (!value) continue;
+        if (seen.has(value)) continue;
+        seen.add(value);
+        result.push(value);
+      }
+      return result;
+    }
+
+    function hasMixedScripts(value) {
+      return /[a-z]/i.test(value) && NON_LATIN_RE.test(value);
+    }
+
+    function countDefaultIgnorables(value) {
+      DEFAULT_IGNORABLE_RE.lastIndex = 0;
+      const matches = value.match(DEFAULT_IGNORABLE_RE);
+      return matches ? matches.length : 0;
+    }
+
+    function countConfusableChars(value, map) {
+      let confusableCount = 0;
+      let divergenceCount = 0;
+      for (const ch of value) {
+        if (map[ch]) {
+          confusableCount += 1;
+          if (ch.normalize("NFKC").toLowerCase() !== map[ch]) divergenceCount += 1;
+        }
+      }
+      return { confusableCount, divergenceCount };
+    }
+
+    function skeleton(value, map) {
+      let output = "";
+      const normalized = normalize(value);
+      for (const ch of normalized) output += map[ch] ?? ch;
+      return output;
+    }
+
+    function levenshteinDistance(a, b) {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+      const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+      const curr = new Array(b.length + 1).fill(0);
+      for (let i = 1; i <= a.length; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(
+            prev[j] + 1,
+            curr[j - 1] + 1,
+            prev[j - 1] + cost
+          );
+        }
+        for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+      }
+      return prev[b.length];
+    }
+
+    function scoreSimilarityRisk(identifier, target, map) {
+      const idSkeleton = skeleton(identifier, map);
+      const targetSkeleton = skeleton(target, map);
+      const distance = levenshteinDistance(idSkeleton, targetSkeleton);
+      const maxLen = Math.max(idSkeleton.length, targetSkeleton.length, 1);
+      const similarity = 1 - distance / maxLen;
+      let score = Math.round(similarity * 78);
+      const skeletonEqual = idSkeleton === targetSkeleton;
+      if (skeletonEqual) score = Math.max(score, 92);
+      if (distance === 1) score += 12;
+      else if (distance === 2) score += 6;
+      const chainDepth = distance;
+      if (chainDepth >= 2) score += Math.min(8, chainDepth * 2);
+      return {
+        score: clamp(score, 0, 100),
+        distance,
+        chainDepth,
+        skeletonEqual,
+      };
+    }
+
+    function levelForScore(score, warnThreshold, blockThreshold) {
+      if (score >= blockThreshold) return "high";
+      if (score >= warnThreshold) return "medium";
+      return "low";
+    }
+
+    function actionForScore(score, warnThreshold, blockThreshold) {
+      if (score >= blockThreshold) return "block";
+      if (score >= warnThreshold) return "warn";
+      return "allow";
     }
 
     // Strategy factories
@@ -1524,8 +1719,9 @@
     }
 
     function createNamespaceGuard(config, adapter) {
-      const reservedMap = buildReservedMap(config.reserved);
       const pattern = config.pattern ?? DEFAULT_PATTERN;
+      const normalizeUnicode = config.normalizeUnicode ?? true;
+      const normalizeInput = (value) => normalize(value, { unicode: normalizeUnicode });
       const configMessages = config.messages ?? {};
       const defaultReservedMsg = DEFAULT_MESSAGES.reserved;
       const invalidMsg = configMessages.invalid ?? DEFAULT_MESSAGES.invalid;
@@ -1533,19 +1729,36 @@
       const validators = config.validators ?? [];
       const allowPurelyNumeric = config.allowPurelyNumeric ?? true;
       const purelyNumericMsg = configMessages.purelyNumeric ?? DEFAULT_MESSAGES.purelyNumeric;
+      const riskConfig = {
+        includeReserved: true,
+        protect: [],
+        maxMatches: 3,
+        warnThreshold: 45,
+        blockThreshold: 70,
+        ...(config.risk ?? {}),
+      };
+
+      const rawReservedMap = buildReservedMap(config.reserved);
+      const reservedMap = new Map();
+      for (const [name, category] of rawReservedMap.entries()) {
+        reservedMap.set(normalizeInput(name), category);
+      }
+
       function getReservedMessage(category) {
         const rm = configMessages.reserved;
         if (typeof rm === "string") return rm;
         if (rm && typeof rm === "object") return rm[category] ?? defaultReservedMsg;
         return defaultReservedMsg;
       }
+
       function validateFormat(identifier) {
-        const normalized = normalize(identifier);
+        const normalized = normalizeInput(identifier);
         if (!pattern.test(normalized)) return invalidMsg;
         if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) return purelyNumericMsg;
         if (reservedMap.has(normalized)) return getReservedMessage(reservedMap.get(normalized));
         return null;
       }
+
       async function checkDbOnly(value, scope) {
         const checks = config.sources.map(async (source) => {
           const existing = await adapter.findOne(source, value);
@@ -1559,24 +1772,35 @@
           return source.name;
         });
         const results = await Promise.all(checks);
-        return !results.some(r => r !== null);
+        return !results.some((r) => r !== null);
       }
+
       async function check(identifier, scope = {}, options) {
-        const normalized = normalize(identifier);
+        const normalized = normalizeInput(identifier);
         if (!pattern.test(normalized)) {
           return { available: false, reason: "invalid", message: invalidMsg };
         }
         if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) {
           return { available: false, reason: "invalid", message: purelyNumericMsg };
         }
+
         const reservedCategory = reservedMap.get(normalized);
         if (reservedCategory) {
-          return { available: false, reason: "reserved", message: getReservedMessage(reservedCategory), category: reservedCategory };
+          return {
+            available: false,
+            reason: "reserved",
+            message: getReservedMessage(reservedCategory),
+            category: reservedCategory,
+          };
         }
+
         for (const validator of validators) {
           const rejection = await validator(normalized);
-          if (rejection) return { available: false, reason: "invalid", message: rejection.message };
+          if (rejection) {
+            return { ...rejection, reason: "invalid", message: rejection.message };
+          }
         }
+
         const dbChecks = config.sources.map(async (source) => {
           const existing = await adapter.findOne(source, normalized);
           if (!existing) return null;
@@ -1591,26 +1815,269 @@
         const results = await Promise.all(dbChecks);
         const collision = results.find((r) => r !== null);
         if (collision) {
-          const result = { available: false, reason: "taken", message: takenMsg(collision), source: collision };
+          const result = {
+            available: false,
+            reason: "taken",
+            message: takenMsg(collision),
+            source: collision,
+          };
           if (config.suggest && !options?.skipSuggestions) {
             const generate = resolveGenerator(config.suggest, pattern);
             const max = config.suggest.max ?? 3;
             const candidates = generate(normalized);
             const suggestions = [];
-            const passedSync = candidates.filter(c => pattern.test(c) && !reservedMap.has(c) && (allowPurelyNumeric || !/^\d+(-\d+)*$/.test(c)));
+            const passedSync = candidates.filter(
+              (c) =>
+                pattern.test(c) &&
+                !reservedMap.has(c) &&
+                (allowPurelyNumeric || !/^\d+(-\d+)*$/.test(c))
+            );
             for (const candidate of passedSync) {
               if (suggestions.length >= max) break;
-              if (await checkDbOnly(candidate, scope)) {
-                suggestions.push(candidate);
-              }
+              if (await checkDbOnly(candidate, scope)) suggestions.push(candidate);
             }
             if (suggestions.length > 0) result.suggestions = suggestions;
           }
           return result;
         }
+
         return { available: true };
       }
-      return { normalize, validateFormat, check };
+
+      async function assertAvailable(identifier, scope = {}) {
+        const result = await check(identifier, scope);
+        if (!result.available) throw new Error(result.message);
+      }
+
+      function checkRisk(identifier, options = {}) {
+        const normalized = normalizeInput(identifier);
+        const map = options.map ?? CONFUSABLE_MAP;
+        const includeReserved = options.includeReserved ?? riskConfig.includeReserved ?? true;
+        const maxMatches = Math.max(1, options.maxMatches ?? riskConfig.maxMatches ?? 3);
+
+        const warnThreshold = clamp(
+          Math.round(options.warnThreshold ?? riskConfig.warnThreshold ?? 45),
+          0,
+          100
+        );
+        const requestedBlock = clamp(
+          Math.round(options.blockThreshold ?? riskConfig.blockThreshold ?? 70),
+          0,
+          100
+        );
+        const blockThreshold =
+          requestedBlock <= warnThreshold ? Math.min(100, warnThreshold + 1) : requestedBlock;
+
+        const reasons = [];
+        let heuristicScore = 0;
+        function addReason(code, message, weight) {
+          const safeWeight = clamp(Math.round(weight), 0, 100);
+          reasons.push({ code, message, weight: safeWeight });
+          heuristicScore += safeWeight;
+        }
+
+        if (hasMixedScripts(normalized)) {
+          addReason("mixed-script", "Identifier mixes Latin and non-Latin scripts.", 24);
+        }
+
+        const ignorableCount = countDefaultIgnorables(normalized);
+        if (ignorableCount > 0) {
+          addReason(
+            "invisible-character",
+            `Identifier contains ${ignorableCount} default-ignorable Unicode character(s).`,
+            Math.min(22, 10 + ignorableCount * 4)
+          );
+        }
+
+        const charStats = countConfusableChars(normalized, map);
+        if (charStats.confusableCount > 0) {
+          addReason(
+            "confusable-character",
+            `Identifier contains ${charStats.confusableCount} confusable character(s).`,
+            Math.min(24, 8 + charStats.confusableCount * 3)
+          );
+        }
+
+        if (charStats.divergenceCount > 0) {
+          addReason(
+            "divergent-mapping",
+            `Identifier includes ${charStats.divergenceCount} mapping(s) where NFKC and TR39 differ.`,
+            Math.min(16, 6 + charStats.divergenceCount * 3)
+          );
+        }
+
+        const configuredProtect = riskConfig.protect ?? [];
+        const explicitProtect = options.protect;
+        const protectInputs = explicitProtect ?? configuredProtect;
+        const normalizedProtect = uniqueNonEmptyStrings(
+          (protectInputs ?? []).map((target) => normalizeInput(target))
+        );
+
+        const protectedTargets = new Set();
+        if (includeReserved) {
+          for (const reservedName of reservedMap.keys()) protectedTargets.add(reservedName);
+        }
+        for (const target of normalizedProtect) protectedTargets.add(target);
+
+        const scoredMatches = [];
+        for (const target of protectedTargets) {
+          if (!target || target === normalized) {
+            if (target === normalized) {
+              scoredMatches.push({
+                target,
+                score: 100,
+                distance: 0,
+                chainDepth: 0,
+                skeletonEqual: true,
+                reasons: ["Exact protected target match"],
+              });
+            }
+            continue;
+          }
+
+          const distance = scoreSimilarityRisk(normalized, target, map);
+          if (distance.score < 35) continue;
+
+          const matchReasons = [];
+          if (distance.skeletonEqual) matchReasons.push("TR39 skeleton collision");
+          if (distance.chainDepth >= 2) matchReasons.push(`chain depth ${distance.chainDepth}`);
+
+          scoredMatches.push({
+            target,
+            score: distance.score,
+            distance: distance.distance,
+            chainDepth: distance.chainDepth,
+            skeletonEqual: distance.skeletonEqual,
+            reasons: matchReasons,
+          });
+        }
+
+        scoredMatches.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (a.distance !== b.distance) return a.distance - b.distance;
+          return a.target.localeCompare(b.target);
+        });
+
+        const matches = scoredMatches.slice(0, maxMatches);
+        let score = clamp(heuristicScore, 0, 100);
+        if (matches.length > 0) {
+          const top = matches[0];
+          score = Math.max(score, top.score);
+          addReason(
+            "confusable-target",
+            `Identifier is visually close to protected target "${top.target}".`,
+            top.score
+          );
+          if (top.skeletonEqual) {
+            addReason("skeleton-collision", `Identifier skeleton collides with "${top.target}".`, 20);
+          }
+          if (top.chainDepth >= 2) {
+            addReason(
+              "deep-chain",
+              `Confusable transformation chain depth is ${top.chainDepth}.`,
+              Math.min(16, 6 + top.chainDepth * 2)
+            );
+          }
+        }
+
+        score = clamp(Math.max(score, heuristicScore), 0, 100);
+        reasons.sort((a, b) => b.weight - a.weight);
+
+        return {
+          identifier,
+          normalized,
+          score,
+          level: levelForScore(score, warnThreshold, blockThreshold),
+          action: actionForScore(score, warnThreshold, blockThreshold),
+          reasons,
+          matches,
+        };
+      }
+
+      function enforceRisk(identifier, options = {}) {
+        const {
+          failOn,
+          messages,
+          protect,
+          includeReserved,
+          map,
+          maxMatches,
+          warnThreshold,
+          blockThreshold,
+        } = options;
+        const configuredProtect = riskConfig.protect ?? [];
+        const fallbackProtect =
+          configuredProtect.length > 0 ? configuredProtect : DEFAULT_PROTECTED_TOKENS;
+        const effectiveProtect = protect ?? fallbackProtect;
+
+        const risk = checkRisk(identifier, {
+          protect: effectiveProtect,
+          includeReserved,
+          map,
+          maxMatches,
+          warnThreshold,
+          blockThreshold,
+        });
+        const failMode = failOn ?? "block";
+        const deny = failMode === "warn" ? risk.action !== "allow" : risk.action === "block";
+
+        if (!deny) return { allowed: true, action: risk.action, risk };
+
+        const topTarget = risk.matches[0]?.target;
+        const suffix = topTarget ? ` Closest protected target: "${topTarget}".` : "";
+        const defaultWarnMessage =
+          "Identifier is potentially confusable with a protected name." + suffix;
+        const defaultBlockMessage = "Identifier is too confusable with a protected name." + suffix;
+
+        return {
+          allowed: false,
+          action: risk.action,
+          message: risk.action === "block"
+            ? messages?.block ?? defaultBlockMessage
+            : messages?.warn ?? defaultWarnMessage,
+          risk,
+        };
+      }
+
+      async function assertClaimable(identifier, scope = {}, options) {
+        const availability = await check(identifier, scope, { skipSuggestions: true });
+        if (!availability.available) throw new Error(availability.message);
+
+        const decision = enforceRisk(identifier, options);
+        if (!decision.allowed) {
+          throw new Error(
+            decision.message ?? "Identifier is too close to a protected or existing namespace."
+          );
+        }
+      }
+
+      return {
+        normalize: normalizeInput,
+        validateFormat,
+        check,
+        assertAvailable,
+        checkRisk,
+        enforceRisk,
+        assertClaimable,
+      };
+    }
+
+    function createNamespaceGuardWithProfile(profileName, config = {}, adapter) {
+      const profile = NAMESPACE_PROFILES[profileName];
+      if (!profile) throw new Error(`Unknown namespace profile: ${profileName}`);
+      return createNamespaceGuard(
+        {
+          ...config,
+          pattern: profile.pattern,
+          normalizeUnicode: profile.normalizeUnicode,
+          allowPurelyNumeric: profile.allowPurelyNumeric,
+          risk: {
+            ...profile.risk,
+            ...(config.risk ?? {}),
+          },
+        },
+        adapter
+      );
     }
 
     // === Mock adapter ===
@@ -1639,11 +2106,13 @@
     let currentStrategy = ["sequential", "random-digits"];
     let homoglyphEnabled = true;
     let rejectNumeric = false;
+    let failOnWarn = false;
 
     function createGuard(strategy) {
       const validators = [];
       if (homoglyphEnabled) validators.push(createHomoglyphValidator());
-      return createNamespaceGuard(
+      return createNamespaceGuardWithProfile(
+        "consumer-handle",
         {
           reserved: {
             system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
@@ -1663,6 +2132,9 @@
           suggest: {
             strategy,
             max: 3,
+          },
+          risk: {
+            protect: ["paypal", "github", "vercel", "namespace-guard", "support", "admin"],
           },
           validators,
           allowPurelyNumeric: !rejectNumeric,
@@ -1711,12 +2183,27 @@
       return html;
     }
 
+    function renderRiskDetail(risk) {
+      const top = risk?.matches?.[0];
+      if (!top) return "";
+      const reasonText = Array.isArray(top.reasons) && top.reasons.length > 0
+        ? `<div class="char-meta">${top.reasons.slice(0, 2).map((reason) => escapeHtml(reason)).join(" • ")}</div>`
+        : "";
+      return `<div class="confusable-detail">Closest protected target <span class="char-latin">${escapeHtml(top.target)}</span> <span class="char-meta">(risk ${top.score}/100, action ${escapeHtml(risk.action)})</span>${reasonText}</div>`;
+    }
+
     function renderResult(value, result) {
       if (!value) { resultEl.innerHTML = ""; return; }
       const normalized = escapeHtml(normalize(value));
 
       if (result.available) {
-        resultEl.innerHTML = `<div class="result-card result-available">${iconCheck}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong> is available!</div></div>`;
+        if (result.risk && result.risk.action === "warn") {
+          const message = result.message ?? "Available, but visually close to a protected target.";
+          const riskHtml = renderRiskDetail(result.risk);
+          resultEl.innerHTML = `<div class="result-card result-riskwarn">${iconShield}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong><div class="result-msg">${escapeHtml(message)}</div>${riskHtml}</div></div>`;
+          return;
+        }
+        resultEl.innerHTML = `<div class="result-card result-available">${iconCheck}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong> is claimable.</div></div>`;
         return;
       }
 
@@ -1727,6 +2214,11 @@
       } else if (result.reason === "taken") {
         icon = iconX; cls = "result-taken";
         if (result.source) extra = `<span class="result-source">${escapeHtml(result.source)}</span>`;
+      } else if (result.reason === "risk") {
+        icon = iconShield;
+        cls = result.action === "block" ? "result-riskblock" : "result-riskwarn";
+        const topTarget = result.risk?.matches?.[0]?.target;
+        if (topTarget) extra = `<span class="result-category">${escapeHtml(topTarget)}</span>`;
       } else {
         icon = iconX; cls = "result-invalid";
       }
@@ -1737,7 +2229,6 @@
         suggestionsHtml = `<div class="suggestions"><div class="suggestions-label">Try instead:</div><div class="suggestion-pills">${pills}</div></div>`;
       }
 
-      // Rich confusable detail
       let confusableHtml = "";
       const spoofChar = result._confusableChar || result._mixedScriptChar || null;
       if (result._confusableChar) {
@@ -1755,7 +2246,10 @@
         confusableHtml = `<div class="confusable-detail">Found <span class="char-highlight">${escapeHtml(ch)}</span> <span class="char-meta">(${script} ${hex})</span> mixed with Latin characters</div>`;
       }
 
-      // Use annotated slug for confusable results, plain normalized for others
+      if (result.reason === "risk" && result.risk) {
+        confusableHtml += renderRiskDetail(result.risk);
+      }
+
       const slugDisplay = spoofChar
         ? annotateSlug(value, spoofChar)
         : `<span class="slug-name">${normalized}</span>`;
@@ -1768,9 +2262,40 @@
       if (!value.trim()) { lastRendered = ""; renderResult("", null); return; }
       const normalized = normalize(value);
       if (normalized === lastRendered) return;
-      const result = await guard.check(value);
+
+      const availability = await guard.check(value);
+      if (!availability.available) {
+        lastRendered = normalized;
+        renderResult(value, availability);
+        return;
+      }
+
+      const decision = guard.enforceRisk(value, {
+        failOn: failOnWarn ? "warn" : "block",
+      });
       lastRendered = normalized;
-      renderResult(value, result);
+
+      if (!decision.allowed) {
+        renderResult(value, {
+          available: false,
+          reason: "risk",
+          action: decision.action,
+          message: decision.message ?? "Identifier is too confusable with a protected name.",
+          risk: decision.risk,
+        });
+        return;
+      }
+
+      if (decision.action === "warn") {
+        renderResult(value, {
+          available: true,
+          message: "Claimable, but close to a protected target.",
+          risk: decision.risk,
+        });
+        return;
+      }
+
+      renderResult(value, { available: true });
     }
 
     const debouncedCheck = debounce(checkSlug, 300);
@@ -1844,6 +2369,7 @@
     // Security toggles
     const toggleHomoglyph = document.getElementById("toggle-homoglyph");
     const toggleNumeric = document.getElementById("toggle-numeric");
+    const toggleFailWarn = document.getElementById("toggle-fail-warn");
 
     function refreshGuard() {
       guard = createGuard(currentStrategy);
@@ -1860,6 +2386,12 @@
       rejectNumeric = !rejectNumeric;
       toggleNumeric.setAttribute("aria-pressed", String(rejectNumeric));
       refreshGuard();
+    });
+
+    toggleFailWarn.addEventListener("click", () => {
+      failOnWarn = !failOnWarn;
+      toggleFailWarn.setAttribute("aria-pressed", String(failOnWarn));
+      if (input.value.trim()) { lastRendered = ""; checkSlug(input.value); }
     });
 
     // Copy button
