@@ -72,7 +72,7 @@ await guard.assertClaimable("acme-corp");
 | Async validators | Custom hooks (profanity, etc.) | Manual wiring |
 | Batch checking | `checkMany()` | Loop it yourself |
 | ORM agnostic | Prisma, Drizzle, Kysely, Knex, TypeORM, MikroORM, Sequelize, Mongoose, raw SQL | Tied to your ORM |
-| CLI | `check`, `risk`, `calibrate`, `recommend`, `drift` | None |
+| CLI | `check`, `risk`, `attack-gen`, `calibrate`, `recommend`, `drift` | None |
 
 ## Adapters
 
@@ -305,6 +305,33 @@ const guard = createNamespaceGuard({
 
 Validators run sequentially and stop at the first rejection. They receive the normalized identifier.
 
+### Zero-Dependency External Filters
+
+`namespace-guard` stays zero-dependency and does not bundle external profanity/moderation libraries.  
+Use `createPredicateValidator` to wrap any third-party boolean check in one line:
+
+```typescript
+import { createNamespaceGuard, createPredicateValidator } from "namespace-guard";
+import { Profanity } from "@2toad/profanity";
+
+const profanity = new Profanity();
+
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  validators: [
+    createPredicateValidator((identifier) => profanity.exists(identifier), {
+      message: "Please choose an appropriate name.",
+      transform: (identifier) => identifier.normalize("NFKC"),
+    }),
+  ],
+}, adapter);
+```
+
+Common optional libraries people pair with `namespace-guard`:
+- `obscenity` (strong normalization/evasion-focused APIs)
+- `@2toad/profanity` (simple boolean API)
+- `bad-words` (basic list-based filter)
+
 ### Built-in Profanity Validator
 
 Use `createProfanityValidator` for a turnkey profanity filter - supply your own word list:
@@ -318,10 +345,17 @@ const guard = createNamespaceGuard({
     createProfanityValidator(["badword", "offensive", "slur"], {
       message: "Please choose an appropriate name.", // optional custom message
       checkSubstrings: true,                         // default: true
+      mode: "evasion",                               // default: "evasion"
+      variantProfile: "balanced",                    // default: "balanced"
+      minSubstringLength: 4,                         // default: 4 (exact matches always checked)
     }),
   ],
 }, adapter);
 ```
+
+`mode: "evasion"` is designed for profanity bypasses: it folds Unicode confusables plus common ASCII substitutes (for example `sh1t`, `5h1t`, mixed-script variants, and separator insertion like `s-h.i_t`). Use `mode: "basic"` if you want strict lowercase matching only.
+
+`variantProfile: "balanced"` is precision-first and avoids more ambiguous substitutions; switch to `"aggressive"` only when you need broader catch coverage.
 
 No words are bundled - use any word list you like (e.g., the `bad-words` npm package, your own list, or an external API wrapped in a custom validator).
 
@@ -631,6 +665,31 @@ npx namespace-guard risk paypa1 --protect paypal --fail-on warn
 # JSON output for automation
 npx namespace-guard risk paуpal --protect paypal --json
 ```
+
+### Attack-gen command
+
+Generate confusable attack candidates for red-team testing and policy tuning:
+
+```bash
+# one-liner default: evasion mode (confusables + substitutions)
+npx namespace-guard attack-gen paypal
+npx namespace-guard attack-gen paypal --json
+
+# Impersonation-focused generation (Unicode/NFKC/NFC confusables)
+npx namespace-guard attack-gen paypal --mode impersonation
+
+# Profanity-evasion generation (adds ASCII/lookalike substitutions)
+npx namespace-guard attack-gen shit --mode evasion --json
+
+# Explore deeper substitutions and wider candidate pools
+npx namespace-guard attack-gen github --max-edits 2 --max-candidates 50
+```
+
+Default mode is `evasion` for practical coverage. Use `--mode impersonation` when you want Unicode-only spoof analysis without substitution noise.
+
+Useful for finding:
+- high-risk variants your policy already blocks
+- non-blocking variants (`allow` or `warn`) that still pass format checks (useful for tightening thresholds/protect lists)
 
 ### Calibrate command
 
@@ -1028,6 +1087,7 @@ Full TypeScript support with exported types:
 import {
   createNamespaceGuard,
   createNamespaceGuardWithProfile,
+  createPredicateValidator,
   createProfanityValidator,
   createHomoglyphValidator,
   skeleton,
@@ -1047,7 +1107,13 @@ import {
   type CheckResult,
   type FindOneOptions,
   type OwnershipScope,
+  type NamespaceValidator,
+  type NamespaceValidatorResult,
+  type PredicateValidatorOptions,
   type SuggestStrategyName,
+  type ProfanityValidationMode,
+  type ProfanityVariantProfile,
+  type ProfanityValidatorOptions,
   type SkeletonOptions,
   type CheckManyOptions,
   type CheckRiskOptions,

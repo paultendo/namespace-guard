@@ -1104,7 +1104,15 @@
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
-          <h3>1. Recommend in one command</h3>
+          <h3>1. Red-team with attack-gen</h3>
+          <p>Generate realistic attack candidates. Default mode is <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">evasion</code> (confusables + substitutions). Switch to <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">--mode impersonation</code> for Unicode-focused spoofing analysis. Keep moderation zero-dependency by plugging in any external profanity library through custom validators.</p>
+          <div class="example">
+            <span class="dim">$</span> npx namespace-guard attack-gen paypal --json<br>
+            <span class="dim">$</span> npx namespace-guard attack-gen shit --mode evasion --json
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>2. Recommend in one command</h3>
           <p>Generate practical warn/block thresholds and a suggested CI drift gate budget from your dataset.</p>
           <div class="example">
             <span class="dim">$</span> npx namespace-guard recommend ./risk-dataset.json<br>
@@ -1112,7 +1120,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>2. Cost-aware tuning when needed</h3>
+          <h3>3. Cost-aware tuning when needed</h3>
           <p>Override default costs and class priors to tune for your domain's false-positive and false-negative tradeoffs.</p>
           <div class="example">
             <span class="dim">$</span> npx namespace-guard calibrate ./risk-dataset.json \<br>
@@ -1120,7 +1128,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>3. Quantify composability drift</h3>
+          <h3>4. Quantify composability drift</h3>
           <p>Compare behavior under <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP_FULL</code> vs <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP</code>.</p>
           <div class="example">
             <span class="dim">$</span> npx namespace-guard drift --json<br>
@@ -1128,7 +1136,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>4. Enforce in CI</h3>
+          <h3>5. Enforce in CI</h3>
           <p>Fail pull requests when drift exceeds your accepted budget.</p>
           <div class="example">
             <span class="dim">$</span> npm run ci:drift-gate -- \<br>
