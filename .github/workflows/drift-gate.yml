@@ -1,0 +1,29 @@
+name: Drift Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  drift-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI
+        run: npm run build
+
+      - name: Enforce drift budget
+        run: npm run ci:drift-gate -- --max-action-flips 29 --max-average-score-delta 95 --max-abs-score-delta 100

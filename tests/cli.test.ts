@@ -3,6 +3,8 @@ import { run } from "../src/cli";
 import { writeFileSync, unlinkSync } from "fs";
 import { resolve } from "path";
 
+const calibrationPath = resolve(__dirname, "calibration-dataset.json");
+
 // Capture console.log/error output
 let logs: string[];
 let errors: string[];
@@ -19,6 +21,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  try {
+    unlinkSync(calibrationPath);
+  } catch {}
   vi.restoreAllMocks();
 });
 
@@ -69,6 +74,260 @@ describe("CLI", () => {
     const code = await run(argv("check", "@ACME-Corp"));
     expect(code).toBe(0);
     expect(logs[0]).toContain("acme-corp");
+  });
+
+  it("scores low-risk identifiers with risk command", async () => {
+    const code = await run(argv("risk", "acme-corp"));
+    expect(code).toBe(0);
+    expect(logs[0]).toContain("risk");
+    expect(logs[0]).toContain("(allow)");
+  });
+
+  it("blocks high-risk confusable identifiers by default", async () => {
+    const code = await run(argv("risk", "pa\u0443pal", "--protect", "paypal"));
+    expect(code).toBe(1);
+    expect(logs[0]).toContain("(block)");
+    expect(logs.join("\n")).toContain("paypal");
+  });
+
+  it("does not fail warn-level identifiers by default", async () => {
+    const code = await run(
+      argv(
+        "risk",
+        "paypa1",
+        "--protect",
+        "paypal",
+        "--warn-threshold",
+        "70",
+        "--block-threshold",
+        "95"
+      )
+    );
+    expect(code).toBe(0);
+    expect(logs[0]).toContain("(warn)");
+  });
+
+  it("fails warn-level identifiers with --fail-on warn", async () => {
+    const code = await run(
+      argv(
+        "risk",
+        "paypa1",
+        "--protect",
+        "paypal",
+        "--warn-threshold",
+        "70",
+        "--block-threshold",
+        "95",
+        "--fail-on",
+        "warn"
+      )
+    );
+    expect(code).toBe(1);
+    expect(logs[0]).toContain("(warn)");
+  });
+
+  it("prints JSON output for risk command", async () => {
+    const code = await run(
+      argv("risk", "pa\u0443pal", "--protect", "paypal", "--json")
+    );
+    expect(code).toBe(1);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.action).toBe("block");
+    expect(parsed.matches[0].target).toBe("paypal");
+  });
+
+  it("validates risk-only option values", async () => {
+    const code = await run(argv("risk", "acme", "--warn-threshold", "NaN"));
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("Invalid --warn-threshold");
+  });
+
+  it("rejects --database-url for risk command", async () => {
+    const code = await run(
+      argv("risk", "acme", "--database-url", "postgres://localhost/db")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
+  it("rejects --database-url for drift command", async () => {
+    const code = await run(
+      argv("drift", "--database-url", "postgres://localhost/db")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
+  it("rejects --database-url for recommend command", async () => {
+    const code = await run(
+      argv("recommend", "dataset.json", "--database-url", "postgres://localhost/db")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
+  it("calibrates thresholds from labeled dataset", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypal", label: "malicious", target: "paypal" },
+        { identifier: "pa\u0443pal", label: "malicious", target: "paypal" },
+        { identifier: "paypa1", label: "malicious", target: "paypal" },
+        { identifier: "teamspace", label: "benign", target: "paypal" },
+        { identifier: "builders-hub", label: "benign", target: "paypal" },
+      ])
+    );
+
+    const code = await run(argv("calibrate", calibrationPath));
+    expect(code).toBe(0);
+    expect(logs.join("\n")).toContain("Recommended warn threshold");
+    expect(logs.join("\n")).toContain("Recommended block threshold");
+  });
+
+  it("prints calibration output as JSON", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypal", label: "malicious", target: "paypal" },
+        { identifier: "teamspace", label: "benign", target: "paypal" },
+      ])
+    );
+
+    const code = await run(argv("calibrate", calibrationPath, "--json"));
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(typeof parsed.recommendations.warnThreshold).toBe("number");
+    expect(typeof parsed.recommendations.blockThreshold).toBe("number");
+    expect(parsed.recommendations.blockThreshold).toBeGreaterThanOrEqual(
+      parsed.recommendations.warnThreshold
+    );
+    expect(typeof parsed.expectedCost.totalCost).toBe("number");
+  });
+
+  it("supports cost-aware calibration with class-prior reweighting", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypal", label: "malicious", target: "paypal", weight: 2 },
+        { identifier: "pa\u0443pal", label: "malicious", target: "paypal" },
+        { identifier: "teamspace", label: "benign", target: "paypal", weight: 3 },
+        { identifier: "builders-hub", label: "benign", target: "paypal" },
+      ])
+    );
+
+    const code = await run(
+      argv(
+        "calibrate",
+        calibrationPath,
+        "--cost-block-benign",
+        "9",
+        "--cost-warn-benign",
+        "1",
+        "--cost-allow-malicious",
+        "15",
+        "--cost-warn-malicious",
+        "4",
+        "--malicious-prior",
+        "0.4",
+        "--json"
+      )
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.costModel.blockBenign).toBe(9);
+    expect(parsed.costModel.allowMalicious).toBe(15);
+    expect(parsed.priorAdjustment.maliciousPrior).toBe(0.4);
+    expect(typeof parsed.expectedCost.averageCost).toBe("number");
+  });
+
+  it("recommends risk config and ci gate from one dataset", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypal", label: "malicious", target: "paypal" },
+        { identifier: "pa\u0443pal", label: "malicious", target: "paypal" },
+        { identifier: "teamspace", label: "benign", target: "paypal" },
+      ])
+    );
+
+    const code = await run(argv("recommend", calibrationPath));
+    expect(code).toBe(0);
+    const out = logs.join("\n");
+    expect(out).toContain("Recommendation");
+    expect(out).toContain("Baseline drift");
+    expect(out).toContain("Suggested namespace-guard risk config");
+    expect(out).toContain("ci:drift-gate");
+  });
+
+  it("prints recommend output as JSON", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypal", label: "malicious", target: "paypal" },
+        { identifier: "teamspace", label: "benign", target: "paypal" },
+      ])
+    );
+
+    const code = await run(argv("recommend", calibrationPath, "--json"));
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(typeof parsed.recommendedConfig.risk.warnThreshold).toBe("number");
+    expect(typeof parsed.recommendedConfig.risk.blockThreshold).toBe("number");
+    expect(typeof parsed.calibrate.expectedCost.totalCost).toBe("number");
+    expect(typeof parsed.drift.actionFlips).toBe("number");
+    expect(parsed.driftBaseline.dataset).toContain("builtin:nfkc-tr39-divergence-vectors");
+    expect(parsed.ciGate.budgets.maxActionFlips).toBeGreaterThan(0);
+    expect(parsed.ciGate.command).toContain("ci:drift-gate");
+  });
+
+  it("validates calibration dataset row labels", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([{ identifier: "paypal", label: "maybe" }])
+    );
+
+    const code = await run(argv("calibrate", calibrationPath));
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("missing a valid label");
+  });
+
+  it("validates cost-aware calibration option values", async () => {
+    const code = await run(
+      argv("calibrate", "missing.json", "--cost-block-benign", "-1")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("Invalid --cost-block-benign");
+  });
+
+  it("runs built-in drift corpus and reports summary", async () => {
+    const code = await run(argv("drift"));
+    expect(code).toBe(0);
+    expect(logs.join("\n")).toContain("Drift results");
+    expect(logs.join("\n")).toContain("action flip");
+  });
+
+  it("prints drift output as JSON", async () => {
+    const code = await run(argv("drift", "--json"));
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.dataset).toContain("builtin:nfkc-tr39-divergence-vectors");
+    expect(parsed.total).toBeGreaterThan(0);
+    expect(typeof parsed.actionFlips).toBe("number");
+  });
+
+  it("supports drift on a custom dataset", async () => {
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([{ identifier: "\u017f", target: "f" }])
+    );
+
+    const code = await run(argv("drift", calibrationPath, "--json"));
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.total).toBe(1);
+    expect(parsed.changedCount).toBeGreaterThanOrEqual(1);
+    expect(parsed.changedPreview[0].identifier).toBe("\u017f");
   });
 });
 
@@ -145,5 +404,23 @@ describe("CLI with config file", () => {
     const code = await run(argv("check", "test", "--config", configPath));
     expect(code).toBe(1);
     expect(errors.join("\n")).toContain("Invalid regex pattern");
+  });
+
+  it("includes reserved names as protected targets for risk checks", async () => {
+    writeFileSync(configPath, JSON.stringify({ reserved: ["admin"] }));
+
+    const code = await run(argv("risk", "admin", "--config", configPath));
+    expect(code).toBe(1);
+    expect(logs[0]).toContain("(block)");
+  });
+
+  it("can exclude reserved-name targets for risk checks", async () => {
+    writeFileSync(configPath, JSON.stringify({ reserved: ["admin"] }));
+
+    const code = await run(
+      argv("risk", "adm\u0456n", "--config", configPath, "--no-reserved")
+    );
+    expect(code).toBe(0);
+    expect(logs[0]).toContain("(allow)");
   });
 });

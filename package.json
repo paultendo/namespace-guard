@@ -68,6 +68,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "ci:drift-gate": "node scripts/drift-gate.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
