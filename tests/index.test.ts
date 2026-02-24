@@ -2,10 +2,16 @@ import { describe, it, expect, vi } from "vitest";
 import {
   normalize,
   createNamespaceGuard,
+  createNamespaceGuardWithProfile,
   createProfanityValidator,
   createHomoglyphValidator,
   skeleton,
   areConfusable,
+  confusableDistance,
+  deriveNfkcTr39DivergenceVectors,
+  NAMESPACE_PROFILES,
+  DEFAULT_PROTECTED_TOKENS,
+  NFKC_TR39_DIVERGENCE_VECTORS,
   CONFUSABLE_MAP,
   CONFUSABLE_MAP_FULL,
   type NamespaceAdapter,
@@ -528,6 +534,95 @@ describe("assertAvailable", () => {
     await expect(
       guard.assertAvailable("sarah", { id: "u1" })
     ).resolves.toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assertClaimable
+// ---------------------------------------------------------------------------
+describe("assertClaimable", () => {
+  it("passes for available identifiers", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    await expect(guard.assertClaimable("sarah-team")).resolves.toBeUndefined();
+  });
+
+  it("throws on format/reserved/taken errors from availability checks", async () => {
+    const guard = createNamespaceGuard(
+      {
+        reserved: ["admin"],
+        sources: defaultSources,
+      },
+      createMockAdapter({
+        user: { sarah: { id: "u1" } },
+      })
+    );
+
+    await expect(guard.assertClaimable("admin")).rejects.toThrow("reserved");
+    await expect(guard.assertClaimable("sarah")).rejects.toThrow("already in use");
+  });
+
+  it("blocks confusable variants of default protected tokens", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        pattern: /^[\p{L}\p{N}][\p{L}\p{N}-]{1,29}$/u,
+      },
+      createMockAdapter({})
+    );
+
+    // admіn (Cyrillic і) should be blocked via default protected token "admin"
+    await expect(guard.assertClaimable("adm\u0456n")).rejects.toThrow(
+      "too confusable"
+    );
+  });
+
+  it("supports failOn=warn policy when enforcing claimability", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    // This is typically warn-level against paypal under these thresholds
+    await expect(
+      guard.assertClaimable("paypa1", {}, {
+        protect: ["paypal"],
+        warnThreshold: 70,
+        blockThreshold: 95,
+      })
+    ).resolves.toBeUndefined();
+
+    await expect(
+      guard.assertClaimable("paypa1", {}, {
+        protect: ["paypal"],
+        warnThreshold: 70,
+        blockThreshold: 95,
+        failOn: "warn",
+      })
+    ).rejects.toThrow("potentially confusable");
+  });
+
+  it("uses configured risk protect targets when provided", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        pattern: /^[\p{L}\p{N}][\p{L}\p{N}-]{1,29}$/u,
+        risk: { includeReserved: false, protect: ["paypal"] },
+      },
+      createMockAdapter({})
+    );
+
+    await expect(guard.assertClaimable("\u0440\u0430ypal")).rejects.toThrow(
+      "too confusable"
+    );
+  });
+
+  it("ships default protected token set with high-value entries", () => {
+    expect(DEFAULT_PROTECTED_TOKENS).toContain("admin");
+    expect(DEFAULT_PROTECTED_TOKENS).toContain("support");
   });
 });
 
@@ -2884,5 +2979,239 @@ describe("areConfusable", () => {
   it("treats different scripts as non-confusable when no mapping exists", () => {
     // CJK character has no confusable mapping to Latin
     expect(areConfusable("hello", "\u4e16\u754c")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// confusableDistance()
+// ---------------------------------------------------------------------------
+describe("confusableDistance", () => {
+  it("returns zero distance for identical strings", () => {
+    const result = confusableDistance("paypal", "paypal");
+    expect(result.distance).toBe(0);
+    expect(result.similarity).toBe(1);
+    expect(result.chainDepth).toBe(0);
+    expect(result.skeletonEqual).toBe(true);
+  });
+
+  it("captures cross-script confusable substitutions", () => {
+    const result = confusableDistance("paypal", "\u0440\u0430ypal"); // Cyrillic р, а
+    expect(result.skeletonEqual).toBe(true);
+    expect(result.crossScriptCount).toBeGreaterThanOrEqual(2);
+    expect(result.chainDepth).toBeGreaterThanOrEqual(2);
+    expect(result.distance).toBeGreaterThan(0);
+    expect(result.distance).toBeLessThan(1.5);
+  });
+
+  it("treats default-ignorable insertions as low-cost edits", () => {
+    const result = confusableDistance("paypal", "pay\u200Bpal");
+    expect(result.skeletonEqual).toBe(true);
+    expect(result.ignorableCount).toBeGreaterThanOrEqual(1);
+    expect(result.distance).toBeLessThan(0.2);
+    expect(result.similarity).toBeGreaterThan(0.95);
+  });
+
+  it("tracks NFKC/TR39 divergence signals for Long S", () => {
+    const result = confusableDistance("\u017f", "f");
+    expect(result.skeletonEqual).toBe(true);
+    expect(result.divergenceCount).toBeGreaterThanOrEqual(1);
+    expect(result.chainDepth).toBeGreaterThanOrEqual(1);
+  });
+
+  it("supports map overrides for NFKC-first pipelines", () => {
+    const result = confusableDistance("\u017f", "f", { map: CONFUSABLE_MAP });
+    expect(result.skeletonEqual).toBe(false);
+    expect(result.divergenceCount).toBe(0);
+    expect(result.distance).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// NFKC/TR39 divergence vectors
+// ---------------------------------------------------------------------------
+describe("NFKC/TR39 divergence vectors", () => {
+  it("exports a stable built-in divergence corpus", () => {
+    expect(NFKC_TR39_DIVERGENCE_VECTORS.length).toBeGreaterThanOrEqual(30);
+    const longS = NFKC_TR39_DIVERGENCE_VECTORS.find(
+      (row) => row.codePoint === "U+017F"
+    );
+    expect(longS).toBeDefined();
+    expect(longS?.tr39).toBe("f");
+    expect(longS?.nfkc).toBe("s");
+  });
+
+  it("derives no divergences from the NFKC-filtered map", () => {
+    const filtered = deriveNfkcTr39DivergenceVectors(CONFUSABLE_MAP);
+    expect(filtered).toHaveLength(0);
+  });
+
+  it("keeps divergence vectors sorted by code point", () => {
+    const cps = NFKC_TR39_DIVERGENCE_VECTORS.map((row) =>
+      Number.parseInt(row.codePoint.slice(2), 16)
+    );
+    const sorted = [...cps].sort((a, b) => a - b);
+    expect(cps).toEqual(sorted);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkRisk()
+// ---------------------------------------------------------------------------
+describe("checkRisk", () => {
+  const guard = createNamespaceGuard(
+    {
+      reserved: ["admin", "support", "paypal"],
+      sources: defaultSources,
+    },
+    createMockAdapter({})
+  );
+
+  it("blocks exact protected target matches", () => {
+    const result = guard.checkRisk("admin");
+    expect(result.score).toBe(100);
+    expect(result.action).toBe("block");
+    expect(result.level).toBe("high");
+    expect(result.matches[0]?.target).toBe("admin");
+  });
+
+  it("flags confusable spoofing against protected targets", () => {
+    const result = guard.checkRisk("\u0440\u0430ypal", { protect: ["paypal"] });
+    expect(result.score).toBeGreaterThanOrEqual(80);
+    expect(result.action).toBe("block");
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].target).toBe("paypal");
+    expect(result.matches[0].skeletonEqual).toBe(true);
+    expect(result.reasons.some((r) => r.code === "confusable-target")).toBe(true);
+  });
+
+  it("warns on invisible-character insertion with threshold control", () => {
+    const result = guard.checkRisk("pay\u200Bpal", {
+      protect: ["paypal"],
+      warnThreshold: 40,
+      blockThreshold: 85,
+    });
+    expect(result.action).toBe("block");
+    expect(result.score).toBeGreaterThanOrEqual(85);
+    expect(result.reasons.some((r) => r.code === "invisible-character")).toBe(true);
+  });
+
+  it("can disable reserved-name inclusion in protected targets", () => {
+    const enabled = guard.checkRisk("adm\u0456n"); // Cyrillic і
+    const disabled = guard.checkRisk("adm\u0456n", { includeReserved: false });
+    expect(enabled.matches.some((m) => m.target === "admin")).toBe(true);
+    expect(disabled.matches.some((m) => m.target === "admin")).toBe(false);
+  });
+
+  it("respects custom policy thresholds", () => {
+    const strict = guard.checkRisk("paypa1", {
+      protect: ["paypal"],
+      warnThreshold: 30,
+      blockThreshold: 60,
+    });
+    const lenient = guard.checkRisk("paypa1", {
+      protect: ["paypal"],
+      warnThreshold: 90,
+      blockThreshold: 98,
+    });
+
+    expect(strict.action === "warn" || strict.action === "block").toBe(true);
+    expect(lenient.action).toBe("allow");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// enforceRisk()
+// ---------------------------------------------------------------------------
+describe("enforceRisk", () => {
+  const guard = createNamespaceGuard(
+    {
+      reserved: ["admin", "paypal"],
+      sources: defaultSources,
+    },
+    createMockAdapter({})
+  );
+
+  it("allows non-block identifiers under default fail mode", () => {
+    const result = guard.enforceRisk("teamspace", { protect: ["paypal"] });
+    expect(result.allowed).toBe(true);
+    expect(result.action === "allow" || result.action === "warn").toBe(true);
+  });
+
+  it("denies block-level identifiers by default", () => {
+    const result = guard.enforceRisk("\u0440\u0430ypal", { protect: ["paypal"] });
+    expect(result.allowed).toBe(false);
+    expect(result.action).toBe("block");
+    expect(result.message).toContain("protected name");
+  });
+
+  it("can fail on warn-level identifiers", () => {
+    const result = guard.enforceRisk("paypa1", {
+      protect: ["paypal"],
+      warnThreshold: 70,
+      blockThreshold: 95,
+      failOn: "warn",
+    });
+    expect(result.action).toBe("warn");
+    expect(result.allowed).toBe(false);
+  });
+
+  it("supports custom deny messages", () => {
+    const result = guard.enforceRisk("\u0440\u0430ypal", {
+      protect: ["paypal"],
+      messages: { block: "Use a less-confusable handle." },
+    });
+    expect(result.allowed).toBe(false);
+    expect(result.message).toBe("Use a less-confusable handle.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createNamespaceGuardWithProfile()
+// ---------------------------------------------------------------------------
+describe("createNamespaceGuardWithProfile", () => {
+  it("applies profile defaults for normalization and numeric policy", async () => {
+    const guard = createNamespaceGuardWithProfile(
+      "consumer-handle",
+      {
+        sources: defaultSources,
+      },
+      createMockAdapter({})
+    );
+
+    // consumer-handle profile defaults to allowPurelyNumeric: false
+    const numeric = await guard.check("1234");
+    expect(numeric.available).toBe(false);
+    if (!numeric.available) {
+      expect(numeric.reason).toBe("invalid");
+    }
+  });
+
+  it("uses profile risk defaults when checkRisk options are omitted", () => {
+    const guard = createNamespaceGuardWithProfile(
+      "developer-id",
+      {
+        reserved: ["paypal"],
+        sources: defaultSources,
+      },
+      createMockAdapter({})
+    );
+
+    const result = guard.checkRisk("paypa1", { protect: ["paypal"] });
+    expect(result.score).toBeGreaterThanOrEqual(NAMESPACE_PROFILES["developer-id"].risk.warnThreshold);
+    expect(result.action === "warn" || result.action === "block").toBe(true);
+  });
+
+  it("allows explicit config to override profile defaults", async () => {
+    const guard = createNamespaceGuardWithProfile(
+      "consumer-handle",
+      {
+        sources: defaultSources,
+        allowPurelyNumeric: true,
+      },
+      createMockAdapter({})
+    );
+
+    const numeric = await guard.check("1234");
+    expect(numeric.available).toBe(true);
   });
 });

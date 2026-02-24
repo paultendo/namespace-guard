@@ -61,6 +61,19 @@ export type NamespaceConfig = {
     /** Maximum number of cached entries before LRU eviction (default: 1000) */
     maxSize?: number;
   };
+  /** Default risk policy for `checkRisk()` / `enforceRisk()` */
+  risk?: {
+    /** Include reserved names as protected targets by default (default: true) */
+    includeReserved?: boolean;
+    /** Default protected targets when none are passed to `checkRisk`/`enforceRisk` (default: none). */
+    protect?: string[];
+    /** Number of top matches returned by default (default: 3) */
+    maxMatches?: number;
+    /** Default warn threshold for score/action mapping (default: 45) */
+    warnThreshold?: number;
+    /** Default block threshold for score/action mapping (default: 70) */
+    blockThreshold?: number;
+  };
 };
 
 /** Options passed to adapter `findOne` calls. */
@@ -108,6 +121,228 @@ export type SkeletonOptions = {
    *  Default: `CONFUSABLE_MAP_FULL` (complete TR39 map, no NFKC filtering).
    *  Pass `CONFUSABLE_MAP` if your pipeline runs NFKC before calling skeleton(). */
   map?: Record<string, string>;
+};
+
+/** Options for `confusableDistance()`. */
+export type ConfusableDistanceOptions = {
+  /** Confusable character map to use (default: `CONFUSABLE_MAP_FULL`). */
+  map?: Record<string, string>;
+};
+
+/** Step-by-step edit operation in a confusable distance path. */
+export type ConfusableDistanceStep = {
+  /** Operation type for this path step. */
+  op: "match" | "substitution" | "confusable-substitution" | "insertion" | "deletion";
+  /** Source character (for substitution/deletion). */
+  from?: string;
+  /** Target character (for substitution/insertion). */
+  to?: string;
+  /** Zero-based index in the source string for this operation. */
+  fromIndex: number;
+  /** Zero-based index in the target string for this operation. */
+  toIndex: number;
+  /** Weighted operation cost. */
+  cost: number;
+  /** Shared prototype when op is `confusable-substitution`. */
+  prototype?: string;
+  /** True when substitution crosses Unicode scripts (e.g. Latin to Cyrillic). */
+  crossScript?: boolean;
+  /** True when substitution uses a known NFKC/TR39 divergent mapping. */
+  divergence?: boolean;
+  /** Human-readable signal for high-risk operations. */
+  reason?: "default-ignorable" | "cross-script" | "nfkc-divergence" | "nfkc-equivalent";
+};
+
+/** Result of weighted confusable distance analysis between two strings. */
+export type ConfusableDistanceResult = {
+  /** Weighted edit distance (lower means more confusable). */
+  distance: number;
+  /** Maximum baseline distance used for similarity scaling. */
+  maxDistance: number;
+  /** Similarity score in [0, 1], where 1 is most similar. */
+  similarity: number;
+  /** Whether TR39 skeletons are equal. */
+  skeletonEqual: boolean;
+  /** Whether NFKC + lowercase forms are equal. */
+  normalizedEqual: boolean;
+  /** Number of non-trivial path operations (attack chain depth proxy). */
+  chainDepth: number;
+  /** Number of cross-script confusable substitutions in the path. */
+  crossScriptCount: number;
+  /** Number of default-ignorable insertions/deletions in the path. */
+  ignorableCount: number;
+  /** Number of substitutions involving NFKC/TR39 divergent mappings. */
+  divergenceCount: number;
+  /** Weighted shortest edit path used to compute the distance. */
+  steps: ConfusableDistanceStep[];
+};
+
+/** A character-level mapping where TR39 and NFKC disagree on ASCII prototype. */
+export type NfkcTr39DivergenceVector = {
+  /** Source character from confusables data. */
+  char: string;
+  /** Unicode scalar value formatted as `U+XXXX`. */
+  codePoint: string;
+  /** TR39 confusable target from the selected map. */
+  tr39: string;
+  /** NFKC lowercase result for the source character. */
+  nfkc: string;
+};
+
+/** Risk reason code returned by `checkRisk()`. */
+export type RiskReasonCode =
+  | "confusable-target"
+  | "skeleton-collision"
+  | "mixed-script"
+  | "invisible-character"
+  | "confusable-character"
+  | "divergent-mapping"
+  | "deep-chain";
+
+/** Structured reason contributing to a risk score. */
+export type RiskReason = {
+  code: RiskReasonCode;
+  message: string;
+  weight: number;
+};
+
+/** Risk levels returned by `checkRisk()`. */
+export type RiskLevel = "low" | "medium" | "high";
+
+/** Policy action derived from the configured thresholds. */
+export type RiskAction = "allow" | "warn" | "block";
+
+/** A nearest protected target returned by risk scoring. */
+export type RiskMatch = {
+  target: string;
+  score: number;
+  distance: number;
+  chainDepth: number;
+  skeletonEqual: boolean;
+  reasons: string[];
+};
+
+/** Options for `guard.checkRisk()`. */
+export type CheckRiskOptions = {
+  /** Additional high-value identifiers to protect against confusable variants. */
+  protect?: string[];
+  /** Include configured reserved names in the protected target set (default: true). */
+  includeReserved?: boolean;
+  /** Confusable map used for skeletoning and distance scoring (default: `CONFUSABLE_MAP_FULL`). */
+  map?: Record<string, string>;
+  /** Number of highest-risk matches to return (default: 3). */
+  maxMatches?: number;
+  /** Score threshold where action transitions from `allow` to `warn` (default: 45). */
+  warnThreshold?: number;
+  /** Score threshold where action transitions from `warn` to `block` (default: 70). */
+  blockThreshold?: number;
+};
+
+/** Output of `guard.checkRisk()`. */
+export type RiskCheckResult = {
+  identifier: string;
+  normalized: string;
+  score: number;
+  level: RiskLevel;
+  action: RiskAction;
+  reasons: RiskReason[];
+  matches: RiskMatch[];
+};
+
+/** Options for `guard.enforceRisk()`. */
+export type EnforceRiskOptions = CheckRiskOptions & {
+  /** Deny mode. "block" denies only block-level risk; "warn" denies warn+block. */
+  failOn?: "block" | "warn";
+  /** Custom messages for denied outcomes. */
+  messages?: {
+    warn?: string;
+    block?: string;
+  };
+};
+
+/** Options for `guard.assertClaimable()`. */
+export type AssertClaimableOptions = EnforceRiskOptions;
+
+/** Result of `guard.enforceRisk()`. */
+export type EnforceRiskResult = {
+  allowed: boolean;
+  action: RiskAction;
+  message?: string;
+  risk: RiskCheckResult;
+};
+
+/** Built-in profile names for practical defaults. */
+export type NamespaceProfileName = "consumer-handle" | "org-slug" | "developer-id";
+
+/** Profile preset definition. */
+export type NamespaceProfilePreset = {
+  description: string;
+  pattern: RegExp;
+  normalizeUnicode: boolean;
+  allowPurelyNumeric: boolean;
+  risk: Required<NonNullable<NamespaceConfig["risk"]>>;
+};
+
+/** Default high-value targets used when enforcing risk without explicit protect targets. */
+export const DEFAULT_PROTECTED_TOKENS = [
+  "admin",
+  "administrator",
+  "support",
+  "help",
+  "security",
+  "billing",
+  "payments",
+  "staff",
+  "moderator",
+  "root",
+  "system",
+  "api",
+  "www",
+  "mail",
+  "login",
+];
+
+/** Practical preset profiles for common namespace types. */
+export const NAMESPACE_PROFILES: Record<NamespaceProfileName, NamespaceProfilePreset> = {
+  "consumer-handle": {
+    description: "User-facing handles with strict anti-impersonation defaults.",
+    pattern: /^[a-z0-9][a-z0-9-]{1,29}$/,
+    normalizeUnicode: true,
+    allowPurelyNumeric: false,
+    risk: {
+      includeReserved: true,
+      protect: [],
+      maxMatches: 3,
+      warnThreshold: 45,
+      blockThreshold: 70,
+    },
+  },
+  "org-slug": {
+    description: "Organization/workspace slugs with conservative collision policy.",
+    pattern: /^[a-z0-9][a-z0-9-]{1,39}$/,
+    normalizeUnicode: true,
+    allowPurelyNumeric: false,
+    risk: {
+      includeReserved: true,
+      protect: [],
+      maxMatches: 5,
+      warnThreshold: 40,
+      blockThreshold: 65,
+    },
+  },
+  "developer-id": {
+    description: "Developer/package style identifiers with stricter warn thresholds.",
+    pattern: /^[a-z0-9][a-z0-9-]{1,49}$/,
+    normalizeUnicode: true,
+    allowPurelyNumeric: true,
+    risk: {
+      includeReserved: true,
+      protect: [],
+      maxMatches: 5,
+      warnThreshold: 35,
+      blockThreshold: 60,
+    },
+  },
 };
 
 const DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
@@ -1685,6 +1920,53 @@ export const CONFUSABLE_MAP_FULL: Record<string, string> = {
   "\u{1fbf9}": "9",
 };
 
+function formatCodePoint(ch: string): string {
+  const cp = ch.codePointAt(0);
+  if (cp === undefined) return "U+0000";
+  return `U+${cp.toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
+/**
+ * Derive the set of characters where TR39 prototype mapping and NFKC lowercase
+ * mapping disagree on single ASCII letter/digit outcomes.
+ */
+export function deriveNfkcTr39DivergenceVectors(
+  map: Record<string, string> = CONFUSABLE_MAP_FULL
+): NfkcTr39DivergenceVector[] {
+  const rows: Array<NfkcTr39DivergenceVector & { cp: number }> = [];
+
+  for (const [char, tr39] of Object.entries(map)) {
+    const cp = char.codePointAt(0);
+    if (cp === undefined) continue;
+    const nfkc = char.normalize("NFKC").toLowerCase();
+    if (!/^[a-z0-9]$/.test(nfkc)) continue;
+    if (nfkc === tr39) continue;
+
+    rows.push({
+      char,
+      codePoint: formatCodePoint(char),
+      tr39,
+      nfkc,
+      cp,
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (a.cp !== b.cp) return a.cp - b.cp;
+    if (a.tr39 !== b.tr39) return a.tr39.localeCompare(b.tr39);
+    return a.nfkc.localeCompare(b.nfkc);
+  });
+
+  return rows.map(({ cp: _cp, ...row }) => row);
+}
+
+/**
+ * Built-in composability regression corpus:
+ * characters where TR39 confusables and NFKC disagree on ASCII targets.
+ */
+export const NFKC_TR39_DIVERGENCE_VECTORS: NfkcTr39DivergenceVector[] =
+  deriveNfkcTr39DivergenceVectors(CONFUSABLE_MAP_FULL);
+
 
 /**
  * Create a validator that rejects identifiers containing homoglyph/confusable characters.
@@ -1741,14 +2023,6 @@ export function createHomoglyphValidator(options?: {
         )
       : null;
 
-  // Script detection for mixed-script analysis
-  // Covers all non-Latin scripts present in CONFUSABLE_MAP:
-  // Greek, Cyrillic, Armenian, Hebrew, Arabic (+Thaana), Indic (Devanagari–Sinhala),
-  // Thai/Lao, Myanmar, Georgian, Ethiopic, Cherokee, Canadian Syllabics,
-  // Runic, Khmer, Coptic, Tifinagh, Lisu, Bamum, Cherokee Supplement
-  const nonLatinRegex = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
-  const latinRegex = /[a-zA-Z]/;
-
   return async (value: string) => {
     // Check 1: Any confusable character present → reject
     if (confusableRegex && confusableRegex.test(value)) {
@@ -1757,9 +2031,7 @@ export function createHomoglyphValidator(options?: {
 
     // Check 2: Mixed-script detection (optional)
     if (rejectMixedScript) {
-      const hasLatin = latinRegex.test(value);
-      const hasNonLatin = nonLatinRegex.test(value);
-      if (hasLatin && hasNonLatin) {
+      if (hasMixedScripts(value)) {
         return { available: false, message };
       }
     }
@@ -1771,6 +2043,170 @@ export function createHomoglyphValidator(options?: {
 /** Matches Unicode Default_Ignorable_Code_Point characters (TR39 skeleton step 2). */
 const DEFAULT_IGNORABLE_RE =
   /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\u{1BCA0}-\u{1BCA3}\u{1D173}-\u{1D17A}\u{E0000}-\u{E0FFF}]/gu;
+const DEFAULT_IGNORABLE_SINGLE_RE = new RegExp(DEFAULT_IGNORABLE_RE.source, "u");
+const LETTER_RE = /\p{L}/u;
+const LATIN_SCRIPT_RE = /\p{Script=Latin}/u;
+const SCRIPT_DETECTORS: Array<[string, RegExp]> = [
+  ["latin", /\p{Script=Latin}/u],
+  ["cyrillic", /\p{Script=Cyrillic}/u],
+  ["greek", /\p{Script=Greek}/u],
+  ["armenian", /\p{Script=Armenian}/u],
+  ["hebrew", /\p{Script=Hebrew}/u],
+  ["arabic", /\p{Script=Arabic}/u],
+  ["devanagari", /\p{Script=Devanagari}/u],
+  ["han", /\p{Script=Han}/u],
+  ["hiragana", /\p{Script=Hiragana}/u],
+  ["katakana", /\p{Script=Katakana}/u],
+];
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+function toCodePoints(value: string): string[] {
+  return Array.from(value);
+}
+
+function getScriptTag(ch: string): string {
+  for (const [tag, re] of SCRIPT_DETECTORS) {
+    if (re.test(ch)) return tag;
+  }
+  if (LETTER_RE.test(ch)) return "other-letter";
+  return "non-letter";
+}
+
+function isDefaultIgnorableChar(ch: string): boolean {
+  return DEFAULT_IGNORABLE_SINGLE_RE.test(ch);
+}
+
+function hasMixedScripts(value: string): boolean {
+  let hasLatin = false;
+  let hasNonLatin = false;
+
+  for (const ch of value) {
+    if (!LETTER_RE.test(ch)) continue;
+    if (LATIN_SCRIPT_RE.test(ch)) {
+      hasLatin = true;
+    } else {
+      hasNonLatin = true;
+    }
+    if (hasLatin && hasNonLatin) return true;
+  }
+
+  return false;
+}
+
+function countDefaultIgnorables(value: string): number {
+  let count = 0;
+  for (const ch of value) {
+    if (isDefaultIgnorableChar(ch)) count++;
+  }
+  return count;
+}
+
+function isNfkcDivergentMapping(ch: string, mapped: string): boolean {
+  const nfkc = ch.normalize("NFKC").toLowerCase();
+  return /^[a-z0-9]$/.test(nfkc) && nfkc !== mapped;
+}
+
+function buildSubstitutionStep(
+  from: string,
+  to: string,
+  fromIndex: number,
+  toIndex: number,
+  map: Record<string, string>
+): ConfusableDistanceStep {
+  if (from === to) {
+    return { op: "match", from, to, fromIndex, toIndex, cost: 0 };
+  }
+
+  const fromPrototype = map[from] ?? from;
+  const toPrototype = map[to] ?? to;
+
+  if (fromPrototype === toPrototype) {
+    const fromScript = getScriptTag(from);
+    const toScript = getScriptTag(to);
+    const crossScript =
+      fromScript !== "non-letter" &&
+      toScript !== "non-letter" &&
+      fromScript !== toScript;
+    const divergence =
+      isNfkcDivergentMapping(from, fromPrototype) ||
+      isNfkcDivergentMapping(to, toPrototype);
+
+    let cost = 0.35;
+    let reason: ConfusableDistanceStep["reason"];
+    if (crossScript) {
+      cost += 0.2;
+      reason = "cross-script";
+    }
+    if (divergence) {
+      cost += 0.1;
+      if (!reason) reason = "nfkc-divergence";
+    }
+
+    return {
+      op: "confusable-substitution",
+      from,
+      to,
+      fromIndex,
+      toIndex,
+      cost,
+      prototype: fromPrototype,
+      crossScript,
+      divergence,
+      reason,
+    };
+  }
+
+  const fromNfkc = from.normalize("NFKC").toLowerCase();
+  const toNfkc = to.normalize("NFKC").toLowerCase();
+  if (fromNfkc === toNfkc) {
+    return {
+      op: "substitution",
+      from,
+      to,
+      fromIndex,
+      toIndex,
+      cost: 0.45,
+      reason: "nfkc-equivalent",
+    };
+  }
+
+  return { op: "substitution", from, to, fromIndex, toIndex, cost: 1 };
+}
+
+function buildDeletionStep(ch: string, fromIndex: number, toIndex: number): ConfusableDistanceStep {
+  if (isDefaultIgnorableChar(ch)) {
+    return {
+      op: "deletion",
+      from: ch,
+      fromIndex,
+      toIndex,
+      cost: 0.05,
+      reason: "default-ignorable",
+    };
+  }
+  return { op: "deletion", from: ch, fromIndex, toIndex, cost: 1 };
+}
+
+function buildInsertionStep(ch: string, fromIndex: number, toIndex: number): ConfusableDistanceStep {
+  if (isDefaultIgnorableChar(ch)) {
+    return {
+      op: "insertion",
+      to: ch,
+      fromIndex,
+      toIndex,
+      cost: 0.05,
+      reason: "default-ignorable",
+    };
+  }
+  return { op: "insertion", to: ch, fromIndex, toIndex, cost: 1 };
+}
 
 /**
  * Compute the TR39 Section 4 skeleton of a string for confusable comparison.
@@ -1815,6 +2251,138 @@ export function skeleton(input: string, options?: SkeletonOptions): string {
 }
 
 /**
+ * Compute a weighted confusable distance between two strings.
+ *
+ * Uses a shortest-path edit model where substitutions between characters that share
+ * a TR39 prototype are low cost, default-ignorable insertions/deletions are very low
+ * cost, and cross-script confusable substitutions increase risk and chain depth.
+ *
+ * This keeps TR39 skeleton equality as the baseline while exposing a graded score.
+ */
+export function confusableDistance(
+  a: string,
+  b: string,
+  options?: ConfusableDistanceOptions
+): ConfusableDistanceResult {
+  const map = options?.map ?? CONFUSABLE_MAP_FULL;
+  const left = toCodePoints(a.normalize("NFD").toLowerCase());
+  const right = toCodePoints(b.normalize("NFD").toLowerCase());
+  const m = left.length;
+  const n = right.length;
+
+  const distance = Array.from({ length: m + 1 }, () =>
+    Array<number>(n + 1).fill(Number.POSITIVE_INFINITY)
+  );
+  const back = Array.from({ length: m + 1 }, () =>
+    Array<{ prevI: number; prevJ: number; step: ConfusableDistanceStep } | null>(n + 1).fill(null)
+  );
+
+  distance[0][0] = 0;
+
+  for (let i = 1; i <= m; i++) {
+    const step = buildDeletionStep(left[i - 1], i - 1, 0);
+    distance[i][0] = distance[i - 1][0] + step.cost;
+    back[i][0] = { prevI: i - 1, prevJ: 0, step };
+  }
+
+  for (let j = 1; j <= n; j++) {
+    const step = buildInsertionStep(right[j - 1], 0, j - 1);
+    distance[0][j] = distance[0][j - 1] + step.cost;
+    back[0][j] = { prevI: 0, prevJ: j - 1, step };
+  }
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const substitution = buildSubstitutionStep(left[i - 1], right[j - 1], i - 1, j - 1, map);
+      const deletion = buildDeletionStep(left[i - 1], i - 1, j);
+      const insertion = buildInsertionStep(right[j - 1], i, j - 1);
+      const candidates = [
+        {
+          total: distance[i - 1][j - 1] + substitution.cost,
+          prevI: i - 1,
+          prevJ: j - 1,
+          step: substitution,
+          priority: 0,
+        },
+        {
+          total: distance[i - 1][j] + deletion.cost,
+          prevI: i - 1,
+          prevJ: j,
+          step: deletion,
+          priority: 1,
+        },
+        {
+          total: distance[i][j - 1] + insertion.cost,
+          prevI: i,
+          prevJ: j - 1,
+          step: insertion,
+          priority: 2,
+        },
+      ];
+
+      let best = candidates[0];
+      for (let k = 1; k < candidates.length; k++) {
+        const candidate = candidates[k];
+        if (candidate.total < best.total) {
+          best = candidate;
+          continue;
+        }
+        if (candidate.total === best.total && candidate.priority < best.priority) {
+          best = candidate;
+        }
+      }
+
+      distance[i][j] = best.total;
+      back[i][j] = { prevI: best.prevI, prevJ: best.prevJ, step: best.step };
+    }
+  }
+
+  const steps: ConfusableDistanceStep[] = [];
+  let i = m;
+  let j = n;
+  while (i > 0 || j > 0) {
+    const cell = back[i][j];
+    if (!cell) break;
+    steps.push(cell.step);
+    i = cell.prevI;
+    j = cell.prevJ;
+  }
+  steps.reverse();
+
+  let chainDepth = 0;
+  let crossScriptCount = 0;
+  let ignorableCount = 0;
+  let divergenceCount = 0;
+
+  for (const step of steps) {
+    if (step.op !== "match") chainDepth++;
+    if (step.crossScript) crossScriptCount++;
+    if (step.reason === "default-ignorable") ignorableCount++;
+    if (step.divergence) divergenceCount++;
+  }
+
+  const maxDistance = Math.max(m, n, 1);
+  const rawDistance = distance[m][n];
+  const similarity = 1 - clamp(rawDistance / maxDistance, 0, 1);
+
+  const aNfkc = a.normalize("NFKC").toLowerCase();
+  const bNfkc = b.normalize("NFKC").toLowerCase();
+
+  return {
+    distance: round3(rawDistance),
+    maxDistance,
+    similarity: round3(similarity),
+    skeletonEqual: skeleton(a, { map }) === skeleton(b, { map }),
+    normalizedEqual: aNfkc === bNfkc,
+    chainDepth,
+    crossScriptCount,
+    ignorableCount,
+    divergenceCount,
+    steps,
+  };
+}
+
+/**
  * Check whether two strings are visually confusable by comparing their TR39 skeletons.
  *
  * @param a - First string
@@ -1835,6 +2403,68 @@ export function areConfusable(
   options?: SkeletonOptions
 ): boolean {
   return skeleton(a, options) === skeleton(b, options);
+}
+
+function countConfusableChars(value: string, map: Record<string, string>): {
+  confusableCount: number;
+  divergenceCount: number;
+} {
+  let confusableCount = 0;
+  let divergenceCount = 0;
+
+  for (const ch of value) {
+    const mapped = map[ch];
+    if (!mapped) continue;
+    confusableCount++;
+    if (isNfkcDivergentMapping(ch, mapped)) divergenceCount++;
+  }
+
+  return { confusableCount, divergenceCount };
+}
+
+function scoreDistanceRisk(result: ConfusableDistanceResult): number {
+  let score = Math.round(result.similarity * 100);
+
+  if (result.skeletonEqual) score = Math.max(score, 82);
+  if (result.normalizedEqual) score = Math.max(score, 88);
+  if (result.crossScriptCount > 0) {
+    score += Math.min(12, result.crossScriptCount * 4);
+  }
+  if (result.ignorableCount > 0) {
+    score += Math.min(12, result.ignorableCount * 4);
+  }
+  if (result.divergenceCount > 0) {
+    score += Math.min(8, result.divergenceCount * 4);
+  }
+  if (result.chainDepth >= 2) {
+    score += Math.min(10, (result.chainDepth - 1) * 3);
+  }
+
+  return clamp(score, 0, 100);
+}
+
+function levelForScore(score: number, warnThreshold: number, blockThreshold: number): RiskLevel {
+  if (score >= blockThreshold) return "high";
+  if (score >= warnThreshold) return "medium";
+  return "low";
+}
+
+function actionForScore(score: number, warnThreshold: number, blockThreshold: number): RiskAction {
+  if (score >= blockThreshold) return "block";
+  if (score >= warnThreshold) return "warn";
+  return "allow";
+}
+
+function uniqueNonEmptyStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
 }
 
 /**
@@ -1861,12 +2491,41 @@ function buildReservedMap(
 }
 
 /**
+ * Create a guard with a built-in profile preset for practical defaults.
+ *
+ * Profile values apply first; explicit `config` values override the preset.
+ */
+export function createNamespaceGuardWithProfile(
+  profileName: NamespaceProfileName,
+  config: NamespaceConfig,
+  adapter: NamespaceAdapter
+) {
+  const profile = NAMESPACE_PROFILES[profileName];
+  if (!profile) {
+    throw new Error(`Unknown namespace profile: ${profileName}`);
+  }
+
+  const mergedConfig: NamespaceConfig = {
+    ...config,
+    pattern: config.pattern ?? profile.pattern,
+    normalizeUnicode: config.normalizeUnicode ?? profile.normalizeUnicode,
+    allowPurelyNumeric: config.allowPurelyNumeric ?? profile.allowPurelyNumeric,
+    risk: {
+      ...profile.risk,
+      ...(config.risk ?? {}),
+    },
+  };
+
+  return createNamespaceGuard(mergedConfig, adapter);
+}
+
+/**
  * Create a namespace guard instance for checking slug/handle uniqueness
  * across multiple database tables with reserved name protection.
  *
  * @param config - Reserved names, data sources, validation pattern, and optional features
  * @param adapter - Database adapter implementing the `findOne` lookup (use a built-in adapter or write your own)
- * @returns A guard with `check`, `checkMany`, `assertAvailable`, `validateFormat`, `validateFormatOnly`, `clearCache`, and `cacheStats` methods
+ * @returns A guard with `check`, `checkMany`, `checkRisk`, `enforceRisk`, `assertAvailable`, `assertClaimable`, `validateFormat`, `validateFormatOnly`, `clearCache`, and `cacheStats` methods
  *
  * @example
  * ```ts
@@ -2216,6 +2875,286 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
+   * Score spoofing/confusability risk for an identifier against protected targets.
+   *
+   * Uses weighted confusable distance with chain-depth and script/invisible-character
+   * signals. Reserved names can be included as protected targets by default.
+   */
+  function checkRisk(identifier: string, options?: CheckRiskOptions): RiskCheckResult {
+    const normalized = normalize(identifier, normalizeOpts);
+    const map = options?.map ?? CONFUSABLE_MAP_FULL;
+    const includeReserved =
+      options?.includeReserved ?? config.risk?.includeReserved ?? true;
+    const maxMatches = Math.max(
+      1,
+      options?.maxMatches ?? config.risk?.maxMatches ?? 3
+    );
+
+    const warnThreshold = clamp(
+      Math.round(options?.warnThreshold ?? config.risk?.warnThreshold ?? 45),
+      0,
+      100
+    );
+    const requestedBlock = clamp(
+      Math.round(options?.blockThreshold ?? config.risk?.blockThreshold ?? 70),
+      0,
+      100
+    );
+    const blockThreshold =
+      requestedBlock <= warnThreshold ? Math.min(100, warnThreshold + 1) : requestedBlock;
+
+    const reasons: RiskReason[] = [];
+    let heuristicScore = 0;
+
+    function addReason(code: RiskReasonCode, message: string, weight: number): void {
+      const safeWeight = clamp(Math.round(weight), 0, 100);
+      reasons.push({ code, message, weight: safeWeight });
+      heuristicScore += safeWeight;
+    }
+
+    if (hasMixedScripts(normalized)) {
+      addReason("mixed-script", "Identifier mixes Latin and non-Latin scripts.", 24);
+    }
+
+    const ignorableCount = countDefaultIgnorables(normalized);
+    if (ignorableCount > 0) {
+      addReason(
+        "invisible-character",
+        `Identifier contains ${ignorableCount} default-ignorable Unicode character(s).`,
+        Math.min(22, 10 + ignorableCount * 4)
+      );
+    }
+
+    const charStats = countConfusableChars(normalized, map);
+    if (charStats.confusableCount > 0) {
+      addReason(
+        "confusable-character",
+        `Identifier contains ${charStats.confusableCount} confusable character(s).`,
+        Math.min(24, 8 + charStats.confusableCount * 3)
+      );
+    }
+
+    if (charStats.divergenceCount > 0) {
+      addReason(
+        "divergent-mapping",
+        `Identifier includes ${charStats.divergenceCount} mapping(s) where NFKC and TR39 differ.`,
+        Math.min(16, 6 + charStats.divergenceCount * 3)
+      );
+    }
+
+    const configuredProtect = config.risk?.protect ?? [];
+    const explicitProtect = options?.protect;
+    const protectInputs = explicitProtect ?? configuredProtect;
+    const normalizedProtect = uniqueNonEmptyStrings(
+      protectInputs.map((target) => normalize(target, normalizeOpts))
+    );
+
+    const protectedTargets = new Set<string>();
+    if (includeReserved) {
+      for (const reservedName of reservedMap.keys()) {
+        const normalizedReserved = normalize(reservedName, normalizeOpts);
+        if (normalizedReserved) protectedTargets.add(normalizedReserved);
+      }
+    }
+    for (const target of normalizedProtect) {
+      protectedTargets.add(target);
+    }
+
+    const scoredMatches: Array<{ match: RiskMatch; detail?: ConfusableDistanceResult }> = [];
+
+    for (const target of protectedTargets) {
+      if (target === normalized) {
+        scoredMatches.push({
+          match: {
+            target,
+            score: 100,
+            distance: 0,
+            chainDepth: 0,
+            skeletonEqual: true,
+            reasons: ["Exact protected target match"],
+          },
+        });
+        continue;
+      }
+
+      const distance = confusableDistance(normalized, target, { map });
+      const score = scoreDistanceRisk(distance);
+      if (score < 35) continue;
+
+      const matchReasons: string[] = [];
+      if (distance.skeletonEqual) matchReasons.push("TR39 skeleton collision");
+      if (distance.crossScriptCount > 0) {
+        matchReasons.push(`${distance.crossScriptCount} cross-script substitution(s)`);
+      }
+      if (distance.ignorableCount > 0) {
+        matchReasons.push(`${distance.ignorableCount} default-ignorable edit(s)`);
+      }
+      if (distance.divergenceCount > 0) {
+        matchReasons.push(`${distance.divergenceCount} NFKC/TR39 divergent mapping(s)`);
+      }
+      if (distance.chainDepth >= 2) {
+        matchReasons.push(`chain depth ${distance.chainDepth}`);
+      }
+
+      scoredMatches.push({
+        match: {
+          target,
+          score,
+          distance: distance.distance,
+          chainDepth: distance.chainDepth,
+          skeletonEqual: distance.skeletonEqual,
+          reasons: matchReasons,
+        },
+        detail: distance,
+      });
+    }
+
+    scoredMatches.sort((a, b) => {
+      if (b.match.score !== a.match.score) return b.match.score - a.match.score;
+      if (a.match.distance !== b.match.distance) return a.match.distance - b.match.distance;
+      return a.match.target.localeCompare(b.match.target);
+    });
+
+    const selectedMatches = scoredMatches.slice(0, maxMatches);
+    const matches = selectedMatches.map((m) => m.match);
+
+    let score = clamp(heuristicScore, 0, 100);
+    if (selectedMatches.length > 0) {
+      const top = selectedMatches[0];
+      score = Math.max(score, top.match.score);
+      addReason(
+        "confusable-target",
+        `Identifier is visually close to protected target "${top.match.target}".`,
+        top.match.score
+      );
+
+      if (top.detail?.skeletonEqual) {
+        addReason(
+          "skeleton-collision",
+          `Identifier skeleton collides with "${top.match.target}".`,
+          20
+        );
+      }
+      if ((top.detail?.chainDepth ?? 0) >= 2) {
+        addReason(
+          "deep-chain",
+          `Confusable transformation chain depth is ${top.detail!.chainDepth}.`,
+          Math.min(16, 6 + top.detail!.chainDepth * 2)
+        );
+      }
+      if ((top.detail?.divergenceCount ?? 0) > 0) {
+        addReason(
+          "divergent-mapping",
+          `Closest target path includes ${top.detail!.divergenceCount} NFKC/TR39 divergent mapping(s).`,
+          Math.min(14, 5 + top.detail!.divergenceCount * 2)
+        );
+      }
+    }
+
+    score = Math.max(score, clamp(heuristicScore, 0, 100));
+    score = clamp(score, 0, 100);
+    reasons.sort((a, b) => b.weight - a.weight);
+
+    return {
+      identifier,
+      normalized,
+      score,
+      level: levelForScore(score, warnThreshold, blockThreshold),
+      action: actionForScore(score, warnThreshold, blockThreshold),
+      reasons,
+      matches,
+    };
+  }
+
+  /**
+   * Enforce risk policy on an identifier and return an allow/deny decision.
+   *
+   * This wraps `checkRisk()` and applies a deny mode:
+   * - `failOn: "block"`: deny only block-level risk
+   * - `failOn: "warn"`: deny warn + block risk
+   */
+  function enforceRisk(
+    identifier: string,
+    options?: EnforceRiskOptions
+  ): EnforceRiskResult {
+    const {
+      failOn,
+      messages,
+      protect,
+      includeReserved,
+      map,
+      maxMatches,
+      warnThreshold,
+      blockThreshold,
+    } = options ?? {};
+    const configuredProtect = config.risk?.protect ?? [];
+    const fallbackProtect =
+      configuredProtect.length > 0 ? configuredProtect : DEFAULT_PROTECTED_TOKENS;
+    const effectiveProtect = protect ?? fallbackProtect;
+    const risk = checkRisk(identifier, {
+      protect: effectiveProtect,
+      includeReserved,
+      map,
+      maxMatches,
+      warnThreshold,
+      blockThreshold,
+    });
+    const failMode = failOn ?? "block";
+    const deny =
+      failMode === "warn" ? risk.action !== "allow" : risk.action === "block";
+
+    if (!deny) {
+      return {
+        allowed: true,
+        action: risk.action,
+        risk,
+      };
+    }
+
+    const topTarget = risk.matches[0]?.target;
+    const suffix = topTarget ? ` Closest protected target: "${topTarget}".` : "";
+    const defaultWarnMessage =
+      "Identifier is potentially confusable with a protected name." + suffix;
+    const defaultBlockMessage =
+      "Identifier is too confusable with a protected name." + suffix;
+
+    return {
+      allowed: false,
+      action: risk.action,
+      message:
+        risk.action === "block"
+          ? messages?.block ?? defaultBlockMessage
+          : messages?.warn ?? defaultWarnMessage,
+      risk,
+    };
+  }
+
+  /**
+   * One-liner claimability guard.
+   *
+   * Runs availability checks (`check`) plus risk enforcement (`enforceRisk`).
+   * Throws an `Error` if the identifier cannot be claimed.
+   */
+  async function assertClaimable(
+    identifier: string,
+    scope: OwnershipScope = {},
+    options?: AssertClaimableOptions
+  ): Promise<void> {
+    const availability = await check(identifier, scope, { skipSuggestions: true });
+    if (!availability.available) {
+      throw new Error(availability.message);
+    }
+
+    const decision = enforceRisk(identifier, options);
+    if (!decision.allowed) {
+      throw new Error(
+        decision.message ??
+          "Identifier is too close to a protected or existing namespace."
+      );
+    }
+  }
+
+  /**
    * Clear the in-memory cache and reset hit/miss counters.
    * No-op if caching is not enabled.
    */
@@ -2239,7 +3178,10 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
     validateFormatOnly,
     check,
     assertAvailable,
+    assertClaimable,
     checkMany,
+    checkRisk,
+    enforceRisk,
     clearCache,
     cacheStats,
   };
