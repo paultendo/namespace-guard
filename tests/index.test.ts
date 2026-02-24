@@ -3,6 +3,7 @@ import {
   normalize,
   createNamespaceGuard,
   createNamespaceGuardWithProfile,
+  createPredicateValidator,
   createProfanityValidator,
   createHomoglyphValidator,
   skeleton,
@@ -1293,6 +1294,61 @@ describe("checkMany", () => {
 });
 
 // ---------------------------------------------------------------------------
+// createPredicateValidator
+// ---------------------------------------------------------------------------
+describe("createPredicateValidator", () => {
+  it("wraps sync predicates", async () => {
+    const validator = createPredicateValidator((value) => value === "blocked");
+    expect(await validator("blocked")).toEqual({
+      available: false,
+      message: "That name is not allowed.",
+    });
+    expect(await validator("clean")).toBeNull();
+  });
+
+  it("wraps async predicates", async () => {
+    const validator = createPredicateValidator(async (value) => value.includes("bad"));
+    expect(await validator("mybadname")).not.toBeNull();
+    expect(await validator("safe-name")).toBeNull();
+  });
+
+  it("supports custom transform and message", async () => {
+    const validator = createPredicateValidator((value) => value === "evil", {
+      transform: (value) => value.toLowerCase(),
+      message: "Custom block.",
+    });
+    expect(await validator("EVIL")).toEqual({
+      available: false,
+      message: "Custom block.",
+    });
+  });
+
+  it("works as a validator in createNamespaceGuard", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        validators: [
+          createPredicateValidator((value) => value === "taken-by-filter", {
+            message: "Blocked by external filter.",
+          }),
+        ],
+      },
+      createMockAdapter({})
+    );
+
+    const blocked = await guard.check("taken-by-filter");
+    expect(blocked.available).toBe(false);
+    if (!blocked.available) {
+      expect(blocked.reason).toBe("invalid");
+      expect(blocked.message).toBe("Blocked by external filter.");
+    }
+
+    const allowed = await guard.check("safe-name");
+    expect(allowed.available).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // createProfanityValidator
 // ---------------------------------------------------------------------------
 describe("createProfanityValidator", () => {
@@ -1303,14 +1359,14 @@ describe("createProfanityValidator", () => {
   });
 
   it("rejects substring match by default", async () => {
-    const validator = createProfanityValidator(["bad"]);
-    const result = await validator("mybadname");
+    const validator = createProfanityValidator(["evil"]);
+    const result = await validator("myevilname");
     expect(result).toEqual({ available: false, message: "That name is not allowed." });
   });
 
   it("skips substring check when checkSubstrings is false", async () => {
-    const validator = createProfanityValidator(["bad"], { checkSubstrings: false });
-    const result = await validator("mybadname");
+    const validator = createProfanityValidator(["evil"], { checkSubstrings: false });
+    const result = await validator("myevilname");
     expect(result).toBeNull();
   });
 
@@ -1324,6 +1380,52 @@ describe("createProfanityValidator", () => {
     const validator = createProfanityValidator(["badword", "offensive"]);
     expect(await validator("hello")).toBeNull();
     expect(await validator("my-cool-slug")).toBeNull();
+  });
+
+  it("rejects substitution-based profanity evasion by default", async () => {
+    const validator = createProfanityValidator(["shit"]);
+    expect(await validator("sh1t")).not.toBeNull();
+    expect(await validator("5h1t")).not.toBeNull();
+    expect(await validator("s-h.i_t")).not.toBeNull();
+  });
+
+  it("rejects unicode confusable profanity evasion by default", async () => {
+    const validator = createProfanityValidator(["shit"]);
+    // Cyrillic і (U+0456)
+    expect(await validator("sh\u0456t")).not.toBeNull();
+  });
+
+  it("supports basic mode for lowercase-only matching", async () => {
+    const validator = createProfanityValidator(["shit"], { mode: "basic" });
+    expect(await validator("shit")).not.toBeNull();
+    expect(await validator("sh1t")).toBeNull();
+  });
+
+  it("uses minSubstringLength to reduce over-matching", async () => {
+    const strict = createProfanityValidator(["bad"]);
+    const permissive = createProfanityValidator(["bad"], {
+      minSubstringLength: 3,
+    });
+
+    expect(await strict("mybadname")).toBeNull();
+    expect(await permissive("mybadname")).not.toBeNull();
+  });
+
+  it("still checks exact matches for short words", async () => {
+    const validator = createProfanityValidator(["bad"]);
+    expect(await validator("bad")).not.toBeNull();
+  });
+
+  it("supports aggressive substitute profile for broader matches", async () => {
+    const balanced = createProfanityValidator(["boob"], {
+      variantProfile: "balanced",
+    });
+    const aggressive = createProfanityValidator(["boob"], {
+      variantProfile: "aggressive",
+    });
+
+    expect(await balanced("8oo8")).toBeNull();
+    expect(await aggressive("8oo8")).not.toBeNull();
   });
 
   it("uses custom message", async () => {
@@ -1342,6 +1444,23 @@ describe("createProfanityValidator", () => {
     );
 
     const result = await guard.check("offensive");
+    expect(result.available).toBe(false);
+    if (!result.available) {
+      expect(result.reason).toBe("invalid");
+      expect(result.message).toBe("That name is not allowed.");
+    }
+  });
+
+  it("blocks obfuscated profanity when used as a guard validator", async () => {
+    const guard = createNamespaceGuard(
+      {
+        sources: defaultSources,
+        validators: [createProfanityValidator(["shit"])],
+      },
+      createMockAdapter({})
+    );
+
+    const result = await guard.check("5h1t");
     expect(result.available).toBe(false);
     if (!result.available) {
       expect(result.reason).toBe("invalid");

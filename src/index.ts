@@ -19,6 +19,12 @@ export type SuggestStrategyName =
   | "scramble"
   | "similar";
 
+/** Result type returned by async validators. */
+export type NamespaceValidatorResult = { available: false; message: string } | null;
+
+/** Async validator hook type used by `NamespaceConfig.validators`. */
+export type NamespaceValidator = (value: string) => Promise<NamespaceValidatorResult>;
+
 /** Configuration for a namespace guard instance. */
 export type NamespaceConfig = {
   /** Reserved names - flat list, Set, or categorized record */
@@ -44,7 +50,7 @@ export type NamespaceConfig = {
     purelyNumeric?: string;
   };
   /** Async validation hooks - run after format/reserved checks, before DB */
-  validators?: Array<(value: string) => Promise<{ available: false; message: string } | null>>;
+  validators?: NamespaceValidator[];
   /** Enable conflict resolution suggestions when a slug is taken */
   suggest?: {
     /** Named strategy, array of strategies to compose, or custom generator function (default: `["sequential", "random-digits"]`) */
@@ -113,6 +119,30 @@ export type CheckResult =
 export type CheckManyOptions = {
   /** Skip suggestion generation for taken identifiers (default: `true`). */
   skipSuggestions?: boolean;
+};
+
+/** Evasion handling mode for `createProfanityValidator()`. */
+export type ProfanityValidationMode = "basic" | "evasion";
+
+/** Substitute-folding strictness for `createProfanityValidator()`. */
+export type ProfanityVariantProfile = "balanced" | "aggressive";
+
+/** Options for `createProfanityValidator()`. */
+export type ProfanityValidatorOptions = {
+  /** Custom rejection message (default: "That name is not allowed."). */
+  message?: string;
+  /** Check if identifier contains a blocked word as a substring (default: `true`). */
+  checkSubstrings?: boolean;
+  /** `basic`: lowercase matching only. `evasion`: Unicode+substitute folding (default: `evasion`). */
+  mode?: ProfanityValidationMode;
+  /** Variant strictness for evasion mode (default: `balanced`). */
+  variantProfile?: ProfanityVariantProfile;
+  /** Minimum blocked-word length for substring checks (default: `4`). Exact matches are always checked. */
+  minSubstringLength?: number;
+  /** Confusable map used for evasion folding (default: `CONFUSABLE_MAP_FULL`). */
+  map?: Record<string, string>;
+  /** Max folded candidates generated per value in evasion mode (default: `64`). */
+  maxFoldVariants?: number;
 };
 
 /** Options for the `skeleton()` and `areConfusable()` functions. */
@@ -662,6 +692,139 @@ export function normalize(raw: string, options?: { unicode?: boolean }): string 
   return nfkc.toLowerCase().replace(/^@+/, "");
 }
 
+/** Options for `createPredicateValidator()`. */
+export type PredicateValidatorOptions = {
+  /** Custom rejection message (default: "That name is not allowed."). */
+  message?: string;
+  /** Optional transform applied before passing input to the predicate. */
+  transform?: (value: string) => string;
+};
+
+/**
+ * Wrap a sync/async boolean predicate as a namespace validator.
+ *
+ * Useful for integrating third-party moderation/profanity libraries without
+ * adding dependencies to namespace-guard itself.
+ *
+ * @param predicate - Returns `true` when the value should be blocked
+ * @param options - Optional rejection message and value transform
+ * @returns A validator compatible with `config.validators`
+ */
+export function createPredicateValidator(
+  predicate: (value: string) => boolean | Promise<boolean>,
+  options?: PredicateValidatorOptions
+): NamespaceValidator {
+  const message = options?.message ?? "That name is not allowed.";
+  const transform = options?.transform ?? ((value: string) => value);
+
+  return async (value: string) => {
+    const blocked = await predicate(transform(value));
+    if (blocked) {
+      return { available: false, message };
+    }
+    return null;
+  };
+}
+
+const PROFANITY_SUBSTITUTE_MAP_BALANCED: Record<string, string[]> = {
+  "0": ["o"],
+  "1": ["i"],
+  "3": ["e"],
+  "4": ["a"],
+  "5": ["s"],
+  "7": ["t"],
+  "@": ["a"],
+  $: ["s"],
+  "+": ["t"],
+  "!": ["i"],
+  "|": ["i"],
+};
+const PROFANITY_SUBSTITUTE_MAP_AGGRESSIVE: Record<string, string[]> = {
+  ...PROFANITY_SUBSTITUTE_MAP_BALANCED,
+  "1": ["i", "l"],
+  "2": ["z"],
+  "6": ["g"],
+  "8": ["b"],
+  "9": ["g"],
+  "!": ["i", "l"],
+  "|": ["i", "l"],
+};
+const ASCII_ALNUM_RE = /^[a-z0-9]$/;
+const NON_ASCII_ALNUM_RE = /[^a-z0-9]+/g;
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseProfanityMode(value: ProfanityValidationMode | undefined): ProfanityValidationMode {
+  return value ?? "evasion";
+}
+
+function parseProfanityVariantProfile(
+  value: ProfanityVariantProfile | undefined
+): ProfanityVariantProfile {
+  return value === "aggressive" ? "aggressive" : "balanced";
+}
+
+function getProfanitySubstituteMap(
+  profile: ProfanityVariantProfile
+): Record<string, string[]> {
+  return profile === "aggressive"
+    ? PROFANITY_SUBSTITUTE_MAP_AGGRESSIVE
+    : PROFANITY_SUBSTITUTE_MAP_BALANCED;
+}
+
+function buildProfanityFoldCandidates(
+  value: string,
+  map: Record<string, string>,
+  substituteMap: Record<string, string[]>,
+  maxVariants: number
+): string[] {
+  const skeletonized = skeleton(value.normalize("NFKC"), { map });
+  let candidates = [""];
+
+  for (const ch of skeletonized) {
+    const options = new Set<string>();
+    if (ASCII_ALNUM_RE.test(ch)) {
+      options.add(ch);
+    } else {
+      // Separators/punctuation can be used to evade simple substring checks.
+      options.add("");
+    }
+
+    const substitutes = substituteMap[ch] ?? [];
+    for (const substitute of substitutes) {
+      options.add(substitute);
+    }
+
+    if (options.size === 0) {
+      options.add("");
+    }
+
+    const next: string[] = [];
+    const seen = new Set<string>();
+    for (const prefix of candidates) {
+      for (const option of options) {
+        const candidate = prefix + option;
+        if (seen.has(candidate)) continue;
+        seen.add(candidate);
+        next.push(candidate);
+        if (next.length >= maxVariants) break;
+      }
+      if (next.length >= maxVariants) break;
+    }
+    candidates = next.length > 0 ? next : candidates;
+  }
+
+  return Array.from(
+    new Set(
+      candidates
+        .map((candidate) => candidate.replace(NON_ASCII_ALNUM_RE, ""))
+        .filter(Boolean)
+    )
+  );
+}
+
 /**
  * Create a validator that rejects identifiers containing profanity or offensive words.
  *
@@ -672,6 +835,11 @@ export function normalize(raw: string, options?: { unicode?: boolean }): string 
  * @param options - Optional settings
  * @param options.message - Custom rejection message (default: "That name is not allowed.")
  * @param options.checkSubstrings - Check if identifier contains a blocked word as a substring (default: true)
+ * @param options.mode - `basic` (lowercase only) or `evasion` (Unicode/substitute folding) (default: `evasion`)
+ * @param options.variantProfile - `balanced` (precision-first) or `aggressive` (broader substitutes) (default: `balanced`)
+ * @param options.minSubstringLength - Minimum blocked-word length used in substring checks (default: `4`)
+ * @param options.map - Confusable map used by `mode: "evasion"` (default: `CONFUSABLE_MAP_FULL`)
+ * @param options.maxFoldVariants - Max folded candidates considered in evasion mode (default: 64)
  * @returns An async validator function for use in `config.validators`
  *
  * @example
@@ -689,18 +857,73 @@ export function normalize(raw: string, options?: { unicode?: boolean }): string 
  */
 export function createProfanityValidator(
   words: string[],
-  options?: { message?: string; checkSubstrings?: boolean }
-): (value: string) => Promise<{ available: false; message: string } | null> {
+  options?: ProfanityValidatorOptions
+): NamespaceValidator {
   const message = options?.message ?? "That name is not allowed.";
   const checkSubstrings = options?.checkSubstrings ?? true;
-  const wordSet = new Set(words.map((w) => w.toLowerCase()));
+  const mode = parseProfanityMode(options?.mode);
+  const variantProfile = parseProfanityVariantProfile(options?.variantProfile);
+  const substituteMap = getProfanitySubstituteMap(variantProfile);
+  const foldMap = options?.map ?? CONFUSABLE_MAP_FULL;
+  const minSubstringLength = Math.max(
+    1,
+    Math.floor(options?.minSubstringLength ?? 4)
+  );
+  const maxFoldVariants = Math.max(
+    1,
+    Math.floor(options?.maxFoldVariants ?? 64)
+  );
+  const rawWords = words
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean);
+  const wordSet = new Set(rawWords);
 
   // Pre-compile regex for O(len) substring matching instead of O(words × len)
+  const substringWords = checkSubstrings
+    ? Array.from(wordSet).filter((w) => w.length >= minSubstringLength)
+    : [];
   const substringRegex =
-    checkSubstrings && wordSet.size > 0
+    substringWords.length > 0
+      ? new RegExp(substringWords.map((w) => escapeRegex(w)).join("|"))
+      : null;
+
+  const foldedExactWordSet =
+    mode === "evasion"
+      ? new Set(
+          rawWords.flatMap((word) =>
+            buildProfanityFoldCandidates(
+              word,
+              foldMap,
+              substituteMap,
+              Math.min(16, maxFoldVariants)
+            )
+          )
+        )
+      : null;
+  const foldedSubstringWordSet =
+    mode === "evasion" &&
+    checkSubstrings
+      ? new Set(
+          rawWords
+            .filter((word) => word.length >= minSubstringLength)
+            .flatMap((word) =>
+              buildProfanityFoldCandidates(
+                word,
+                foldMap,
+                substituteMap,
+                Math.min(16, maxFoldVariants)
+              )
+            )
+        )
+      : null;
+  const foldedSubstringRegex =
+    mode === "evasion" &&
+    checkSubstrings &&
+    foldedSubstringWordSet &&
+    foldedSubstringWordSet.size > 0
       ? new RegExp(
-          Array.from(wordSet)
-            .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+          Array.from(foldedSubstringWordSet)
+            .map((w) => escapeRegex(w))
             .join("|")
         )
       : null;
@@ -714,6 +937,26 @@ export function createProfanityValidator(
 
     if (substringRegex && substringRegex.test(normalized)) {
       return { available: false, message };
+    }
+
+    if (mode === "evasion" && foldedExactWordSet && foldedExactWordSet.size > 0) {
+      const foldedCandidates = buildProfanityFoldCandidates(
+        normalized,
+        foldMap,
+        substituteMap,
+        maxFoldVariants
+      );
+
+      if (foldedCandidates.some((candidate) => foldedExactWordSet.has(candidate))) {
+        return { available: false, message };
+      }
+
+      if (
+        foldedSubstringRegex &&
+        foldedCandidates.some((candidate) => foldedSubstringRegex.test(candidate))
+      ) {
+        return { available: false, message };
+      }
     }
 
     return null;
@@ -1997,7 +2240,7 @@ export function createHomoglyphValidator(options?: {
   message?: string;
   additionalMappings?: Record<string, string>;
   rejectMixedScript?: boolean;
-}): (value: string) => Promise<{ available: false; message: string } | null> {
+}): NamespaceValidator {
   const message =
     options?.message ??
     "That name contains characters that could be confused with other letters.";
