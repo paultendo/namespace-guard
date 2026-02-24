@@ -22,6 +22,7 @@ function printUsage() {
   console.log(`Usage:
   namespace-guard check <slug> [options]
   namespace-guard risk <slug> [options]
+  namespace-guard attack-gen <target> [options]
   namespace-guard calibrate <dataset.json> [options]
   namespace-guard recommend <dataset.json> [options]
   namespace-guard drift [dataset.json] [options]
@@ -34,6 +35,12 @@ Options:
   --warn-threshold <n>   Risk score threshold for warn action (0-100)
   --block-threshold <n>  Risk score threshold for block action (0-100)
   --max-matches <n>      Number of top risk matches to return
+  --mode <kind>          For attack-gen: "evasion" (default) or "impersonation"
+  --map <mode>           For attack-gen: "filtered" or "full" (default depends on --mode)
+  --max-candidates <n>   For attack-gen: max candidates shown (default 25)
+  --max-edits <n>        For attack-gen: max substitutions per candidate (1-2, default 2)
+  --max-per-char <n>     For attack-gen: replacements sampled per target char (default 8)
+  --no-ignorables        For attack-gen: skip zero-width insertion candidates
   --fail-on <mode>       For risk: fail on "block" (default) or "warn"
   --target-recall <n>    For calibrate: desired recall for warn threshold (0-1, default 0.90)
   --cost-block-benign <n>   For calibrate: cost when benign input is blocked (default 8)
@@ -42,7 +49,7 @@ Options:
   --cost-warn-malicious <n>  For calibrate: cost when malicious input is warned (default 3)
   --malicious-prior <n>      For calibrate: expected malicious base rate (0-1), reweights classes
   --limit <n>             For drift: max changed examples printed (default 10)
-  --json                 Print machine-readable JSON (risk/calibrate/recommend/drift commands)
+  --json                 Print machine-readable JSON (risk/attack-gen/calibrate/recommend/drift commands)
   --help                 Show this help message
 
 Examples:
@@ -51,6 +58,8 @@ Examples:
   namespace-guard check sarah --database-url postgres://localhost/mydb
   namespace-guard risk paуpal --protect paypal
   namespace-guard risk paypa1 --protect paypal --fail-on warn --json
+  namespace-guard attack-gen paypal --json
+  namespace-guard attack-gen shit --mode evasion --json
   namespace-guard calibrate ./risk-dataset.json --protect paypal --json
   namespace-guard recommend ./risk-dataset.json --protect paypal --json
   namespace-guard drift
@@ -67,6 +76,12 @@ function parseArgs(argv: string[]): {
   warnThreshold: number | undefined;
   blockThreshold: number | undefined;
   maxMatches: number | undefined;
+  attackMode: string | undefined;
+  mapMode: string | undefined;
+  maxCandidates: number | undefined;
+  maxEdits: number | undefined;
+  maxPerChar: number | undefined;
+  includeIgnorables: boolean;
   failOn: string | undefined;
   targetRecall: number | undefined;
   costBlockBenign: number | undefined;
@@ -88,6 +103,12 @@ function parseArgs(argv: string[]): {
   let warnThreshold: number | undefined;
   let blockThreshold: number | undefined;
   let maxMatches: number | undefined;
+  let attackMode: string | undefined;
+  let mapMode: string | undefined;
+  let maxCandidates: number | undefined;
+  let maxEdits: number | undefined;
+  let maxPerChar: number | undefined;
+  let includeIgnorables = true;
   let failOn: string | undefined;
   let targetRecall: number | undefined;
   let costBlockBenign: number | undefined;
@@ -119,6 +140,18 @@ function parseArgs(argv: string[]): {
       blockThreshold = Number(args[++i]);
     } else if (arg === "--max-matches" && i + 1 < args.length) {
       maxMatches = Number(args[++i]);
+    } else if (arg === "--mode" && i + 1 < args.length) {
+      attackMode = args[++i];
+    } else if (arg === "--map" && i + 1 < args.length) {
+      mapMode = args[++i];
+    } else if (arg === "--max-candidates" && i + 1 < args.length) {
+      maxCandidates = Number(args[++i]);
+    } else if (arg === "--max-edits" && i + 1 < args.length) {
+      maxEdits = Number(args[++i]);
+    } else if (arg === "--max-per-char" && i + 1 < args.length) {
+      maxPerChar = Number(args[++i]);
+    } else if (arg === "--no-ignorables") {
+      includeIgnorables = false;
     } else if (arg === "--fail-on" && i + 1 < args.length) {
       failOn = args[++i];
     } else if (arg === "--target-recall" && i + 1 < args.length) {
@@ -154,6 +187,12 @@ function parseArgs(argv: string[]): {
     warnThreshold,
     blockThreshold,
     maxMatches,
+    attackMode,
+    mapMode,
+    maxCandidates,
+    maxEdits,
+    maxPerChar,
+    includeIgnorables,
     failOn,
     targetRecall,
     costBlockBenign,
@@ -319,6 +358,63 @@ type DriftAnalysisOutput = {
   };
 };
 
+type AttackGenerationMode = "impersonation" | "evasion";
+type AttackMapMode = "filtered" | "full";
+
+type AttackSeed = {
+  identifier: string;
+  edits: number;
+  kind: "substitution" | "ascii-lookalike" | "ignorable-insert";
+  operations: string[];
+};
+
+type AttackCandidate = AttackSeed & {
+  normalized: string;
+  score: number;
+  action: RiskAction;
+  level: string;
+  formatValid: boolean;
+  formatMessage: string | null;
+  topTarget?: string;
+  topScore?: number;
+  topDistance?: number;
+  topChainDepth?: number;
+  reasons: string[];
+};
+
+type AttackGenerationOutput = {
+  target: string;
+  normalizedTarget: string;
+  protect: string[];
+  mode: AttackGenerationMode;
+  map: "CONFUSABLE_MAP" | "CONFUSABLE_MAP_FULL";
+  settings: {
+    maxCandidates: number;
+    maxEdits: number;
+    maxPerChar: number;
+    includeIgnorables: boolean;
+    warnThreshold?: number;
+    blockThreshold?: number;
+  };
+  generated: {
+    total: number;
+    substitution: number;
+    asciiLookalike: number;
+    ignorableInsert: number;
+  };
+  outcomes: {
+    allow: number;
+    warn: number;
+    block: number;
+  };
+  bypassCount: number;
+  previews: {
+    bypass: AttackCandidate[];
+    topRisk: AttackCandidate[];
+    blocked: AttackCandidate[];
+  };
+};
+
 const DEFAULT_COST_MODEL: CostModel = {
   blockBenign: 8,
   warnBenign: 1,
@@ -368,6 +464,258 @@ function safeDivide(numerator: number, denominator: number): number {
 function round(value: number, digits = 3): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+const ASCII_LOOKALIKE_REPLACEMENTS: Record<string, string[]> = {
+  a: ["4"],
+  b: ["8"],
+  e: ["3"],
+  g: ["9"],
+  i: ["1"],
+  l: ["1"],
+  o: ["0"],
+  s: ["5"],
+  t: ["7"],
+  z: ["2"],
+  "0": ["o"],
+  "1": ["l", "i"],
+  "2": ["z"],
+  "3": ["e"],
+  "4": ["a"],
+  "5": ["s"],
+  "7": ["t"],
+  "8": ["b"],
+  "9": ["g"],
+};
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
+}
+
+function parseAttackGenerationMode(value: string | undefined): AttackGenerationMode | null {
+  if (value === undefined) return "evasion";
+  if (value === "impersonation" || value === "evasion") return value;
+  return null;
+}
+
+function parseAttackMapMode(
+  value: string | undefined,
+  mode: AttackGenerationMode
+): AttackMapMode | null {
+  if (value === undefined) return mode === "evasion" ? "full" : "filtered";
+  if (value === "filtered" || value === "full") return value;
+  return null;
+}
+
+function codePointLabel(char: string): string {
+  const cp = char.codePointAt(0);
+  if (cp === undefined) return "U+0000";
+  return `U+${cp.toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
+function buildConfusablePrototypeBuckets(
+  map: Record<string, string>,
+  maxPerChar: number
+): Record<string, string[]> {
+  const buckets: Record<string, string[]> = {};
+
+  for (const [char, prototype] of Object.entries(map)) {
+    if (!/^[a-z0-9]$/.test(prototype)) continue;
+    if (char === prototype) continue;
+    if (!buckets[prototype]) buckets[prototype] = [];
+    buckets[prototype].push(char);
+  }
+
+  for (const [prototype, chars] of Object.entries(buckets)) {
+    const unique = uniqueStrings(chars);
+    unique.sort((a, b) => {
+      const aCp = a.codePointAt(0) ?? 0;
+      const bCp = b.codePointAt(0) ?? 0;
+      const aAscii = aCp <= 0x7f ? 1 : 0;
+      const bAscii = bCp <= 0x7f ? 1 : 0;
+      if (aAscii !== bAscii) return aAscii - bAscii;
+
+      const aNfkcMatches = a.normalize("NFKC").toLowerCase() === prototype ? 0 : 1;
+      const bNfkcMatches = b.normalize("NFKC").toLowerCase() === prototype ? 0 : 1;
+      if (aNfkcMatches !== bNfkcMatches) return aNfkcMatches - bNfkcMatches;
+
+      if (aCp !== bCp) return aCp - bCp;
+      return a.localeCompare(b);
+    });
+    buckets[prototype] = unique.slice(0, maxPerChar);
+  }
+
+  return buckets;
+}
+
+function generateAttackSeeds(
+  target: string,
+  map: Record<string, string>,
+  options: {
+    mode: AttackGenerationMode;
+    maxCandidates: number;
+    maxEdits: number;
+    maxPerChar: number;
+    includeIgnorables: boolean;
+  }
+): AttackSeed[] {
+  const chars = Array.from(target);
+  const buckets = buildConfusablePrototypeBuckets(map, options.maxPerChar);
+  const seeds = new Map<string, AttackSeed>();
+  const generationCap = Math.max(200, options.maxCandidates * 20);
+
+  function replacementOptions(
+    char: string
+  ): Array<{ to: string; kind: "substitution" | "ascii-lookalike" }> {
+    const out: Array<{ to: string; kind: "substitution" | "ascii-lookalike" }> = [];
+    const seen = new Set<string>();
+
+    if (options.mode === "evasion") {
+      const asciiLookalike = ASCII_LOOKALIKE_REPLACEMENTS[char] ?? [];
+      for (const to of asciiLookalike) {
+        if (seen.has(to)) continue;
+        seen.add(to);
+        out.push({ to, kind: "ascii-lookalike" });
+      }
+    }
+
+    const confusable = buckets[char] ?? [];
+    for (const to of confusable) {
+      if (seen.has(to)) continue;
+      seen.add(to);
+      out.push({ to, kind: "substitution" });
+    }
+
+    return out.slice(0, options.maxPerChar);
+  }
+
+  function addSeed(seed: AttackSeed): void {
+    if (seed.identifier === target) return;
+    if (seeds.has(seed.identifier)) return;
+    seeds.set(seed.identifier, seed);
+  }
+
+  for (let i = 0; i < chars.length; i++) {
+    const from = chars[i];
+    for (const replacement of replacementOptions(from)) {
+      const { to, kind } = replacement;
+      const next = [...chars];
+      next[i] = to;
+      addSeed({
+        identifier: next.join(""),
+        edits: 1,
+        kind,
+        operations: [
+          `replace ${from} with ${to} at ${i}${kind === "ascii-lookalike" ? " (ascii lookalike)" : ""}`,
+        ],
+      });
+      if (seeds.size >= generationCap) return Array.from(seeds.values());
+    }
+  }
+
+  if (options.includeIgnorables && chars.length > 1) {
+    const invisibles = ["\u200B", "\u200C", "\u200D"];
+    for (let i = 1; i < chars.length; i++) {
+      for (const insertChar of invisibles) {
+        const next = [...chars];
+        next.splice(i, 0, insertChar);
+        addSeed({
+          identifier: next.join(""),
+          edits: 1,
+          kind: "ignorable-insert",
+          operations: [`insert ${codePointLabel(insertChar)} at ${i}`],
+        });
+        if (seeds.size >= generationCap) return Array.from(seeds.values());
+      }
+    }
+  }
+
+  if (options.maxEdits >= 2) {
+    for (let i = 0; i < chars.length; i++) {
+      const fromA = chars[i];
+      const replacementsA = replacementOptions(fromA);
+      if (replacementsA.length === 0) continue;
+
+      for (let j = i + 1; j < chars.length; j++) {
+        const fromB = chars[j];
+        const replacementsB = replacementOptions(fromB);
+        if (replacementsB.length === 0) continue;
+
+        for (const repA of replacementsA) {
+          for (const repB of replacementsB) {
+            const toA = repA.to;
+            const toB = repB.to;
+            const kind =
+              repA.kind === "ascii-lookalike" || repB.kind === "ascii-lookalike"
+                ? "ascii-lookalike"
+                : "substitution";
+            const next = [...chars];
+            next[i] = toA;
+            next[j] = toB;
+            addSeed({
+              identifier: next.join(""),
+              edits: 2,
+              kind,
+              operations: [
+                `replace ${fromA} with ${toA} at ${i}${repA.kind === "ascii-lookalike" ? " (ascii lookalike)" : ""}`,
+                `replace ${fromB} with ${toB} at ${j}${repB.kind === "ascii-lookalike" ? " (ascii lookalike)" : ""}`,
+              ],
+            });
+            if (seeds.size >= generationCap) return Array.from(seeds.values());
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(seeds.values());
+}
+
+function rankAttackCandidates(a: AttackCandidate, b: AttackCandidate): number {
+  if (b.score !== a.score) return b.score - a.score;
+  const actionDelta = actionSeverity(b.action) - actionSeverity(a.action);
+  if (actionDelta !== 0) return actionDelta;
+  if (a.edits !== b.edits) return a.edits - b.edits;
+  return a.identifier.localeCompare(b.identifier);
+}
+
+function printAttackGenerationOutput(output: AttackGenerationOutput): void {
+  console.log(
+    `Attack generation results for ${JSON.stringify(output.target)} (normalized: ${JSON.stringify(output.normalizedTarget)})`
+  );
+  console.log(
+    `Mode: ${output.mode}, map: ${output.map}, protect: [${output.protect.join(", ")}], generated: ${output.generated.total} (confusable ${output.generated.substitution}, ascii-lookalike ${output.generated.asciiLookalike}, ignorable ${output.generated.ignorableInsert})`
+  );
+  console.log(
+    `Outcomes: allow ${output.outcomes.allow}, warn ${output.outcomes.warn}, block ${output.outcomes.block}`
+  );
+  console.log(`Bypasses (non-blocking + format-valid): ${output.bypassCount}`);
+
+  if (output.previews.bypass.length > 0) {
+    console.log("Top allow/bypass candidates:");
+    for (const row of output.previews.bypass) {
+      console.log(
+        `  ${JSON.stringify(row.identifier)} score ${row.score} (${row.action}) edits ${row.edits}${row.topTarget ? ` vs ${row.topTarget}` : ""}`
+      );
+    }
+  }
+
+  if (output.previews.topRisk.length > 0) {
+    console.log("Top risk candidates:");
+    for (const row of output.previews.topRisk) {
+      console.log(
+        `  ${JSON.stringify(row.identifier)} score ${row.score} (${row.action}) edits ${row.edits}${row.topTarget ? ` vs ${row.topTarget}` : ""}`
+      );
+    }
+  }
 }
 
 function computeThresholdMetrics(
@@ -645,6 +993,12 @@ export async function run(argv: string[] = process.argv): Promise<number> {
     warnThreshold,
     blockThreshold,
     maxMatches,
+    attackMode,
+    mapMode,
+    maxCandidates,
+    maxEdits,
+    maxPerChar,
+    includeIgnorables,
     failOn,
     targetRecall,
     costBlockBenign,
@@ -666,6 +1020,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
   if (
     command !== "check" &&
     command !== "risk" &&
+    command !== "attack-gen" &&
     command !== "calibrate" &&
     command !== "recommend" &&
     command !== "drift"
@@ -678,13 +1033,14 @@ export async function run(argv: string[] = process.argv): Promise<number> {
   if (
     (command === "check" ||
       command === "risk" ||
+      command === "attack-gen" ||
       command === "calibrate" ||
       command === "recommend") &&
     !slug
   ) {
     if (command === "check") {
       console.error("Missing slug argument");
-    } else if (command === "risk") {
+    } else if (command === "risk" || command === "attack-gen") {
       console.error("Missing identifier argument");
     } else {
       console.error("Missing dataset file argument");
@@ -695,6 +1051,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
 
   if (
     (command === "risk" ||
+      command === "attack-gen" ||
       command === "calibrate" ||
       command === "recommend" ||
       command === "drift") &&
@@ -725,6 +1082,51 @@ export async function run(argv: string[] = process.argv): Promise<number> {
     (!Number.isFinite(maxMatches) || maxMatches < 1 || !Number.isInteger(maxMatches))
   ) {
     console.error(`Invalid --max-matches value: ${maxMatches}`);
+    return 1;
+  }
+
+  const parsedAttackMode = parseAttackGenerationMode(attackMode);
+  if (parsedAttackMode === null) {
+    console.error(
+      `Invalid --mode value: ${attackMode} (expected "impersonation" or "evasion")`
+    );
+    return 1;
+  }
+
+  const parsedAttackMapMode = parseAttackMapMode(mapMode, parsedAttackMode);
+  if (parsedAttackMapMode === null) {
+    console.error(`Invalid --map value: ${mapMode} (expected "filtered" or "full")`);
+    return 1;
+  }
+
+  if (
+    maxCandidates !== undefined &&
+    (!Number.isFinite(maxCandidates) ||
+      maxCandidates < 1 ||
+      !Number.isInteger(maxCandidates))
+  ) {
+    console.error(`Invalid --max-candidates value: ${maxCandidates}`);
+    return 1;
+  }
+
+  if (
+    maxEdits !== undefined &&
+    (!Number.isFinite(maxEdits) ||
+      !Number.isInteger(maxEdits) ||
+      maxEdits < 1 ||
+      maxEdits > 2)
+  ) {
+    console.error(`Invalid --max-edits value: ${maxEdits} (expected 1 or 2)`);
+    return 1;
+  }
+
+  if (
+    maxPerChar !== undefined &&
+    (!Number.isFinite(maxPerChar) ||
+      !Number.isInteger(maxPerChar) ||
+      maxPerChar < 1)
+  ) {
+    console.error(`Invalid --max-per-char value: ${maxPerChar}`);
     return 1;
   }
 
@@ -848,6 +1250,112 @@ export async function run(argv: string[] = process.argv): Promise<number> {
         return risk.action === "allow" ? 0 : 1;
       }
       return risk.action === "block" ? 1 : 0;
+    }
+
+    if (command === "attack-gen") {
+      const normalizedTarget = normalize(slug!);
+      if (!normalizedTarget) {
+        console.error("Target normalizes to an empty identifier.");
+        return 1;
+      }
+
+      const attackMaxCandidates = maxCandidates ?? 25;
+      const attackMaxEdits = maxEdits ?? 2;
+      const attackMaxPerChar = maxPerChar ?? 8;
+      const attackMap =
+        parsedAttackMapMode === "full" ? CONFUSABLE_MAP_FULL : CONFUSABLE_MAP;
+      const protectTargets = uniqueStrings(
+        protect.length > 0 ? protect : [normalizedTarget]
+      );
+
+      const seeds = generateAttackSeeds(normalizedTarget, attackMap, {
+        mode: parsedAttackMode,
+        maxCandidates: attackMaxCandidates,
+        maxEdits: attackMaxEdits,
+        maxPerChar: attackMaxPerChar,
+        includeIgnorables,
+      });
+
+      const evaluated: AttackCandidate[] = [];
+      for (const seed of seeds) {
+        const risk = guard.checkRisk(seed.identifier, {
+          protect: protectTargets,
+          includeReserved,
+          map: attackMap,
+          ...(warnThreshold !== undefined ? { warnThreshold } : {}),
+          ...(blockThreshold !== undefined ? { blockThreshold } : {}),
+          ...(maxMatches !== undefined ? { maxMatches } : {}),
+        });
+
+        const formatMessage = guard.validateFormatOnly(seed.identifier);
+        const top = risk.matches[0];
+        evaluated.push({
+          ...seed,
+          normalized: risk.normalized,
+          score: risk.score,
+          action: risk.action,
+          level: risk.level,
+          formatValid: formatMessage === null,
+          formatMessage,
+          topTarget: top?.target,
+          topScore: top?.score,
+          topDistance: top?.distance,
+          topChainDepth: top?.chainDepth,
+          reasons: risk.reasons.map((reason) => reason.code),
+        });
+      }
+
+      evaluated.sort(rankAttackCandidates);
+
+      const previewLimit = Math.min(50, attackMaxCandidates);
+      const outcomes = {
+        allow: evaluated.filter((row) => row.action === "allow").length,
+        warn: evaluated.filter((row) => row.action === "warn").length,
+        block: evaluated.filter((row) => row.action === "block").length,
+      };
+      const bypassRows = evaluated.filter(
+        (row) => row.action !== "block" && row.formatValid
+      );
+      const blockedRows = evaluated.filter((row) => row.action === "block");
+      const output: AttackGenerationOutput = {
+        target: slug!,
+        normalizedTarget,
+        protect: protectTargets,
+        mode: parsedAttackMode,
+        map:
+          parsedAttackMapMode === "full"
+            ? "CONFUSABLE_MAP_FULL"
+            : "CONFUSABLE_MAP",
+        settings: {
+          maxCandidates: attackMaxCandidates,
+          maxEdits: attackMaxEdits,
+          maxPerChar: attackMaxPerChar,
+          includeIgnorables,
+          ...(warnThreshold !== undefined ? { warnThreshold } : {}),
+          ...(blockThreshold !== undefined ? { blockThreshold } : {}),
+        },
+        generated: {
+          total: evaluated.length,
+          substitution: seeds.filter((seed) => seed.kind === "substitution").length,
+          asciiLookalike: seeds.filter((seed) => seed.kind === "ascii-lookalike").length,
+          ignorableInsert: seeds.filter((seed) => seed.kind === "ignorable-insert").length,
+        },
+        outcomes,
+        bypassCount: bypassRows.length,
+        previews: {
+          bypass: bypassRows.slice(0, previewLimit),
+          topRisk: evaluated.slice(0, previewLimit),
+          blocked: blockedRows.slice(0, previewLimit),
+        },
+      };
+
+      if (json) {
+        console.log(JSON.stringify(output, null, 2));
+      } else {
+        printAttackGenerationOutput(output);
+      }
+
+      return 0;
     }
 
     if (command === "calibrate" || command === "recommend") {

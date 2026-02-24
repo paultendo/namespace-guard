@@ -136,6 +136,48 @@ describe("CLI", () => {
     expect(parsed.matches[0].target).toBe("paypal");
   });
 
+  it("generates confusable attack candidates", async () => {
+    const code = await run(argv("attack-gen", "paypal"));
+    expect(code).toBe(0);
+    expect(logs.join("\n")).toContain("Attack generation results");
+    expect(logs.join("\n")).toContain("Top risk candidates");
+  });
+
+  it("prints JSON output for attack-gen command", async () => {
+    const code = await run(
+      argv("attack-gen", "paypal", "--json", "--max-candidates", "10")
+    );
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.normalizedTarget).toBe("paypal");
+    expect(parsed.mode).toBe("evasion");
+    expect(parsed.map).toBe("CONFUSABLE_MAP_FULL");
+    expect(parsed.generated.total).toBeGreaterThan(0);
+    expect(typeof parsed.outcomes.allow).toBe("number");
+    expect(typeof parsed.bypassCount).toBe("number");
+    expect(Array.isArray(parsed.previews.topRisk)).toBe(true);
+  });
+
+  it("supports attack-gen impersonation mode", async () => {
+    const code = await run(
+      argv("attack-gen", "acme", "--json", "--mode", "impersonation")
+    );
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.mode).toBe("impersonation");
+    expect(parsed.generated.asciiLookalike).toBe(0);
+  });
+
+  it("supports attack-gen evasion mode with ascii lookalikes", async () => {
+    const code = await run(
+      argv("attack-gen", "acme", "--json", "--mode", "evasion")
+    );
+    expect(code).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.mode).toBe("evasion");
+    expect(parsed.generated.asciiLookalike).toBeGreaterThan(0);
+  });
+
   it("validates risk-only option values", async () => {
     const code = await run(argv("risk", "acme", "--warn-threshold", "NaN"));
     expect(code).toBe(1);
@@ -148,6 +190,28 @@ describe("CLI", () => {
     );
     expect(code).toBe(1);
     expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
+  it("rejects --database-url for attack-gen command", async () => {
+    const code = await run(
+      argv("attack-gen", "paypal", "--database-url", "postgres://localhost/db")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
+  it("validates attack-gen option values", async () => {
+    const code = await run(
+      argv("attack-gen", "paypal", "--max-edits", "3", "--map", "weird")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("Invalid --map value");
+  });
+
+  it("validates attack-gen mode values", async () => {
+    const code = await run(argv("attack-gen", "paypal", "--mode", "unknown"));
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("Invalid --mode value");
   });
 
   it("rejects --database-url for drift command", async () => {
