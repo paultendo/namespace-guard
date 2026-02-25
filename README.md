@@ -67,6 +67,7 @@ We started by auditing how major Unicode-confusable implementations compose norm
 - Export the vectors as JSON (`docs/data/composability-vectors.json`) and wire them into CLI drift baselines.
 - Publish a labeled benchmark corpus (`docs/data/confusable-bench.v1.json`) for cross-tool evaluation and CI regressions.
 - Submitted the findings for Unicode public review (PRI #540): https://www.unicode.org/review/pri540/
+- Validated the 31 divergence vectors empirically by rendering each character across 12 fonts and measuring SSIM similarity: TR39 is visually correct for letter-shape confusables, NFKC for digit confusables, and 61% are ties where both targets are near-identical ([confusable-vision](https://github.com/paultendo/confusable-vision)).
 
 Details:
 - Technical reference: [docs/reference.md#how-the-anti-spoofing-pipeline-works](docs/reference.md#how-the-anti-spoofing-pipeline-works)
