@@ -10,6 +10,7 @@ import {
   areConfusable,
   confusableDistance,
   deriveNfkcTr39DivergenceVectors,
+  isLikelyUniqueViolationError,
   NAMESPACE_PROFILES,
   DEFAULT_PROTECTED_TOKENS,
   NFKC_TR39_DIVERGENCE_VECTORS,
@@ -624,6 +625,141 @@ describe("assertClaimable", () => {
   it("ships default protected token set with high-value entries", () => {
     expect(DEFAULT_PROTECTED_TOKENS).toContain("admin");
     expect(DEFAULT_PROTECTED_TOKENS).toContain("support");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// claim
+// ---------------------------------------------------------------------------
+describe("claim", () => {
+  it("claims successfully and passes normalized identifier to write callback", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    const result = await guard.claim("  @Sarah  ", async (normalized) => {
+      expect(normalized).toBe("sarah");
+      return { id: "u1", handleCanonical: normalized };
+    });
+
+    expect(result.claimed).toBe(true);
+    if (result.claimed) {
+      expect(result.normalized).toBe("sarah");
+      expect(result.value.id).toBe("u1");
+    }
+  });
+
+  it("returns unavailable when pre-check fails", async () => {
+    const guard = createNamespaceGuard(
+      {
+        reserved: ["admin"],
+        sources: defaultSources,
+      },
+      createMockAdapter({})
+    );
+
+    const write = vi.fn(async () => ({ id: "x" }));
+    const result = await guard.claim("admin", write);
+
+    expect(result.claimed).toBe(false);
+    expect(write).not.toHaveBeenCalled();
+    if (!result.claimed) {
+      expect(result.reason).toBe("unavailable");
+      expect(result.message).toContain("reserved");
+    }
+  });
+
+  it("maps duplicate-key races to unavailable result", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    const result = await guard.claim("sarah", async () => {
+      const err = new Error("duplicate key value violates unique constraint");
+      (err as Error & { code: string }).code = "23505";
+      throw err;
+    });
+
+    expect(result.claimed).toBe(false);
+    if (!result.claimed) {
+      expect(result.reason).toBe("unavailable");
+      expect(result.message).toContain("already in use");
+    }
+  });
+
+  it("supports custom duplicate detector", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    const result = await guard.claim(
+      "sarah",
+      async () => {
+        throw new Error("something custom");
+      },
+      {
+        isUniqueViolation: (error) =>
+          error instanceof Error && error.message.includes("custom"),
+      }
+    );
+
+    expect(result.claimed).toBe(false);
+    if (!result.claimed) {
+      expect(result.message).toContain("already in use");
+    }
+  });
+
+  it("rethrows non-duplicate write errors", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    await expect(
+      guard.claim("sarah", async () => {
+        throw new Error("network down");
+      })
+    ).rejects.toThrow("network down");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// unique violation detector
+// ---------------------------------------------------------------------------
+describe("isLikelyUniqueViolationError", () => {
+  it("detects common driver/ORM duplicate signatures", () => {
+    const pg = { code: "23505", message: "duplicate key value violates unique constraint" };
+    const prisma = { code: "P2002", message: "Unique constraint failed on the fields" };
+    const mysql = { code: "ER_DUP_ENTRY", errno: 1062, message: "Duplicate entry" };
+    const sqlite = { code: "SQLITE_CONSTRAINT_UNIQUE", message: "UNIQUE constraint failed" };
+    const mongo = { code: 11000, message: "E11000 duplicate key error" };
+
+    expect(isLikelyUniqueViolationError(pg)).toBe(true);
+    expect(isLikelyUniqueViolationError(prisma)).toBe(true);
+    expect(isLikelyUniqueViolationError(mysql)).toBe(true);
+    expect(isLikelyUniqueViolationError(sqlite)).toBe(true);
+    expect(isLikelyUniqueViolationError(mongo)).toBe(true);
+  });
+
+  it("walks nested error containers", () => {
+    const nested = {
+      original: {
+        parent: {
+          cause: {
+            code: "23505",
+          },
+        },
+      },
+    };
+    expect(isLikelyUniqueViolationError(nested)).toBe(true);
+  });
+
+  it("returns false for unrelated errors", () => {
+    expect(isLikelyUniqueViolationError(new Error("timeout"))).toBe(false);
+    expect(isLikelyUniqueViolationError({ code: "ECONNRESET" })).toBe(false);
   });
 });
 

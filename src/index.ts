@@ -301,6 +301,93 @@ export type EnforceRiskResult = {
   risk: RiskCheckResult;
 };
 
+/** Predicate for detecting duplicate-key / unique-constraint errors from write operations. */
+export type UniqueViolationDetector = (error: unknown) => boolean;
+
+/** Options for `guard.claim()`. */
+export type ClaimOptions = AssertClaimableOptions & {
+  /** Ownership scope passed to availability checks. */
+  scope?: OwnershipScope;
+  /** Optional custom detector for duplicate-key/unique-constraint write errors. */
+  isUniqueViolation?: UniqueViolationDetector;
+  /** Message used when write fails due to a unique violation (default: "That name is already in use."). */
+  takenMessage?: string;
+};
+
+/** Result of `guard.claim()`. */
+export type ClaimResult<T> =
+  | {
+      claimed: true;
+      normalized: string;
+      value: T;
+    }
+  | {
+      claimed: false;
+      normalized: string;
+      reason: "unavailable";
+      message: string;
+    };
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  return value as Record<string, unknown>;
+}
+
+/**
+ * Best-effort detection of duplicate-key / unique-constraint errors across
+ * common data layers (Postgres, MySQL, SQLite, Prisma, MongoDB).
+ */
+export function isLikelyUniqueViolationError(error: unknown): boolean {
+  const queue: unknown[] = [error];
+  const visited = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+
+    const obj = asRecord(current);
+    if (!obj) continue;
+
+    const code = typeof obj.code === "string" ? obj.code : null;
+    const numericCode = typeof obj.code === "number" ? obj.code : null;
+    const errno = typeof obj.errno === "number" ? obj.errno : null;
+    const message = typeof obj.message === "string" ? obj.message.toLowerCase() : "";
+
+    if (
+      code === "23505" || // Postgres unique_violation
+      code === "P2002" || // Prisma unique constraint failed
+      code === "ER_DUP_ENTRY" || // MySQL duplicate entry
+      code === "SQLITE_CONSTRAINT" ||
+      code === "SQLITE_CONSTRAINT_UNIQUE" ||
+      code === "11000" || // some Mongo drivers surface as string
+      numericCode === 11000 || // Mongo duplicate key
+      errno === 1062 || // MySQL duplicate entry
+      errno === 11000 // Mongo duplicate key
+    ) {
+      return true;
+    }
+
+    if (
+      message.includes("duplicate key") ||
+      message.includes("unique constraint") ||
+      message.includes("unique violation") ||
+      message.includes("already exists") ||
+      message.includes("e11000") ||
+      message.includes("constraint failed")
+    ) {
+      return true;
+    }
+
+    if (obj.cause) queue.push(obj.cause);
+    if (obj.parent) queue.push(obj.parent);
+    if (obj.original) queue.push(obj.original);
+    if (obj.meta) queue.push(obj.meta);
+  }
+
+  return false;
+}
+
 /** Built-in profile names for practical defaults. */
 export type NamespaceProfileName = "consumer-handle" | "org-slug" | "developer-id";
 
@@ -2768,7 +2855,7 @@ export function createNamespaceGuardWithProfile(
  *
  * @param config - Reserved names, data sources, validation pattern, and optional features
  * @param adapter - Database adapter implementing the `findOne` lookup (use a built-in adapter or write your own)
- * @returns A guard with `check`, `checkMany`, `checkRisk`, `enforceRisk`, `assertAvailable`, `assertClaimable`, `validateFormat`, `validateFormatOnly`, `clearCache`, and `cacheStats` methods
+ * @returns A guard with `check`, `checkMany`, `checkRisk`, `enforceRisk`, `assertAvailable`, `assertClaimable`, `claim`, `validateFormat`, `validateFormatOnly`, `clearCache`, and `cacheStats` methods
  *
  * @example
  * ```ts
@@ -3398,6 +3485,60 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
   }
 
   /**
+   * Race-safe claim helper.
+   *
+   * Runs claimability checks, then executes your write callback with the
+   * normalized identifier. If a unique-constraint race occurs, returns an
+   * unavailable result instead of throwing.
+   */
+  async function claim<T>(
+    identifier: string,
+    write: (normalized: string) => Promise<T>,
+    options?: ClaimOptions
+  ): Promise<ClaimResult<T>> {
+    const normalized = normalize(identifier, normalizeOpts);
+    const scope = options?.scope ?? {};
+
+    const availability = await check(identifier, scope, { skipSuggestions: true });
+    if (!availability.available) {
+      return {
+        claimed: false,
+        normalized,
+        reason: "unavailable",
+        message: availability.message,
+      };
+    }
+
+    const decision = enforceRisk(identifier, options);
+    if (!decision.allowed) {
+      return {
+        claimed: false,
+        normalized,
+        reason: "unavailable",
+        message:
+          decision.message ??
+          "Identifier is too close to a protected or existing namespace.",
+      };
+    }
+
+    try {
+      const value = await write(normalized);
+      return { claimed: true, normalized, value };
+    } catch (error) {
+      const detector = options?.isUniqueViolation ?? isLikelyUniqueViolationError;
+      if (!detector(error)) {
+        throw error;
+      }
+      return {
+        claimed: false,
+        normalized,
+        reason: "unavailable",
+        message: options?.takenMessage ?? "That name is already in use.",
+      };
+    }
+  }
+
+  /**
    * Clear the in-memory cache and reset hit/miss counters.
    * No-op if caching is not enabled.
    */
@@ -3422,6 +3563,7 @@ export function createNamespaceGuard(config: NamespaceConfig, adapter: Namespace
     check,
     assertAvailable,
     assertClaimable,
+    claim,
     checkMany,
     checkRisk,
     enforceRisk,
