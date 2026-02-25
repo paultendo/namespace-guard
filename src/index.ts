@@ -856,7 +856,7 @@ function buildProfanityFoldCandidates(
  * ```
  */
 export function createProfanityValidator(
-  words: string[],
+  words: readonly string[],
   options?: ProfanityValidatorOptions
 ): NamespaceValidator {
   const message = options?.message ?? "That name is not allowed.";

@@ -58,12 +58,18 @@
       "types": "./dist/adapters/mongoose.d.ts",
       "import": "./dist/adapters/mongoose.mjs",
       "require": "./dist/adapters/mongoose.js"
+    },
+    "./profanity-en": {
+      "types": "./dist/profanity-en.d.ts",
+      "import": "./dist/profanity-en.mjs",
+      "require": "./dist/profanity-en.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
+    "build:profanity-data": "node scripts/generate-profanity-global.js",
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",

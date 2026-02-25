@@ -12,6 +12,7 @@ export default defineConfig({
     "src/adapters/mikro-orm.ts",
     "src/adapters/sequelize.ts",
     "src/adapters/mongoose.ts",
+    "src/profanity-en.ts",
     "src/cli.ts",
   ],
   format: ["cjs", "esm"],

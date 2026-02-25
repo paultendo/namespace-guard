@@ -357,7 +357,33 @@ const guard = createNamespaceGuard({
 
 `variantProfile: "balanced"` is precision-first and avoids more ambiguous substitutions; switch to `"aggressive"` only when you need broader catch coverage.
 
-No words are bundled - use any word list you like (e.g., the `bad-words` npm package, your own list, or an external API wrapped in a custom validator).
+#### Curated English Default List (Optional Subpath)
+
+If you want a ready-to-use default list without wiring your own dataset first:
+
+```typescript
+import { createNamespaceGuard } from "namespace-guard";
+import { createEnglishProfanityValidator } from "namespace-guard/profanity-en";
+
+const guard = createNamespaceGuard({
+  sources: [/* ... */],
+  validators: [
+    createEnglishProfanityValidator({
+      mode: "evasion",            // default
+      variantProfile: "balanced", // default
+      minSubstringLength: 4,      // default
+    }),
+  ],
+}, adapter);
+```
+
+`namespace-guard/profanity-en` also exports:
+- `PROFANITY_WORDS_EN` (curated word list)
+- `PROFANITY_WORDS_EN_COUNT`
+- `PROFANITY_WORDS_EN_SOURCE`
+- `PROFANITY_WORDS_EN_LICENSE`
+
+Core `namespace-guard` remains zero-dependency and does not force any external moderation package.
 
 ### Built-in Homoglyph Validator
 
@@ -1132,6 +1158,18 @@ import {
   type ConfusableDistanceStep,
   type NfkcTr39DivergenceVector,
 } from "namespace-guard";
+```
+
+Optional curated profanity subpath export:
+
+```typescript
+import {
+  createEnglishProfanityValidator,
+  PROFANITY_WORDS_EN,
+  PROFANITY_WORDS_EN_COUNT,
+  PROFANITY_WORDS_EN_SOURCE,
+  PROFANITY_WORDS_EN_LICENSE,
+} from "namespace-guard/profanity-en";
 ```
 
 ## Support
