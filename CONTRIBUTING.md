@@ -19,3 +19,7 @@ Thanks for helping improve `namespace-guard`.
 ## Community
 
 This project follows [Contributor Covenant](./CODE_OF_CONDUCT.md).
+
+Thank you for contributing to `namespace-guard`.
+
+Paul Wood FRSA (@paultendo)
