@@ -4,6 +4,7 @@ import { writeFileSync, unlinkSync } from "fs";
 import { resolve } from "path";
 
 const calibrationPath = resolve(__dirname, "calibration-dataset.json");
+const canonicalAuditPath = resolve(__dirname, "canonical-audit-dataset.json");
 
 // Capture console.log/error output
 let logs: string[];
@@ -23,6 +24,9 @@ beforeEach(() => {
 afterEach(() => {
   try {
     unlinkSync(calibrationPath);
+  } catch {}
+  try {
+    unlinkSync(canonicalAuditPath);
   } catch {}
   vi.restoreAllMocks();
 });
@@ -230,6 +234,14 @@ describe("CLI", () => {
     expect(errors.join("\n")).toContain("--database-url is only supported");
   });
 
+  it("rejects --database-url for audit-canonical command", async () => {
+    const code = await run(
+      argv("audit-canonical", "dataset.json", "--database-url", "postgres://localhost/db")
+    );
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
   it("calibrates thresholds from labeled dataset", async () => {
     writeFileSync(
       calibrationPath,
@@ -392,6 +404,41 @@ describe("CLI", () => {
     expect(parsed.total).toBe(1);
     expect(parsed.changedCount).toBeGreaterThanOrEqual(1);
     expect(parsed.changedPreview[0].identifier).toBe("\u017f");
+  });
+
+  it("audits canonical collisions from dataset", async () => {
+    writeFileSync(
+      canonicalAuditPath,
+      JSON.stringify([
+        { id: "u1", handle: "BigBird", handleCanonical: "bigbird" },
+        { id: "u2", handle: "ᴮᴵᴳᴮᴵᴿᴰ", handleCanonical: "bigbird" },
+        { id: "u3", handle: "Alice", handleCanonical: "alice" },
+      ])
+    );
+
+    const code = await run(argv("audit-canonical", canonicalAuditPath));
+    expect(code).toBe(1);
+    const out = logs.join("\n");
+    expect(out).toContain("Canonical audit");
+    expect(out).toContain('canonical "bigbird"');
+  });
+
+  it("prints canonical audit output as JSON", async () => {
+    writeFileSync(
+      canonicalAuditPath,
+      JSON.stringify([
+        { id: "u1", identifier: "Acme", canonical: "acme" },
+        { id: "u2", identifier: "ACME", canonical: "acme" },
+        { id: "u3", identifier: "Bravo", canonical: "bravo" },
+      ])
+    );
+
+    const code = await run(argv("audit-canonical", canonicalAuditPath, "--json"));
+    expect(code).toBe(1);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.collisions).toBe(1);
+    expect(parsed.conflictingRows).toBe(2);
+    expect(parsed.collisionsPreview[0].canonical).toBe("acme");
   });
 });
 

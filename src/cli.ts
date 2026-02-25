@@ -23,6 +23,7 @@ function printUsage() {
   namespace-guard check <slug> [options]
   namespace-guard risk <slug> [options]
   namespace-guard attack-gen <target> [options]
+  namespace-guard audit-canonical <dataset.json> [options]
   namespace-guard calibrate <dataset.json> [options]
   namespace-guard recommend <dataset.json> [options]
   namespace-guard drift [dataset.json] [options]
@@ -49,7 +50,7 @@ Options:
   --cost-warn-malicious <n>  For calibrate: cost when malicious input is warned (default 3)
   --malicious-prior <n>      For calibrate: expected malicious base rate (0-1), reweights classes
   --limit <n>             For drift: max changed examples printed (default 10)
-  --json                 Print machine-readable JSON (risk/attack-gen/calibrate/recommend/drift commands)
+  --json                 Print machine-readable JSON (risk/attack-gen/audit-canonical/calibrate/recommend/drift commands)
   --help                 Show this help message
 
 Examples:
@@ -60,6 +61,7 @@ Examples:
   namespace-guard risk paypa1 --protect paypal --fail-on warn --json
   namespace-guard attack-gen paypal --json
   namespace-guard attack-gen shit --mode evasion --json
+  namespace-guard audit-canonical ./users-export.json --json
   namespace-guard calibrate ./risk-dataset.json --protect paypal --json
   namespace-guard recommend ./risk-dataset.json --protect paypal --json
   namespace-guard drift
@@ -358,6 +360,34 @@ type DriftAnalysisOutput = {
   };
 };
 
+type CanonicalAuditDatasetRow = Record<string, unknown>;
+
+type CanonicalAuditRow = {
+  index: number;
+  id?: string;
+  source?: string;
+  raw: string;
+  normalized: string;
+  storedCanonical?: string;
+};
+
+type CanonicalAuditCollision = {
+  canonical: string;
+  count: number;
+  rows: CanonicalAuditRow[];
+};
+
+type CanonicalAuditOutput = {
+  dataset: string;
+  total: number;
+  processed: number;
+  skipped: number;
+  collisions: number;
+  conflictingRows: number;
+  canonicalMismatches: number;
+  collisionsPreview: CanonicalAuditCollision[];
+};
+
 type AttackGenerationMode = "impersonation" | "evasion";
 type AttackMapMode = "filtered" | "full";
 
@@ -454,6 +484,121 @@ function parseProtectList(value: unknown): string[] {
       .filter(Boolean);
   }
   return [];
+}
+
+function pickString(row: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return undefined;
+}
+
+function parseCanonicalAuditRow(
+  row: CanonicalAuditDatasetRow,
+  index: number
+): CanonicalAuditRow | null {
+  const raw = pickString(row, ["identifier", "raw", "handle", "slug", "username", "value"]);
+  if (!raw) return null;
+
+  const id = pickString(row, ["id", "_id", "uuid"]);
+  const source = pickString(row, ["source", "table", "model"]);
+  const storedCanonical = pickString(row, [
+    "canonical",
+    "normalized",
+    "handleCanonical",
+    "slugCanonical",
+    "handle_canonical",
+    "slug_canonical",
+  ]);
+
+  return {
+    index,
+    id,
+    source,
+    raw,
+    normalized: normalize(raw),
+    storedCanonical,
+  };
+}
+
+function analyzeCanonicalDataset(
+  rows: CanonicalAuditDatasetRow[],
+  options: { datasetLabel: string; limit: number }
+): CanonicalAuditOutput {
+  const parsed: CanonicalAuditRow[] = [];
+  let skipped = 0;
+  let canonicalMismatches = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = parseCanonicalAuditRow(rows[i], i + 1);
+    if (!row) {
+      skipped++;
+      continue;
+    }
+    if (row.storedCanonical !== undefined && row.storedCanonical !== row.normalized) {
+      canonicalMismatches++;
+    }
+    parsed.push(row);
+  }
+
+  const groups = new Map<string, CanonicalAuditRow[]>();
+  for (const row of parsed) {
+    const bucket = groups.get(row.normalized);
+    if (bucket) bucket.push(row);
+    else groups.set(row.normalized, [row]);
+  }
+
+  const collisions = Array.from(groups.entries())
+    .filter(([, group]) => group.length > 1)
+    .map(([canonical, group]) => ({
+      canonical,
+      count: group.length,
+      rows: group.sort((a, b) => a.raw.localeCompare(b.raw)),
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.canonical.localeCompare(b.canonical);
+    });
+
+  const conflictingRows = collisions.reduce((sum, row) => sum + row.count, 0);
+
+  return {
+    dataset: options.datasetLabel,
+    total: rows.length,
+    processed: parsed.length,
+    skipped,
+    collisions: collisions.length,
+    conflictingRows,
+    canonicalMismatches,
+    collisionsPreview: collisions.slice(0, options.limit),
+  };
+}
+
+function printCanonicalAuditOutput(output: CanonicalAuditOutput): void {
+  console.log(
+    `Canonical audit (${output.dataset}) — ${output.processed}/${output.total} processed, ${output.collisions} collision group(s)`
+  );
+  console.log(
+    `Conflicting rows: ${output.conflictingRows}, stored-canonical mismatches: ${output.canonicalMismatches}, skipped rows: ${output.skipped}`
+  );
+
+  for (const group of output.collisionsPreview) {
+    console.log(`canonical "${group.canonical}" -> ${group.count} row(s)`);
+    for (const row of group.rows) {
+      const idLabel = row.id ? ` id=${JSON.stringify(row.id)}` : "";
+      const sourceLabel = row.source ? ` source=${JSON.stringify(row.source)}` : "";
+      const canonicalLabel =
+        row.storedCanonical !== undefined
+          ? ` storedCanonical=${JSON.stringify(row.storedCanonical)}`
+          : "";
+      console.log(
+        `  row ${row.index}:${idLabel}${sourceLabel} raw=${JSON.stringify(row.raw)} normalized=${JSON.stringify(row.normalized)}${canonicalLabel}`
+      );
+    }
+  }
 }
 
 function safeDivide(numerator: number, denominator: number): number {
@@ -1021,6 +1166,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
     command !== "check" &&
     command !== "risk" &&
     command !== "attack-gen" &&
+    command !== "audit-canonical" &&
     command !== "calibrate" &&
     command !== "recommend" &&
     command !== "drift"
@@ -1034,6 +1180,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
     (command === "check" ||
       command === "risk" ||
       command === "attack-gen" ||
+      command === "audit-canonical" ||
       command === "calibrate" ||
       command === "recommend") &&
     !slug
@@ -1052,6 +1199,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
   if (
     (command === "risk" ||
       command === "attack-gen" ||
+      command === "audit-canonical" ||
       command === "calibrate" ||
       command === "recommend" ||
       command === "drift") &&
@@ -1356,6 +1504,48 @@ export async function run(argv: string[] = process.argv): Promise<number> {
       }
 
       return 0;
+    }
+
+    if (command === "audit-canonical") {
+      const datasetPath = resolve(slug!);
+      if (!existsSync(datasetPath)) {
+        console.error(`Dataset file not found: ${datasetPath}`);
+        return 1;
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(readFileSync(datasetPath, "utf-8"));
+      } catch {
+        console.error(`Failed to parse dataset file: ${datasetPath}`);
+        return 1;
+      }
+
+      if (!Array.isArray(parsed)) {
+        console.error("Canonical audit dataset must be a JSON array.");
+        return 1;
+      }
+
+      if (parsed.length === 0) {
+        console.error("Canonical audit dataset is empty.");
+        return 1;
+      }
+
+      const output = analyzeCanonicalDataset(
+        parsed as CanonicalAuditDatasetRow[],
+        {
+          datasetLabel: datasetPath,
+          limit: limit ?? 10,
+        }
+      );
+
+      if (json) {
+        console.log(JSON.stringify(output, null, 2));
+      } else {
+        printCanonicalAuditOutput(output);
+      }
+
+      return output.collisions > 0 || output.canonicalMismatches > 0 ? 1 : 0;
     }
 
     if (command === "calibrate" || command === "recommend") {
