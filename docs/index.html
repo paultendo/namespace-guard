@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>namespace-guard - Slug Claimability Guard</title>
-  <meta name="description" content="Interactive playground for namespace-guard. Validate slug claimability with reserved-name checks, anti-spoofing risk policy, threshold calibration, and drift-safe CI gating.">
+  <meta name="description" content="Interactive playground for namespace-guard. Check slug availability, reserved names, Unicode spoofing risk, and practical CLI setup for production checks.">
   <meta property="og:title" content="namespace-guard Playground">
-  <meta property="og:description" content="Try the slug claimability playground in your browser. Built-in Unicode spoofing detection plus CLI calibration and drift gating.">
+  <meta property="og:description" content="Try the slug claimability playground in your browser. Includes Unicode spoofing checks and simple CLI workflows for production policies.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://paultendo.github.io/namespace-guard/">
   <meta property="og:image" content="https://paultendo.github.io/namespace-guard/og.svg">
@@ -14,7 +14,7 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="namespace-guard Playground">
-  <meta name="twitter:description" content="Try the slug claimability playground in your browser. Built-in Unicode spoofing detection plus CLI calibration and drift gating.">
+  <meta name="twitter:description" content="Try the slug claimability playground in your browser. Includes Unicode spoofing checks and simple CLI workflows for production policies.">
   <meta name="twitter:image" content="https://paultendo.github.io/namespace-guard/og.svg">
   <meta name="theme-color" content="#090e17">
   <link rel="canonical" href="https://paultendo.github.io/namespace-guard/">
@@ -37,6 +37,13 @@
       --red-soft: rgba(255, 90, 90, 0.12);
       --amber: #ffbe3c;
       --amber-soft: rgba(255, 190, 60, 0.12);
+      --syntax-kw: #c792ea;
+      --syntax-fn: #82aaff;
+      --syntax-str: #c3e88d;
+      --syntax-cm: #546e7a;
+      --syntax-type: #ffcb6b;
+      --syntax-var: #f78c6c;
+      --syntax-br: rgba(255,255,255,0.3);
       --font-display: 'Syne', system-ui, sans-serif;
       --font-body: 'Instrument Sans', system-ui, sans-serif;
       --font-mono: 'Google Sans Code', ui-monospace, 'SF Mono', monospace;
@@ -194,8 +201,21 @@
       gap: 1rem;
       grid-template-columns: 1fr;
     }
-    @media (min-width: 768px) {
-      .how-grid { grid-template-columns: repeat(4, 1fr); }
+    @media (min-width: 640px) {
+      .how-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .how-grid > .how-card:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: min(38rem, 100%);
+      }
+    }
+    @media (min-width: 1024px) {
+      .how-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .how-grid > .how-card:last-child:nth-child(odd) {
+        grid-column: auto;
+        justify-self: stretch;
+        width: auto;
+      }
     }
     .how-card { text-align: left; }
     .how-card h3 {
@@ -216,6 +236,36 @@
     .how-card .example .val { color: var(--accent); }
     .how-card .example .err { color: var(--red); }
     .how-card .example .warn { color: var(--amber); }
+    .profiles-cards {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    @media (min-width: 900px) {
+      .profiles-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .checklist {
+      margin-top: 0.55rem;
+      padding-left: 1.05rem;
+      display: grid;
+      gap: 0.35rem;
+      color: var(--ink-muted);
+      font-size: 0.83rem;
+      line-height: 1.45;
+    }
+    .checklist li::marker { color: rgba(188,201,223,0.7); }
+    .insight-card .label {
+      display: inline-block;
+      margin-top: 0.55rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: rgba(188,201,223,0.62);
+    }
+    .profile-override {
+      margin-top: 1rem;
+      text-align: left;
+    }
 
     /* Playground */
     .playground { text-align: left; }
@@ -389,6 +439,18 @@
       border-color: rgba(30,215,96,0.4);
       background: rgba(30,215,96,0.1);
     }
+    .playground-policy {
+      margin-top: 0.8rem;
+      font-size: 0.8rem;
+      color: rgba(188,201,223,0.74);
+      line-height: 1.45;
+    }
+    .playground-depth {
+      margin-top: 0.3rem;
+      font-size: 0.76rem;
+      color: rgba(188,201,223,0.58);
+      line-height: 1.35;
+    }
 
     /* Examples */
     .examples-section { margin-top: 1.5rem; }
@@ -517,13 +579,20 @@
       white-space: pre;
     }
     .code-block code { font: inherit; color: inherit; }
-    .code-block .kw { color: #c792ea; }
-    .code-block .fn { color: #82aaff; }
-    .code-block .str { color: #c3e88d; }
-    .code-block .cm { color: #546e7a; font-style: italic; }
-    .code-block .type { color: #ffcb6b; }
-    .code-block .br { color: rgba(255,255,255,0.3); }
-    .code-block .var { color: #f78c6c; }
+    .code-block .kw,
+    .insight-card .example .kw { color: var(--syntax-kw); }
+    .code-block .fn,
+    .insight-card .example .fn { color: var(--syntax-fn); }
+    .code-block .str,
+    .insight-card .example .str { color: var(--syntax-str); }
+    .code-block .cm,
+    .insight-card .example .cm { color: var(--syntax-cm); font-style: italic; }
+    .code-block .type,
+    .insight-card .example .type { color: var(--syntax-type); }
+    .code-block .br,
+    .insight-card .example .br { color: var(--syntax-br); }
+    .code-block .var,
+    .insight-card .example .var { color: var(--syntax-var); }
 
     /* Pipeline explainer */
     .pipeline-section { text-align: center; }
@@ -611,6 +680,12 @@
     .insight-card .example .val { color: var(--accent); }
     .insight-card .example .err { color: var(--red); }
     .insight-card .example .dim { color: rgba(188,201,223,0.4); }
+    .inline-chip {
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.3);
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+    }
 
     /* Confusable highlight in result */
     .confusable-detail {
@@ -707,11 +782,11 @@
 
   <header class="shell hero">
     <h1 class="display-type">namespace-guard</h1>
-    <p class="hero-tagline">Claim safe slugs in one line: availability plus anti-spoofing risk policy.</p>
+    <p class="hero-tagline">Claim safe slugs in one line: availability, spoofing protection, and moderation hooks.</p>
     <div class="hero-phonetic phonetic-serif">
       <span class="pron">/neym-speys gahrd/</span>
       <span class="pos">noun</span>
-      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes - with built-in Unicode spoofing protection.</span>
+      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes - with built-in Unicode spoofing protection and pluggable moderation.</span>
     </div>
     <div class="hero-actions">
       <a href="#playground" class="btn-primary">Try it out</a>
@@ -757,6 +832,94 @@
           <p>Detects visually deceptive Unicode characters from 20+ scripts using a 613-pair confusable map generated from Unicode TR39.</p>
           <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"</div>
         </div>
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Profanity &amp; Evasion
+          </h3>
+          <p>Blocks common profanity obfuscation (Unicode confusables + substitutions) with conservative defaults, and supports external moderation libraries via validators.</p>
+          <div class="example"><span class="err">"5h1t"</span> &rarr; blocked</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Profiles -->
+    <section class="pipeline-section" aria-labelledby="profiles-heading">
+      <h2 id="profiles-heading" class="display-type">Built-in Profiles</h2>
+      <p class="subtitle">Start with a profile that matches your namespace type, then customize as needed.</p>
+
+      <div class="profiles-cards">
+        <div class="glass-card insight-card">
+          <h3>consumer-handle</h3>
+          <p>For public usernames and handles. Strict anti-impersonation defaults.</p>
+          <ul class="checklist">
+            <li>2-30 chars</li>
+            <li>lowercase letters, numbers, hyphens</li>
+            <li>purely numeric names blocked</li>
+          </ul>
+          <span class="label">Best for: social/community handles</span>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>org-slug</h3>
+          <p>For teams, workspaces, and company slugs. Slightly longer and conservative by default.</p>
+          <ul class="checklist">
+            <li>2-40 chars</li>
+            <li>lowercase letters, numbers, hyphens</li>
+            <li>purely numeric names blocked</li>
+          </ul>
+          <span class="label">Best for: org/workspace URLs</span>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>developer-id</h3>
+          <p>For technical IDs and package-style names. Allows more length and numeric-only IDs.</p>
+          <ul class="checklist">
+            <li>2-50 chars</li>
+            <li>lowercase letters, numbers, hyphens</li>
+            <li>purely numeric names allowed</li>
+          </ul>
+          <span class="label">Best for: internal/dev tooling identifiers</span>
+        </div>
+      </div>
+      <div class="glass-card insight-card profile-override">
+        <h3>Start with a profile, override what you need</h3>
+        <p>Profiles are defaults, not lock-in. Most setups only need one or two overrides.</p>
+        <div class="example">
+          <span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span><span class="br">(</span><span class="str">"org-slug"</span>, <span class="br">{</span><br>
+          &nbsp;&nbsp;<span class="var">allowPurelyNumeric</span>: <span class="kw">true</span>,<br>
+          <span class="br">}</span>, adapter<span class="br">)</span>;
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Scope -->
+    <section class="pipeline-section" aria-labelledby="scope-heading">
+      <h2 id="scope-heading" class="display-type">What It Does (And Doesn&rsquo;t)</h2>
+      <p class="subtitle">Plain boundaries so teams know exactly where this library helps.</p>
+
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <h3>What it does</h3>
+          <ul class="checklist">
+            <li>Normalizes and validates slug format</li>
+            <li>Checks collisions across multiple data sources</li>
+            <li>Blocks reserved names</li>
+            <li>Scores and enforces Unicode confusable risk</li>
+            <li>Lets you plug in moderation or policy validators</li>
+          </ul>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>What it doesn&rsquo;t do</h3>
+          <ul class="checklist">
+            <li>It does not bundle third-party moderation datasets</li>
+            <li>It does not replace account security controls (2FA, verification, abuse ops)</li>
+            <li>It does not guarantee perfect abuse detection</li>
+            <li>This playground uses simulated data, not your live database</li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -783,7 +946,16 @@
             <button type="submit" class="btn-primary check-btn">Claim check</button>
           </div>
         </form>
-        <p id="playground-desc" class="sr-only">Type a slug to run one-liner claim checks (availability plus anti-spoofing risk policy) against simulated data.</p>
+        <p id="playground-desc" class="sr-only">Type a slug to run claimability checks against simulated data, including reserved names, collisions, spoofing risk, and optional profanity evasion checks.</p>
+
+        <div class="strategy-section">
+          <div class="strategy-label">Policy profile:</div>
+          <div class="strategy-row" role="group" aria-label="Choose namespace profile">
+            <button class="strategy-chip" aria-pressed="true" data-profile="consumer-handle">consumer-handle</button>
+            <button class="strategy-chip" aria-pressed="false" data-profile="org-slug">org-slug</button>
+            <button class="strategy-chip" aria-pressed="false" data-profile="developer-id">developer-id</button>
+          </div>
+        </div>
 
         <div class="strategy-section">
           <div class="strategy-label">Suggestion strategy:</div>
@@ -801,10 +973,14 @@
         <div class="strategy-section">
           <div class="strategy-label">Security options:</div>
           <div class="strategy-row" role="group" aria-label="Toggle security features">
-            <button class="strategy-chip" aria-pressed="true" id="toggle-homoglyph">homoglyph detection</button>
-            <button class="strategy-chip" aria-pressed="false" id="toggle-numeric">reject purely numeric</button>
+            <button class="strategy-chip" aria-pressed="true" id="toggle-homoglyph">confusable chars</button>
+            <button class="strategy-chip" aria-pressed="true" id="toggle-mixed-script">mixed-script block</button>
+            <button class="strategy-chip" aria-pressed="true" id="toggle-profanity">profanity evasion</button>
+            <button class="strategy-chip" aria-pressed="true" id="toggle-numeric">reject purely numeric</button>
             <button class="strategy-chip" aria-pressed="false" id="toggle-fail-warn">fail on warn</button>
           </div>
+          <p id="playground-policy" class="playground-policy"></p>
+          <p id="playground-depth" class="playground-depth"></p>
         </div>
 
         <div id="result" class="result-area" aria-live="polite" aria-atomic="true"></div>
@@ -814,6 +990,9 @@
           <div class="examples-row" role="group" aria-label="Example slugs to try">
             <button class="example-pill" data-slug="sarah">sarah</button>
             <button class="example-pill" data-slug="admin">admin</button>
+            <button class="example-pill" data-slug="shit">blocked-word</button>
+            <button class="example-pill" data-slug="sh1t">obfuscated-word-1</button>
+            <button class="example-pill" data-slug="5h1t">obfuscated-word-2</button>
             <button class="example-pill" data-slug="acme-corp">acme-corp</button>
             <button class="example-pill" data-slug="my-new-app">my-new-app</button>
             <button class="example-pill" data-slug="paypa1">paypa1</button>
@@ -872,6 +1051,13 @@
                 <h4>Reserved (brand)</h4>
                 <div class="tags">
                   <span class="mock-tag">namespace-guard</span>
+                </div>
+              </div>
+              <div class="mock-group">
+                <h4>Moderation list (demo)</h4>
+                <div class="tags">
+                  <span class="mock-tag">English list (~2.7k terms)</span>
+                  <span class="mock-tag">Custom additions included</span>
                 </div>
               </div>
             </div>
@@ -1100,47 +1286,87 @@
     <!-- CLI workflow -->
     <section class="pipeline-section" aria-labelledby="workflow-heading">
       <h2 id="workflow-heading" class="display-type">Operational CLI workflow</h2>
-      <p class="subtitle">Go from labeled examples to enforced regression budgets in a few commands.</p>
+      <p class="subtitle">Go from sample attacks to production checks in a few commands.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>1. Red-team with attack-gen</h3>
-          <p>Generate realistic attack candidates. Default mode is <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">evasion</code> (confusables + substitutions). Switch to <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">--mode impersonation</code> for Unicode-focused spoofing analysis. Keep moderation zero-dependency by plugging in any external profanity library through custom validators.</p>
+          <p>Generate realistic variants to test your policy. Default mode is <code class="inline-chip">evasion</code> (Unicode confusables + substitutions). Use <code class="inline-chip">--mode impersonation</code> when you only want Unicode spoofing analysis.</p>
           <div class="example">
-            <span class="dim">$</span> npx namespace-guard attack-gen paypal --json<br>
-            <span class="dim">$</span> npx namespace-guard attack-gen shit --mode evasion --json
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">attack-gen</span> <span class="str">paypal</span> <span class="var">--json</span><br>
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">attack-gen</span> <span class="str">shit</span> <span class="var">--mode</span> <span class="str">evasion</span> <span class="var">--json</span>
           </div>
         </div>
         <div class="glass-card insight-card">
           <h3>2. Recommend in one command</h3>
-          <p>Generate practical warn/block thresholds and a suggested CI drift gate budget from your dataset.</p>
+          <p>Get recommended warn/block thresholds and a suggested CI command from your dataset.</p>
           <div class="example">
-            <span class="dim">$</span> npx namespace-guard recommend ./risk-dataset.json<br>
-            <span class="dim"># emits recommended risk config + CI gate command</span>
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">recommend</span> <span class="str">./risk-dataset.json</span><br>
+            <span class="cm"># emits recommended risk config + CI gate command</span>
           </div>
         </div>
         <div class="glass-card insight-card">
           <h3>3. Cost-aware tuning when needed</h3>
           <p>Override default costs and class priors to tune for your domain's false-positive and false-negative tradeoffs.</p>
           <div class="example">
-            <span class="dim">$</span> npx namespace-guard calibrate ./risk-dataset.json \<br>
-            &nbsp;&nbsp;--cost-block-benign 8 --cost-allow-malicious 12 --malicious-prior 0.05
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">calibrate</span> <span class="str">./risk-dataset.json</span> <span class="br">\</span><br>
+            &nbsp;&nbsp;<span class="var">--cost-block-benign</span> <span class="type">8</span> <span class="var">--cost-allow-malicious</span> <span class="type">12</span> <span class="var">--malicious-prior</span> <span class="type">0.05</span>
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>4. Quantify composability drift</h3>
-          <p>Compare behavior under <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP_FULL</code> vs <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP</code>.</p>
+          <h3>4. Compare map behavior</h3>
+          <p>See how results change between <code class="inline-chip">CONFUSABLE_MAP_FULL</code> and <code class="inline-chip">CONFUSABLE_MAP</code>.</p>
           <div class="example">
-            <span class="dim">$</span> npx namespace-guard drift --json<br>
-            <span class="dim"># includes actionFlips, averageScoreDelta, maxAbsScoreDelta</span>
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">drift</span> <span class="var">--json</span><br>
+            <span class="cm"># includes actionFlips, averageScoreDelta, maxAbsScoreDelta</span>
           </div>
         </div>
         <div class="glass-card insight-card">
           <h3>5. Enforce in CI</h3>
-          <p>Fail pull requests when drift exceeds your accepted budget.</p>
+          <p>Fail pull requests when changes exceed the limits you set.</p>
           <div class="example">
-            <span class="dim">$</span> npm run ci:drift-gate -- \<br>
-            &nbsp;&nbsp;--max-action-flips 29 --max-average-score-delta 95 --max-abs-score-delta 100
+            <span class="dim">$</span> <span class="kw">npm</span> <span class="fn">run</span> <span class="fn">ci:drift-gate</span> <span class="var">--</span> <span class="br">\</span><br>
+            &nbsp;&nbsp;<span class="var">--max-action-flips</span> <span class="type">29</span> <span class="var">--max-average-score-delta</span> <span class="type">95</span> <span class="var">--max-abs-score-delta</span> <span class="type">100</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Profanity and evasion -->
+    <section class="pipeline-section" aria-labelledby="profanity-heading">
+      <h2 id="profanity-heading" class="display-type">Profanity &amp; Evasion</h2>
+      <p class="subtitle">Keep moderation dependency-free by default, and plug in any external library when you need it.</p>
+
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <h3>Built-in profanity validator</h3>
+          <p><code class="inline-chip">createProfanityValidator</code> catches common obfuscation while staying conservative by default: <code class="inline-chip">variantProfile: "balanced"</code> and <code class="inline-chip">minSubstringLength: 4</code>.</p>
+          <div class="example">
+            <span class="kw">const</span> validator = <span class="fn">createProfanityValidator</span><span class="br">(</span><span class="br">[</span><span class="str">"word"</span><span class="br">]</span>, <span class="br">{</span> <span class="var">mode</span>: <span class="str">"evasion"</span> <span class="br">}</span><span class="br">)</span>;<br>
+            <span class="dim"># catches common evasion like leet and confusables</span><br>
+            <span class="dim"># avoids broad matches on very short tokens</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Use a default list or your own</h3>
+          <p>For quick setup, use <code class="inline-chip">namespace-guard/profanity-en</code>. Or keep bring-your-own moderation with <code class="inline-chip">createPredicateValidator</code>.</p>
+          <div class="example">
+            <span class="dim">// one-liner default list</span><br>
+            <span class="var">validators</span>: <span class="br">[</span><span class="fn">createEnglishProfanityValidator</span><span class="br">()</span><span class="br">]</span><br>
+            <span class="dim">// external library path also supported</span><br>
+            <span class="var">validators</span>: <span class="br">[</span><span class="fn">createPredicateValidator</span><span class="br">((</span>id<span class="br">)</span> =&gt; profanity.<span class="fn">exists</span><span class="br">(</span>id<span class="br">))]</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Increase strictness carefully</h3>
+          <p>Only switch to <code class="inline-chip">variantProfile: "aggressive"</code> or shorter substring lengths after checking false positives.</p>
+          <div class="example">
+            <span class="dim">// safer default</span><br>
+            <span class="br">{</span> <span class="var">variantProfile</span>: <span class="str">"balanced"</span>, <span class="var">minSubstringLength</span>: <span class="type">4</span> <span class="br">}</span><br>
+            <span class="dim">// stricter mode</span><br>
+            <span class="br">{</span> <span class="var">variantProfile</span>: <span class="str">"aggressive"</span>, <span class="var">minSubstringLength</span>: <span class="type">3</span> <span class="br">}</span>
           </div>
         </div>
       </div>
@@ -1151,7 +1377,7 @@
     <!-- Anti-spoofing pipeline -->
     <section class="pipeline-section" aria-labelledby="pipeline-heading">
       <h2 id="pipeline-heading" class="display-type">Anti-spoofing pipeline</h2>
-      <p class="subtitle">Three stages, each aware of the others. No dead code, no wrong mappings.</p>
+      <p class="subtitle">Three clear steps for Unicode spoof detection.</p>
 
       <div class="pipeline-flow">
         <div class="pipeline-stage">
@@ -1176,7 +1402,7 @@
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>NFKC-aware confusable map</h3>
-          <p>Most libraries blindly ship Unicode TR39 mappings. We found 31 entries where TR39 and NFKC disagree - dead code that encodes the <em>wrong</em> mapping in any pipeline that normalizes first. Need the full unfiltered map? <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">CONFUSABLE_MAP_FULL</code> (~1,400 entries) is exported for non-NFKC pipelines.</p>
+          <p>TR39 and NFKC do not always map characters the same way. namespace-guard accounts for those differences so normalized pipelines use the right mapping. Need the full unfiltered map? <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (~1,400 entries) is exported for non-NFKC pipelines.</p>
           <div class="example">
             <span class="dim">// TR39 says Long S (&lsaquo;&#x17F;&rsaquo;) &rarr; &ldquo;f&rdquo;</span><br>
             <span class="dim">// NFKC says Long S &rarr; &ldquo;s&rdquo;</span> <span class="val">&larr; correct</span><br>
@@ -1196,11 +1422,11 @@
         </div>
         <div class="glass-card insight-card">
           <h3>Reproducible from source</h3>
-          <p>The map is generated from Unicode's official <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">confusables.txt</code>, not hand-curated. Run <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">npx tsx scripts/generate-confusables.ts</code> to regenerate for new Unicode versions. The script automatically excludes NFKC conflicts.</p>
+          <p>The map is generated from Unicode's official <code class="inline-chip">confusables.txt</code>, not hand-curated. Run <code class="inline-chip">npx tsx scripts/generate-confusables.ts</code> to regenerate for new Unicode versions. The script automatically excludes NFKC conflicts.</p>
         </div>
         <div class="glass-card insight-card">
           <h3>Defense in depth</h3>
-          <p>The default slug pattern <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:0.1rem 0.35rem; border-radius:0.25rem;">/^[a-z0-9][a-z0-9-]*$/</code> already blocks non-ASCII. The confusable map and mixed-script detection protect apps with permissive patterns that allow Unicode identifiers, or serve as a second line of defense if a format regex is misconfigured.</p>
+          <p>The default slug pattern <code class="inline-chip">/^[a-z0-9][a-z0-9-]*$/</code> already blocks non-ASCII. The confusable map and mixed-script detection protect apps with permissive patterns that allow Unicode identifiers, or serve as a second line of defense if a format regex is misconfigured.</p>
         </div>
       </div>
     </section>
@@ -1221,8 +1447,9 @@
     <div class="footer-author">Built by <a href="https://github.com/paultendo" target="_blank" rel="noopener" style="color: rgba(188,201,223,0.6); text-decoration: none;">Paul Wood FRSA (@paultendo)</a></div>
   </footer>
 
+  <script src="./data/profanity-words.global.js"></script>
   <script type="module">
-    // === namespace-guard playground runtime (v0.11.1-aligned subset) ===
+    // === namespace-guard playground runtime (v0.12.0-aligned subset) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
     var DEFAULT_MESSAGES = {
       invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
@@ -1364,22 +1591,25 @@
       const map = { ...CONFUSABLE_MAP, ...(options?.additionalMappings ?? {}) };
       const chars = Object.keys(map);
       const re = new RegExp("[" + chars.map(c => c.replace(/[\\\]^-]/g, "\\$&")).join("") + "]");
+      const checkConfusables = options?.checkConfusables ?? true;
       const mixed = options?.rejectMixedScript ?? false;
       const nonLatinRe = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
       return async (value) => {
         // Check confusable map - find the first offending character
-        for (const ch of value) {
-          if (map[ch]) {
-            const cp = ch.codePointAt(0);
-            const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
-            const script = getScriptName(cp);
-            return {
-              available: false,
-              message: `Contains ${script} "${ch}" (${hex}) which looks like Latin "${map[ch]}".`,
-              _confusableChar: ch,
-              _confusableTarget: map[ch],
-              _confusableScript: script,
-            };
+        if (checkConfusables && re.test(value)) {
+          for (const ch of value) {
+            if (map[ch]) {
+              const cp = ch.codePointAt(0);
+              const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+              const script = getScriptName(cp);
+              return {
+                available: false,
+                message: `Contains ${script} "${ch}" (${hex}) which looks like Latin "${map[ch]}".`,
+                _confusableChar: ch,
+                _confusableTarget: map[ch],
+                _confusableScript: script,
+              };
+            }
           }
         }
         // Check mixed-script
@@ -1407,6 +1637,171 @@
         return null;
       };
     }
+
+    const PROFANITY_SUBSTITUTE_MAP_BALANCED = {
+      "0": ["o"],
+      "1": ["i"],
+      "3": ["e"],
+      "4": ["a"],
+      "5": ["s"],
+      "7": ["t"],
+      "@": ["a"],
+      "$": ["s"],
+      "+": ["t"],
+      "!": ["i"],
+      "|": ["i"],
+    };
+    const PROFANITY_SUBSTITUTE_MAP_AGGRESSIVE = {
+      ...PROFANITY_SUBSTITUTE_MAP_BALANCED,
+      "1": ["i", "l"],
+      "2": ["z"],
+      "6": ["g"],
+      "8": ["b"],
+      "9": ["g"],
+      "!": ["i", "l"],
+      "|": ["i", "l"],
+    };
+    const ASCII_ALNUM_RE = /^[a-z0-9]$/;
+    const NON_ASCII_ALNUM_RE = /[^a-z0-9]+/g;
+
+    function escapeRegex(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function buildProfanityFoldCandidates(value, map, substituteMap, maxVariants) {
+      const skeletonized = skeleton(value, map);
+      let candidates = [""];
+
+      for (const ch of skeletonized) {
+        const options = new Set();
+        if (ASCII_ALNUM_RE.test(ch)) {
+          options.add(ch);
+        } else {
+          options.add("");
+        }
+
+        const substitutes = substituteMap[ch] ?? [];
+        for (const substitute of substitutes) options.add(substitute);
+        if (options.size === 0) options.add("");
+
+        const next = [];
+        const seen = new Set();
+        for (const prefix of candidates) {
+          for (const option of options) {
+            const candidate = prefix + option;
+            if (seen.has(candidate)) continue;
+            seen.add(candidate);
+            next.push(candidate);
+            if (next.length >= maxVariants) break;
+          }
+          if (next.length >= maxVariants) break;
+        }
+        if (next.length > 0) candidates = next;
+      }
+
+      return Array.from(
+        new Set(
+          candidates
+            .map((candidate) => candidate.replace(NON_ASCII_ALNUM_RE, ""))
+            .filter(Boolean)
+        )
+      );
+    }
+
+    function createProfanityValidator(words, options = {}) {
+      const message = options.message ?? "That handle is blocked by moderation policy.";
+      const checkSubstrings = options.checkSubstrings ?? true;
+      const mode = options.mode ?? "evasion";
+      const variantProfile = options.variantProfile === "aggressive" ? "aggressive" : "balanced";
+      const substituteMap =
+        variantProfile === "aggressive"
+          ? PROFANITY_SUBSTITUTE_MAP_AGGRESSIVE
+          : PROFANITY_SUBSTITUTE_MAP_BALANCED;
+      const foldMap = options.map ?? CONFUSABLE_MAP;
+      const minSubstringLength = Math.max(1, Math.floor(options.minSubstringLength ?? 4));
+      const maxFoldVariants = Math.max(1, Math.floor(options.maxFoldVariants ?? 64));
+
+      const rawWords = words.map((w) => normalize(w)).filter(Boolean);
+      const wordSet = new Set(rawWords);
+
+      const substringWords = checkSubstrings
+        ? Array.from(wordSet).filter((w) => w.length >= minSubstringLength)
+        : [];
+      const substringRegex = substringWords.length > 0
+        ? new RegExp(substringWords.map((w) => escapeRegex(w)).join("|"))
+        : null;
+
+      const foldedExactWordSet = mode === "evasion"
+        ? new Set(
+          rawWords.flatMap((word) =>
+            buildProfanityFoldCandidates(
+              word,
+              foldMap,
+              substituteMap,
+              Math.min(16, maxFoldVariants)
+            )
+          )
+        )
+        : null;
+
+      const foldedSubstringWordSet = mode === "evasion" && checkSubstrings
+        ? new Set(
+          rawWords
+            .filter((word) => word.length >= minSubstringLength)
+            .flatMap((word) =>
+              buildProfanityFoldCandidates(
+                word,
+                foldMap,
+                substituteMap,
+                Math.min(16, maxFoldVariants)
+              )
+            )
+        )
+        : null;
+
+      const foldedSubstringRegex = mode === "evasion" &&
+        checkSubstrings &&
+        foldedSubstringWordSet &&
+        foldedSubstringWordSet.size > 0
+        ? new RegExp(Array.from(foldedSubstringWordSet).map((w) => escapeRegex(w)).join("|"))
+        : null;
+
+      return async (value) => {
+        const normalized = normalize(value);
+
+        if (wordSet.has(normalized)) {
+          return { available: false, message };
+        }
+        if (substringRegex && substringRegex.test(normalized)) {
+          return { available: false, message };
+        }
+
+        if (mode === "evasion" && foldedExactWordSet && foldedExactWordSet.size > 0) {
+          const foldedCandidates = buildProfanityFoldCandidates(
+            normalized,
+            foldMap,
+            substituteMap,
+            maxFoldVariants
+          );
+          if (foldedCandidates.some((candidate) => foldedExactWordSet.has(candidate))) {
+            return { available: false, message };
+          }
+          if (
+            foldedSubstringRegex &&
+            foldedCandidates.some((candidate) => foldedSubstringRegex.test(candidate))
+          ) {
+            return { available: false, message };
+          }
+        }
+
+        return null;
+      };
+    }
+
+    const DEMO_PROFANITY_WORDS_URL = "./data/profanity-words.json";
+    const DEMO_PROFANITY_GLOBAL_KEY = "__NG_PROFANITY_WORDS__";
+    let demoProfanityWords = [];
+    let profanityWordCount = 0;
 
     var DEFAULT_PROTECTED_TOKENS = [
       "admin", "administrator", "support", "help", "security", "billing", "payments",
@@ -1459,6 +1854,33 @@
       const trimmed = raw.trim();
       const nfkc = (options.unicode ?? true) ? trimmed.normalize("NFKC") : trimmed;
       return nfkc.toLowerCase().replace(/^@+/, "");
+    }
+
+    function applyDemoProfanityWords(payload) {
+      demoProfanityWords = uniqueNonEmptyStrings(
+        payload.map((word) => normalize(String(word)))
+      );
+      profanityWordCount = demoProfanityWords.length;
+    }
+
+    async function loadDemoProfanityWords() {
+      const preloaded = globalThis[DEMO_PROFANITY_GLOBAL_KEY];
+      if (Array.isArray(preloaded) && preloaded.length > 0) {
+        applyDemoProfanityWords(preloaded);
+        return;
+      }
+      try {
+        const response = await fetch(DEMO_PROFANITY_WORDS_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        if (!Array.isArray(payload)) throw new Error("Expected an array of words.");
+
+        applyDemoProfanityWords(payload);
+      } catch (error) {
+        console.warn("Could not load playground profanity list.", error);
+        demoProfanityWords = [];
+        profanityWordCount = 0;
+      }
     }
 
     function buildReservedMap(reserved) {
@@ -2076,9 +2498,9 @@
       return createNamespaceGuard(
         {
           ...config,
-          pattern: profile.pattern,
-          normalizeUnicode: profile.normalizeUnicode,
-          allowPurelyNumeric: profile.allowPurelyNumeric,
+          pattern: config.pattern ?? profile.pattern,
+          normalizeUnicode: config.normalizeUnicode ?? profile.normalizeUnicode,
+          allowPurelyNumeric: config.allowPurelyNumeric ?? profile.allowPurelyNumeric,
           risk: {
             ...profile.risk,
             ...(config.risk ?? {}),
@@ -2111,16 +2533,40 @@
     };
 
     // === Guard factory (recreated when strategy/options change) ===
+    let currentProfile = "consumer-handle";
     let currentStrategy = ["sequential", "random-digits"];
     let homoglyphEnabled = true;
-    let rejectNumeric = false;
+    let mixedScriptEnabled = true;
+    let profanityEnabled = true;
+    let rejectNumeric = true;
     let failOnWarn = false;
 
     function createGuard(strategy) {
       const validators = [];
-      if (homoglyphEnabled) validators.push(createHomoglyphValidator());
+      if (homoglyphEnabled || mixedScriptEnabled) {
+        validators.push(
+          createHomoglyphValidator({
+            checkConfusables: homoglyphEnabled,
+            rejectMixedScript: mixedScriptEnabled,
+          })
+        );
+      }
+      if (profanityEnabled && demoProfanityWords.length > 0) {
+        validators.push(
+          createProfanityValidator(demoProfanityWords, {
+            mode: "evasion",
+            variantProfile: "balanced",
+            minSubstringLength: 4,
+            message: "That handle is blocked by moderation policy.",
+          })
+        );
+      }
+      const profile = NAMESPACE_PROFILES[currentProfile];
+      const allowPurelyNumeric = rejectNumeric
+        ? false
+        : (profile?.allowPurelyNumeric ?? false);
       return createNamespaceGuardWithProfile(
-        "consumer-handle",
+        currentProfile,
         {
           reserved: {
             system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
@@ -2145,7 +2591,7 @@
             protect: ["paypal", "github", "vercel", "namespace-guard", "support", "admin"],
           },
           validators,
-          allowPurelyNumeric: !rejectNumeric,
+          allowPurelyNumeric,
         },
         playgroundAdapter
       );
@@ -2158,6 +2604,35 @@
     const input = document.getElementById("slug-input");
     const resultEl = document.getElementById("result");
     const copyBtn = document.getElementById("copy-btn");
+    const policySummaryEl = document.getElementById("playground-policy");
+    const policyDepthEl = document.getElementById("playground-depth");
+
+    function updatePolicySummary() {
+      const checks = [
+        "format",
+        "reserved names",
+        "DB collisions",
+      ];
+      if (homoglyphEnabled) checks.push("confusable chars");
+      if (mixedScriptEnabled) checks.push("mixed-script block");
+      if (profanityEnabled) {
+        if (profanityWordCount > 0) {
+          checks.push(`profanity evasion (${profanityWordCount.toLocaleString()} words)`);
+        } else {
+          checks.push("profanity evasion (list loading)");
+        }
+      }
+      const riskMode = failOnWarn ? "warn + block" : "block only";
+      const numericMode = rejectNumeric
+        ? "purely numeric blocked"
+        : (NAMESPACE_PROFILES[currentProfile]?.allowPurelyNumeric ? "purely numeric allowed" : "purely numeric blocked by profile");
+      policySummaryEl.textContent = `Active policy (${currentProfile}): ${checks.join(", ")}. Risk gate: ${riskMode}. Numeric rule: ${numericMode}.`;
+      if (policyDepthEl) {
+        policyDepthEl.textContent = profanityWordCount > 0
+          ? `Curated default profanity list depth: ${profanityWordCount.toLocaleString()} terms.`
+          : "Curated default profanity list depth: loading.";
+      }
+    }
 
     function escapeHtml(str) {
       const div = document.createElement("div");
@@ -2356,6 +2831,17 @@
       });
     });
 
+    // Profile chips
+    const profileChips = document.querySelectorAll("[data-profile]");
+    profileChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        profileChips.forEach(c => c.setAttribute("aria-pressed", "false"));
+        chip.setAttribute("aria-pressed", "true");
+        currentProfile = chip.dataset.profile;
+        refreshGuard();
+      });
+    });
+
     // Strategy chips
     const strategyChips = document.querySelectorAll("[data-strategy]");
     strategyChips.forEach(chip => {
@@ -2376,17 +2862,32 @@
 
     // Security toggles
     const toggleHomoglyph = document.getElementById("toggle-homoglyph");
+    const toggleMixedScript = document.getElementById("toggle-mixed-script");
+    const toggleProfanity = document.getElementById("toggle-profanity");
     const toggleNumeric = document.getElementById("toggle-numeric");
     const toggleFailWarn = document.getElementById("toggle-fail-warn");
 
     function refreshGuard() {
       guard = createGuard(currentStrategy);
+      updatePolicySummary();
       if (input.value.trim()) { lastRendered = ""; checkSlug(input.value); }
     }
 
     toggleHomoglyph.addEventListener("click", () => {
       homoglyphEnabled = !homoglyphEnabled;
       toggleHomoglyph.setAttribute("aria-pressed", String(homoglyphEnabled));
+      refreshGuard();
+    });
+
+    toggleMixedScript.addEventListener("click", () => {
+      mixedScriptEnabled = !mixedScriptEnabled;
+      toggleMixedScript.setAttribute("aria-pressed", String(mixedScriptEnabled));
+      refreshGuard();
+    });
+
+    toggleProfanity.addEventListener("click", () => {
+      profanityEnabled = !profanityEnabled;
+      toggleProfanity.setAttribute("aria-pressed", String(profanityEnabled));
       refreshGuard();
     });
 
@@ -2399,8 +2900,12 @@
     toggleFailWarn.addEventListener("click", () => {
       failOnWarn = !failOnWarn;
       toggleFailWarn.setAttribute("aria-pressed", String(failOnWarn));
+      updatePolicySummary();
       if (input.value.trim()) { lastRendered = ""; checkSlug(input.value); }
     });
+
+    updatePolicySummary();
+    loadDemoProfanityWords().then(() => refreshGuard());
 
     // Copy button
     copyBtn.addEventListener("click", async () => {
