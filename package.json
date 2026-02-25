@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -82,6 +82,7 @@
     "build:profanity-data": "node scripts/generate-profanity-global.js",
     "build:composability-data": "node scripts/generate-composability-vectors.js",
     "build:confusable-bench": "node scripts/generate-confusable-bench.js",
+    "build:weights-global": "node scripts/generate-confusable-weights-global.js",
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",

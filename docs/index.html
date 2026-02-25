@@ -1080,6 +1080,25 @@
             <button class="strategy-chip" aria-pressed="true" id="toggle-numeric">reject purely numeric</button>
             <button class="strategy-chip" aria-pressed="false" id="toggle-fail-warn">fail on warn</button>
           </div>
+        </div>
+
+        <div class="strategy-section">
+          <div class="strategy-label">Visual weights:</div>
+          <div class="strategy-row" role="group" aria-label="Toggle visual weights">
+            <button class="strategy-chip" aria-pressed="false" id="toggle-weights">SSIM-scored weights</button>
+          </div>
+        </div>
+
+        <div class="strategy-section" id="context-section" style="display:none;">
+          <div class="strategy-label">Weight context:</div>
+          <div class="strategy-row" role="group" aria-label="Choose weight context">
+            <button class="strategy-chip" aria-pressed="true" data-context="all">all</button>
+            <button class="strategy-chip" aria-pressed="false" data-context="identifier">identifier</button>
+            <button class="strategy-chip" aria-pressed="false" data-context="domain">domain</button>
+          </div>
+        </div>
+
+        <div class="strategy-section">
           <p id="playground-policy" class="playground-policy"></p>
           <p id="playground-rules" class="playground-rules"></p>
           <p id="playground-depth" class="playground-depth"></p>
@@ -1459,9 +1478,23 @@
             <span class="kw">import</span> <span class="br">{</span> <span class="fn">skeleton</span>, <span class="fn">areConfusable</span>, <span class="fn">confusableDistance</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
             <span class="fn">skeleton</span><span class="br">(</span><span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// "paypal"</span><br>
             <span class="fn">areConfusable</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// true</span><br>
-            <span class="fn">confusableDistance</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// similarity + chainDepth + steps</span>
+            <span class="fn">confusableDistance</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// similarity + chainDepth + steps</span><br>
+            <span class="fn">confusableDistance</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// measured visual costs</span>
           </div>
           <p class="research-links"><a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#advanced-security-primitives" target="_blank" rel="noopener">Reference: Advanced Security Primitives</a></p>
+        </div>
+
+        <div class="glass-card insight-card">
+          <h3>Measured visual weights</h3>
+          <p>903 confusable pairs scored via SSIM across 230 system fonts.
+             Pass <code class="inline-chip">CONFUSABLE_WEIGHTS</code> to
+             <code class="inline-chip">confusableDistance()</code> for measured
+             costs instead of hardcoded thresholds.</p>
+          <div class="example">
+            <span class="kw">import</span> <span class="br">{</span> <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/confusable-weights"</span>;<br>
+            <span class="fn">confusableDistance</span><span class="br">(</span>a, b, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span>, <span class="var">context</span>: <span class="str">"identifier"</span> <span class="br">}</span><span class="br">)</span>;
+          </div>
+          <p class="research-links"><a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0 data)</p>
         </div>
       </div>
     </section>
@@ -1582,6 +1615,7 @@
   </footer>
 
   <script src="./data/profanity-words.global.js"></script>
+  <script src="./data/confusable-weights.global.js"></script>
   <script type="module">
     // === namespace-guard playground runtime (v0.14.0-aligned subset) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
@@ -2139,6 +2173,15 @@
       return prev[b.length];
     }
 
+    function lookupWeight(from, to, weights, context) {
+      if (!weights) return undefined;
+      const w = weights[from]?.[to] ?? weights[to]?.[from];
+      if (!w) return undefined;
+      if (context === "identifier" && !w.xidContinue) return undefined;
+      if (context === "domain" && !w.idnaPvalid) return undefined;
+      return w;
+    }
+
     function scoreSimilarityRisk(identifier, target, map) {
       const idSkeleton = skeleton(identifier, map);
       const targetSkeleton = skeleton(target, map);
@@ -2152,11 +2195,35 @@
       else if (distance === 2) score += 6;
       const chainDepth = distance;
       if (chainDepth >= 2) score += Math.min(8, chainDepth * 2);
+
+      // Apply measured visual weights when enabled
+      let weightedPairs = 0;
+      if (weightsEnabled && CONFUSABLE_WEIGHTS) {
+        const idChars = [...identifier];
+        const tgtChars = [...target];
+        const len = Math.min(idChars.length, tgtChars.length);
+        for (let i = 0; i < len; i++) {
+          if (idChars[i] === tgtChars[i]) continue;
+          const w = lookupWeight(idChars[i], tgtChars[i], CONFUSABLE_WEIGHTS, currentContext);
+          if (w) {
+            weightedPairs++;
+            // Lower cost = more visually similar = higher risk boost
+            const boost = Math.round((1 - w.cost) * 15);
+            score += boost;
+            // Novel pairs (not in TR39 map but found by SSIM) get extra signal
+            if (!w.tr39Allowed && !map[idChars[i]]) {
+              score += 5;
+            }
+          }
+        }
+      }
+
       return {
         score: clamp(score, 0, 100),
         distance,
         chainDepth,
         skeletonEqual,
+        weightedPairs,
       };
     }
 
@@ -2546,6 +2613,7 @@
           const matchReasons = [];
           if (distance.skeletonEqual) matchReasons.push("TR39 skeleton collision");
           if (distance.chainDepth >= 2) matchReasons.push(`chain depth ${distance.chainDepth}`);
+          if (distance.weightedPairs > 0) matchReasons.push(`${distance.weightedPairs} SSIM-weighted pair${distance.weightedPairs > 1 ? "s" : ""}`);
 
           scoredMatches.push({
             target,
@@ -2716,6 +2784,30 @@
     let profanityEnabled = true;
     let rejectNumeric = true;
     let failOnWarn = false;
+    let weightsEnabled = false;
+    let currentContext = "all";
+
+    // Parse compact global weights into ConfusableWeight shape
+    const CONFUSABLE_WEIGHTS = (() => {
+      const raw = window.__NG_CONFUSABLE_WEIGHTS__;
+      if (!raw) return null;
+      const out = {};
+      for (const [src, targets] of Object.entries(raw)) {
+        out[src] = {};
+        for (const [tgt, w] of Object.entries(targets)) {
+          out[src][tgt] = {
+            danger: w.d,
+            stableDanger: w.s,
+            cost: w.c,
+            glyphReuse: !!w.g,
+            xidContinue: !!w.x,
+            idnaPvalid: !!w.i,
+            tr39Allowed: !!w.t,
+          };
+        }
+      }
+      return out;
+    })();
 
     function createGuard(strategy) {
       const validators = [];
@@ -2804,6 +2896,10 @@
         } else {
           checks.push("profanity evasion (list unavailable)");
         }
+      }
+      if (weightsEnabled) {
+        const ctxLabel = currentContext === "all" ? "" : ` (${currentContext})`;
+        checks.push(`visual weights${ctxLabel}`);
       }
       const riskMode = failOnWarn ? "warn + block" : "block only";
       const numericMode = rejectNumeric
@@ -3098,6 +3194,27 @@
       toggleFailWarn.setAttribute("aria-pressed", String(failOnWarn));
       updatePolicySummary();
       if (input.value.trim()) { lastRendered = ""; checkSlug(input.value); }
+    });
+
+    // Visual weights toggle
+    const toggleWeights = document.getElementById("toggle-weights");
+    const contextSection = document.getElementById("context-section");
+    const contextChips = document.querySelectorAll("[data-context]");
+
+    toggleWeights.addEventListener("click", () => {
+      weightsEnabled = !weightsEnabled;
+      toggleWeights.setAttribute("aria-pressed", String(weightsEnabled));
+      contextSection.style.display = weightsEnabled ? "" : "none";
+      refreshGuard();
+    });
+
+    contextChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        contextChips.forEach(c => c.setAttribute("aria-pressed", "false"));
+        chip.setAttribute("aria-pressed", "true");
+        currentContext = chip.dataset.context;
+        refreshGuard();
+      });
     });
 
     const preloadedProfanityWords = globalThis[DEMO_PROFANITY_GLOBAL_KEY];

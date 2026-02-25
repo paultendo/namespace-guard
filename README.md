@@ -147,6 +147,19 @@ areConfusable("paypal", "pa\u0443pal"); // true
 confusableDistance("paypal", "pa\u0443pal"); // graded similarity + chainDepth + explainable steps
 ```
 
+For measured visual scoring, pass the optional weights from confusable-vision (903 SSIM-scored pairs across 230 fonts). The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
+
+```typescript
+import { confusableDistance } from "namespace-guard";
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+
+const result = confusableDistance("paypal", "pa\u0443pal", {
+  weights: CONFUSABLE_WEIGHTS,
+  context: "identifier",
+});
+// result.similarity, result.steps (including "visual-weight" reason for novel pairs)
+```
+
 ## Adapter Support
 
 - Prisma
@@ -176,6 +189,7 @@ Migration guides per adapter: [docs/reference.md#canonical-uniqueness-migration-
 - Anti-spoofing pipeline and composability vectors: [docs/reference.md#how-the-anti-spoofing-pipeline-works](docs/reference.md#how-the-anti-spoofing-pipeline-works)
 - Benchmark corpus (`confusable-bench.v1`): [docs/reference.md#confusable-benchmark-corpus-artifact](docs/reference.md#confusable-benchmark-corpus-artifact)
 - Advanced primitives (`skeleton`, `areConfusable`, `confusableDistance`): [docs/reference.md#advanced-security-primitives](docs/reference.md#advanced-security-primitives)
+- Confusable weights (SSIM-scored pairs): [docs/reference.md#confusable-weights-subpath](docs/reference.md#confusable-weights-subpath)
 - CLI reference: [docs/reference.md#cli](docs/reference.md#cli)
 - API reference: [docs/reference.md#api-reference](docs/reference.md#api-reference)
 - Framework integration (Next.js/Express/tRPC): [docs/reference.md#framework-integration](docs/reference.md#framework-integration)

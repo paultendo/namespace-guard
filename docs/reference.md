@@ -1411,6 +1411,24 @@ const score = confusableDistance("paypal", "pa\u0443pal");
 // score.similarity, score.chainDepth, score.steps, etc.
 ```
 
+**Options:**
+- `map` -- confusable character map (default: `CONFUSABLE_MAP_FULL`)
+- `weights` -- optional measured visual weights from confusable-vision scoring; when provided, TR39 pairs use measured cost instead of hardcoded 0.35, and novel pairs (not in TR39 map) use their visual-weight cost
+- `context` -- filter weights by deployment context: `'identifier'` (XID_Continue only), `'domain'` (IDNA PVALID only), or `'all'` (default)
+
+Weighted usage:
+
+```typescript
+import { confusableDistance } from "namespace-guard";
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+
+const result = confusableDistance("paypal", "pa\u0443pal", {
+  weights: CONFUSABLE_WEIGHTS,
+  context: "identifier",
+});
+// Steps with reason: "visual-weight" indicate novel pairs scored via SSIM
+```
+
 ---
 
 ### `deriveNfkcTr39DivergenceVectors(map?)`
@@ -1619,6 +1637,8 @@ import {
   type ConfusableDistanceOptions,
   type ConfusableDistanceResult,
   type ConfusableDistanceStep,
+  type ConfusableWeight,
+  type ConfusableWeights,
   type NfkcTr39DivergenceVector,
   type ComposabilityVector,
 } from "namespace-guard";
@@ -1645,6 +1665,18 @@ import {
   COMPOSABILITY_VECTORS_COUNT,
   type ComposabilityVector,
 } from "namespace-guard/composability-vectors";
+```
+
+Confusable weights subpath export:
+
+```typescript
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+
+// 903 SSIM-scored pairs (110 TR39 + 793 novel discoveries)
+// Pass to confusableDistance() for measured visual costs
+const result = confusableDistance("paypal", "pa\u0443pal", {
+  weights: CONFUSABLE_WEIGHTS,
+});
 ```
 
 ## Support
