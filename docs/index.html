@@ -445,6 +445,12 @@
       color: rgba(188,201,223,0.74);
       line-height: 1.45;
     }
+    .playground-rules {
+      margin-top: 0.2rem;
+      font-size: 0.77rem;
+      color: rgba(188,201,223,0.66);
+      line-height: 1.4;
+    }
     .playground-depth {
       margin-top: 0.3rem;
       font-size: 0.76rem;
@@ -654,6 +660,63 @@
     @media (min-width: 768px) {
       .insight-cards { grid-template-columns: 1fr 1fr; }
     }
+    .research-section .insight-cards {
+      grid-template-columns: 1fr;
+      max-width: 68rem;
+      margin-inline: auto;
+    }
+    @media (min-width: 768px) {
+      .research-section .insight-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+    .research-section .research-links {
+      margin-top: 0.8rem;
+      font-size: 0.86rem;
+      color: rgba(188,201,223,0.72);
+    }
+    .research-section .research-links a {
+      color: rgba(188,201,223,0.9);
+      text-underline-offset: 0.14em;
+      text-decoration-color: rgba(188,201,223,0.4);
+    }
+    .research-section .research-links a:hover {
+      color: var(--foreground);
+      text-decoration-color: rgba(216,226,243,0.7);
+    }
+    .research-section .research-links .sep {
+      color: rgba(188,201,223,0.35);
+      margin: 0 0.32rem;
+    }
+    .advanced-apis-section .insight-cards {
+      grid-template-columns: minmax(0, 56rem);
+      justify-content: center;
+      max-width: 56rem;
+      margin-inline: auto;
+    }
+    @media (min-width: 768px) {
+      .advanced-apis-section .insight-cards {
+        grid-template-columns: minmax(0, 56rem);
+      }
+    }
+    .advanced-apis-section .insight-card {
+      width: 100%;
+      margin-inline: auto;
+    }
+    .advanced-apis-section .research-links {
+      margin-top: 0.8rem;
+      font-size: 0.86rem;
+      color: rgba(188,201,223,0.72);
+    }
+    .advanced-apis-section .research-links a {
+      color: rgba(188,201,223,0.9);
+      text-underline-offset: 0.14em;
+      text-decoration-color: rgba(188,201,223,0.4);
+    }
+    .advanced-apis-section .research-links a:hover {
+      color: var(--foreground);
+      text-decoration-color: rgba(216,226,243,0.7);
+    }
     .insight-card {
       padding: clamp(1rem, 2vw, 1.5rem);
     }
@@ -840,6 +903,42 @@
           <p>Blocks common profanity obfuscation (Unicode confusables + substitutions) with conservative defaults, and supports external moderation libraries via validators.</p>
           <div class="example"><span class="err">"5h1t"</span> &rarr; blocked</div>
         </div>
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
+            Invisible Character Guard
+          </h3>
+          <p>Flags default-ignorable and direction-control Unicode characters often used for deceptive identifiers, with optional combining-mark blocking for stricter anti-evasion policies.</p>
+          <div class="example"><span class="err">"a&#x200D;dmin"</span> &rarr; contains a zero-width joiner</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Research -->
+    <section class="pipeline-section research-section" aria-labelledby="research-heading">
+      <h2 id="research-heading" class="display-type">Research Behind The Pipeline</h2>
+      <p class="subtitle">We audited major confusable implementations (including ICU, Chromium, Rust, and django-registration), found a normalization/mapping composition gap, then shipped reproducible artifacts instead of one-off rules.</p>
+
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <ul class="checklist">
+            <li>31 documented NFKC vs TR39 divergence vectors, shipped as <code class="inline-chip">nfkc-tr39-divergence-v1</code></li>
+            <li>Two production map modes: <code class="inline-chip">CONFUSABLE_MAP</code> (NFKC-first) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (TR39/raw-input)</li>
+            <li>Published artifacts: composability vectors + confusable benchmark corpus (<code class="inline-chip">confusable-bench.v1</code>)</li>
+            <li>Submitted for Unicode public review (PRI #540)</li>
+          </ul>
+          <p class="research-links">
+            <a href="https://paultendo.github.io/posts/namespace-guard-launch/" target="_blank" rel="noopener">Launch write-up</a>
+            <span class="sep">&middot;</span>
+            <a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#how-the-anti-spoofing-pipeline-works" target="_blank" rel="noopener">Technical details</a>
+            <span class="sep">&middot;</span>
+            <a href="./data/confusable-bench.v1.json" target="_blank" rel="noopener">Benchmark corpus</a>
+            <span class="sep">&middot;</span>
+            <a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">Unicode PRI #540</a>
+          </p>
+        </div>
       </div>
     </section>
 
@@ -908,6 +1007,7 @@
             <li>Checks collisions across multiple data sources</li>
             <li>Blocks reserved names</li>
             <li>Scores and enforces Unicode confusable risk</li>
+            <li>Flags invisible and direction-control characters</li>
             <li>Lets you plug in moderation or policy validators</li>
           </ul>
         </div>
@@ -946,7 +1046,7 @@
             <button type="submit" class="btn-primary check-btn">Claim check</button>
           </div>
         </form>
-        <p id="playground-desc" class="sr-only">Type a slug to run claimability checks against simulated data, including reserved names, collisions, spoofing risk, and optional profanity evasion checks.</p>
+        <p id="playground-desc" class="sr-only">Type a slug to run claimability checks against simulated data, including reserved names, collisions, spoofing risk, invisible-character checks, and optional profanity evasion checks.</p>
 
         <div class="strategy-section">
           <div class="strategy-label">Policy profile:</div>
@@ -975,11 +1075,13 @@
           <div class="strategy-row" role="group" aria-label="Toggle security features">
             <button class="strategy-chip" aria-pressed="true" id="toggle-homoglyph">confusable chars</button>
             <button class="strategy-chip" aria-pressed="true" id="toggle-mixed-script">mixed-script block</button>
+            <button class="strategy-chip" aria-pressed="true" id="toggle-invisible">invisible-char block</button>
             <button class="strategy-chip" aria-pressed="true" id="toggle-profanity">profanity evasion</button>
             <button class="strategy-chip" aria-pressed="true" id="toggle-numeric">reject purely numeric</button>
             <button class="strategy-chip" aria-pressed="false" id="toggle-fail-warn">fail on warn</button>
           </div>
           <p id="playground-policy" class="playground-policy"></p>
+          <p id="playground-rules" class="playground-rules"></p>
           <p id="playground-depth" class="playground-depth"></p>
         </div>
 
@@ -1005,6 +1107,7 @@
             <button class="example-pill" data-slug="&#x13AA;dmin" title="Cherokee Ꭺ + Latin dmin">&#x13AA;dmin</button>
             <button class="example-pill" data-slug="&#x251;dmin" title="IPA ɑ + Latin dmin">&#x251;dmin</button>
             <button class="example-pill" data-slug="&#x1D00;dmin" title="Latin small cap ᴀ + Latin dmin">&#x1D00;dmin</button>
+            <button class="example-pill" data-slug="a&#x200D;dmin" title="Contains zero-width joiner">a[ZWJ]dmin</button>
             <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">ｈｅｌｌｏ</button>
             <button class="example-pill" data-slug="123456">123456</button>
           </div>
@@ -1314,20 +1417,51 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>4. Compare map behavior</h3>
-          <p>See how results change between <code class="inline-chip">CONFUSABLE_MAP_FULL</code> and <code class="inline-chip">CONFUSABLE_MAP</code>.</p>
+          <h3>4. Audit canonical data before migration</h3>
+          <p>Detect canonical collisions in exported records before adding database unique constraints on canonical columns.</p>
           <div class="example">
-            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">drift</span> <span class="var">--json</span><br>
-            <span class="cm"># includes actionFlips, averageScoreDelta, maxAbsScoreDelta</span>
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">audit-canonical</span> <span class="str">./users-export.json</span> <span class="var">--json</span><br>
+            <span class="cm">// checks identifier fields + optional stored canonical fields</span>
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>5. Enforce in CI</h3>
+          <h3>5. Compare map behavior</h3>
+          <p>See how results change between <code class="inline-chip">CONFUSABLE_MAP_FULL</code> and <code class="inline-chip">CONFUSABLE_MAP</code>, with a built-in 31-vector composability baseline.</p>
+          <div class="example">
+            <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">drift</span> <span class="var">--json</span><br>
+            <span class="cm">// dataset: builtin:composability-vectors (31 vectors)</span><br>
+            <span class="cm">// includes actionFlips, averageScoreDelta, maxAbsScoreDelta</span>
+          </div>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>6. Enforce in CI</h3>
           <p>Fail pull requests when changes exceed the limits you set.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npm</span> <span class="fn">run</span> <span class="fn">ci:drift-gate</span> <span class="var">--</span> <span class="br">\</span><br>
             &nbsp;&nbsp;<span class="var">--max-action-flips</span> <span class="type">29</span> <span class="var">--max-average-score-delta</span> <span class="type">95</span> <span class="var">--max-abs-score-delta</span> <span class="type">100</span>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Advanced API primitives -->
+    <section class="pipeline-section advanced-apis-section" aria-labelledby="advanced-apis-heading">
+      <h2 id="advanced-apis-heading" class="display-type">Advanced API primitives (optional)</h2>
+      <p class="subtitle">For custom moderation and anti-spoofing workflows, use the low-level helpers directly.</p>
+
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <h3>Explainable pairwise checks</h3>
+          <p>Use skeleton equality for fast binary checks, or distance scoring when you need chain depth and explainable edit steps.</p>
+          <div class="example">
+            <span class="kw">import</span> <span class="br">{</span> <span class="fn">skeleton</span>, <span class="fn">areConfusable</span>, <span class="fn">confusableDistance</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
+            <span class="fn">skeleton</span><span class="br">(</span><span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// "paypal"</span><br>
+            <span class="fn">areConfusable</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// true</span><br>
+            <span class="fn">confusableDistance</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// similarity + chainDepth + steps</span>
+          </div>
+          <p class="research-links"><a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#advanced-security-primitives" target="_blank" rel="noopener">Reference: Advanced Security Primitives</a></p>
         </div>
       </div>
     </section>
@@ -1345,8 +1479,8 @@
           <p><code class="inline-chip">createProfanityValidator</code> catches common obfuscation while staying conservative by default: <code class="inline-chip">variantProfile: "balanced"</code> and <code class="inline-chip">minSubstringLength: 4</code>.</p>
           <div class="example">
             <span class="kw">const</span> validator = <span class="fn">createProfanityValidator</span><span class="br">(</span><span class="br">[</span><span class="str">"word"</span><span class="br">]</span>, <span class="br">{</span> <span class="var">mode</span>: <span class="str">"evasion"</span> <span class="br">}</span><span class="br">)</span>;<br>
-            <span class="dim"># catches common evasion like leet and confusables</span><br>
-            <span class="dim"># avoids broad matches on very short tokens</span>
+            <span class="dim">// catches common evasion like leet and confusables</span><br>
+            <span class="dim">// avoids broad matches on very short tokens</span>
           </div>
         </div>
         <div class="glass-card insight-card">
@@ -1449,7 +1583,7 @@
 
   <script src="./data/profanity-words.global.js"></script>
   <script type="module">
-    // === namespace-guard playground runtime (v0.12.0-aligned subset) ===
+    // === namespace-guard playground runtime (v0.14.0-aligned subset) ===
     var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
     var DEFAULT_MESSAGES = {
       invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
@@ -1458,6 +1592,8 @@
       purelyNumeric: "Identifiers cannot be purely numeric.",
     };
     var SUFFIX_WORDS = ["dev", "io", "app", "hq", "pro", "team", "labs", "hub", "go", "one"];
+    const COMPOSABILITY_VECTOR_SUITE = "nfkc-tr39-divergence-v1";
+    const COMPOSABILITY_VECTOR_COUNT = 31;
 
     // Generated from Unicode TR39 confusables.txt + supplemental Latin small capitals (613 entries)
     // NFKC-conflict entries excluded (NFKC normalization runs first in the pipeline)
@@ -1802,6 +1938,7 @@
     const DEMO_PROFANITY_GLOBAL_KEY = "__NG_PROFANITY_WORDS__";
     let demoProfanityWords = [];
     let profanityWordCount = 0;
+    let profanityListReady = false;
 
     var DEFAULT_PROTECTED_TOKENS = [
       "admin", "administrator", "support", "help", "security", "billing", "payments",
@@ -1849,6 +1986,8 @@
 
     var NON_LATIN_RE = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
     var DEFAULT_IGNORABLE_RE = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF0-\uFFF8]/gu;
+    var BIDI_CONTROL_RE = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
+    var COMBINING_MARK_RE = /\p{M}/gu;
 
     function normalize(raw, options = {}) {
       const trimmed = raw.trim();
@@ -1861,6 +2000,7 @@
         payload.map((word) => normalize(String(word)))
       );
       profanityWordCount = demoProfanityWords.length;
+      profanityListReady = true;
     }
 
     async function loadDemoProfanityWords() {
@@ -1880,6 +2020,7 @@
         console.warn("Could not load playground profanity list.", error);
         demoProfanityWords = [];
         profanityWordCount = 0;
+        profanityListReady = true;
       }
     }
 
@@ -1922,6 +2063,40 @@
       DEFAULT_IGNORABLE_RE.lastIndex = 0;
       const matches = value.match(DEFAULT_IGNORABLE_RE);
       return matches ? matches.length : 0;
+    }
+
+    function countBidiControls(value) {
+      BIDI_CONTROL_RE.lastIndex = 0;
+      const matches = value.match(BIDI_CONTROL_RE);
+      return matches ? matches.length : 0;
+    }
+
+    function countCombiningMarks(value) {
+      COMBINING_MARK_RE.lastIndex = 0;
+      const matches = value.match(COMBINING_MARK_RE);
+      return matches ? matches.length : 0;
+    }
+
+    function createInvisibleCharacterValidator(options = {}) {
+      const rejectDefaultIgnorables = options.rejectDefaultIgnorables ?? true;
+      const rejectBidiControls = options.rejectBidiControls ?? true;
+      const rejectCombiningMarks = options.rejectCombiningMarks ?? false;
+      const message =
+        options.message ??
+        "Contains invisible or direction-control Unicode characters.";
+      return async (value) => {
+        const normalized = normalize(value);
+        if (rejectDefaultIgnorables && countDefaultIgnorables(normalized) > 0) {
+          return { available: false, message };
+        }
+        if (rejectBidiControls && countBidiControls(normalized) > 0) {
+          return { available: false, message };
+        }
+        if (rejectCombiningMarks && countCombiningMarks(normalized) > 0) {
+          return { available: false, message };
+        }
+        return null;
+      };
     }
 
     function countConfusableChars(value, map) {
@@ -2537,12 +2712,16 @@
     let currentStrategy = ["sequential", "random-digits"];
     let homoglyphEnabled = true;
     let mixedScriptEnabled = true;
+    let invisibleEnabled = true;
     let profanityEnabled = true;
     let rejectNumeric = true;
     let failOnWarn = false;
 
     function createGuard(strategy) {
       const validators = [];
+      if (invisibleEnabled) {
+        validators.push(createInvisibleCharacterValidator());
+      }
       if (homoglyphEnabled || mixedScriptEnabled) {
         validators.push(
           createHomoglyphValidator({
@@ -2605,6 +2784,7 @@
     const resultEl = document.getElementById("result");
     const copyBtn = document.getElementById("copy-btn");
     const policySummaryEl = document.getElementById("playground-policy");
+    const policyRulesEl = document.getElementById("playground-rules");
     const policyDepthEl = document.getElementById("playground-depth");
 
     function updatePolicySummary() {
@@ -2615,22 +2795,31 @@
       ];
       if (homoglyphEnabled) checks.push("confusable chars");
       if (mixedScriptEnabled) checks.push("mixed-script block");
+      if (invisibleEnabled) checks.push("invisible-char block");
       if (profanityEnabled) {
-        if (profanityWordCount > 0) {
+        if (!profanityListReady) {
+          checks.push("profanity evasion (list loading)");
+        } else if (profanityWordCount > 0) {
           checks.push(`profanity evasion (${profanityWordCount.toLocaleString()} words)`);
         } else {
-          checks.push("profanity evasion (list loading)");
+          checks.push("profanity evasion (list unavailable)");
         }
       }
       const riskMode = failOnWarn ? "warn + block" : "block only";
       const numericMode = rejectNumeric
         ? "purely numeric blocked"
         : (NAMESPACE_PROFILES[currentProfile]?.allowPurelyNumeric ? "purely numeric allowed" : "purely numeric blocked by profile");
-      policySummaryEl.textContent = `Active policy (${currentProfile}): ${checks.join(", ")}. Risk gate: ${riskMode}. Numeric rule: ${numericMode}.`;
+      policySummaryEl.textContent = `Active policy (${currentProfile}): ${checks.join(", ")}.`;
+      if (policyRulesEl) {
+        policyRulesEl.textContent = `Risk gate: ${riskMode}. Numeric rule: ${numericMode}.`;
+      }
       if (policyDepthEl) {
-        policyDepthEl.textContent = profanityWordCount > 0
-          ? `Curated default profanity list depth: ${profanityWordCount.toLocaleString()} terms.`
-          : "Curated default profanity list depth: loading.";
+        const profanityDepth = !profanityListReady
+          ? "Curated default profanity list depth: loading."
+          : profanityWordCount > 0
+            ? `Curated default profanity list depth: ${profanityWordCount.toLocaleString()} terms.`
+            : "Curated default profanity list depth: unavailable.";
+        policyDepthEl.textContent = `${profanityDepth} Composability baseline: ${COMPOSABILITY_VECTOR_SUITE} (${COMPOSABILITY_VECTOR_COUNT} vectors).`;
       }
     }
 
@@ -2863,6 +3052,7 @@
     // Security toggles
     const toggleHomoglyph = document.getElementById("toggle-homoglyph");
     const toggleMixedScript = document.getElementById("toggle-mixed-script");
+    const toggleInvisible = document.getElementById("toggle-invisible");
     const toggleProfanity = document.getElementById("toggle-profanity");
     const toggleNumeric = document.getElementById("toggle-numeric");
     const toggleFailWarn = document.getElementById("toggle-fail-warn");
@@ -2885,6 +3075,12 @@
       refreshGuard();
     });
 
+    toggleInvisible.addEventListener("click", () => {
+      invisibleEnabled = !invisibleEnabled;
+      toggleInvisible.setAttribute("aria-pressed", String(invisibleEnabled));
+      refreshGuard();
+    });
+
     toggleProfanity.addEventListener("click", () => {
       profanityEnabled = !profanityEnabled;
       toggleProfanity.setAttribute("aria-pressed", String(profanityEnabled));
@@ -2903,6 +3099,12 @@
       updatePolicySummary();
       if (input.value.trim()) { lastRendered = ""; checkSlug(input.value); }
     });
+
+    const preloadedProfanityWords = globalThis[DEMO_PROFANITY_GLOBAL_KEY];
+    if (Array.isArray(preloadedProfanityWords) && preloadedProfanityWords.length > 0) {
+      applyDemoProfanityWords(preloadedProfanityWords);
+      guard = createGuard(currentStrategy);
+    }
 
     updatePolicySummary();
     loadDemoProfanityWords().then(() => refreshGuard());
