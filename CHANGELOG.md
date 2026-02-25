@@ -5,6 +5,108 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.16.0] - 2026-02-25
+
+### Added
+- `ConfusableWeight` and `ConfusableWeights` types for measured visual similarity data
+- `weights` option in `ConfusableDistanceOptions` to use measured SSIM-based costs instead of hardcoded 0.35
+- `context` option in `ConfusableDistanceOptions` for deployment-specific filtering (`'identifier'`, `'domain'`, `'all'`)
+- `"visual-weight"` reason in `ConfusableDistanceStep` for novel pairs recognized via the weight graph
+- `namespace-guard/confusable-weights` subpath export with 903 scored pairs (110 TR39 + 793 novel discoveries from confusable-vision)
+- `scripts/generate-confusable-weights.js` to regenerate weights data from confusable-vision output
+
+### Changed
+- `buildSubstitutionStep` uses measured cost from weights when available (falls back to hardcoded 0.35 when not)
+- Novel confusable pairs not in TR39 map can now be recognized via the weight graph instead of defaulting to cost 1
+
+## [0.15.1] - 2026-02-25
+
+### Added
+- `CODE_OF_CONDUCT.md` using Contributor Covenant v2.1
+- Concise `CONTRIBUTING.md` with practical contribution guidance
+- Contributor sign-off line in `CONTRIBUTING.md`
+
+### Changed
+- Release bump to `0.15.1`
+
+## [0.15.0] - 2026-02-25
+
+### Added
+- Composability suite aliases:
+  - `COMPOSABILITY_VECTOR_SUITE`
+  - `COMPOSABILITY_VECTORS`
+  - `COMPOSABILITY_VECTORS_COUNT`
+- `namespace-guard/composability-vectors` export subpath
+- `createInvisibleCharacterValidator()` and `InvisibleCharacterValidatorOptions`, including opt-in `rejectCombiningMarks`
+- Reproducible composability artifact pipeline:
+  - `scripts/generate-composability-vectors.js`
+  - `docs/data/composability-vectors.json`
+  - `docs/data/composability-vectors.SOURCE.md`
+- Reproducible confusable benchmark corpus:
+  - `scripts/generate-confusable-bench.js`
+  - `docs/data/confusable-bench.v1.json`
+  - `docs/data/confusable-bench.v1.SOURCE.md`
+- Dataset integrity tests:
+  - `tests/composability-vectors.test.ts`
+  - `tests/confusable-bench.test.ts`
+
+### Changed
+- CLI drift/recommend built-in baseline dataset label from `builtin:nfkc-tr39-divergence-vectors` to `builtin:composability-vectors`
+- `tsup` entrypoints now include `src/composability-vectors.ts`
+- Added build scripts:
+  - `build:composability-data`
+  - `build:confusable-bench`
+- Documentation refresh across:
+  - `README.md`
+  - `docs/reference.md`
+  - `docs/index.html` (playground/workflow/research/advanced API sections)
+
+## [0.14.0] - 2026-02-25
+
+### Added
+- `guard.claim(identifier, write, options?)` for race-safe claim/write workflows
+- `isLikelyUniqueViolationError(error)` helper for duplicate-key detection across common stacks
+- CLI `audit-canonical` command for preflight canonical collision/mismatch analysis on exported datasets
+
+### Changed
+- README now includes per-adapter canonical uniqueness migration guidance and operational rollout notes
+- Playground/docs workflow sections updated for calibration/recommendation/drift operations and moderation coverage
+
+## [0.13.0] - 2026-02-25
+
+### Added
+- Curated profanity subpath export: `namespace-guard/profanity-en`
+- `createEnglishProfanityValidator()` helper
+- `PROFANITY_WORDS_EN`, `PROFANITY_WORDS_EN_COUNT`, `PROFANITY_WORDS_EN_SOURCE`, `PROFANITY_WORDS_EN_LICENSE` exports
+- Profanity dataset provenance docs and generated preload asset:
+  - `docs/data/profanity-words.SOURCE.md`
+  - `docs/data/profanity-words.global.js`
+  - `scripts/generate-profanity-global.js`
+
+### Changed
+- Zero-dependency moderation story now supports:
+  - curated built-in English list via subpath
+  - bring-your-own predicate validator path
+- Release bump to `0.13.0`
+
+## [0.12.0] - 2026-02-24
+
+### Added
+- CLI `recommend` command that combines calibration + drift baseline analysis and outputs ready-to-paste risk/CI guidance
+- CI drift gate tooling:
+  - `scripts/drift-gate.js`
+  - GitHub Actions workflow `.github/workflows/drift-gate.yml`
+- `ci:drift-gate` npm script
+
+### Changed
+- Release bump to `0.12.0`
+
+## [0.11.1] - 2026-02-23
+
+### Added
+- Additional tests in `tests/index.test.ts`
+- Expanded npm package keywords/topics metadata
+
 ## [0.11.0] - 2026-02-22
 
 ### Added
@@ -171,6 +273,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI (`npx namespace-guard check <slug>`)
 - Interactive playground page (GitHub Pages)
 
+[0.15.1]: https://github.com/paultendo/namespace-guard/compare/v0.15.0...v0.15.1
+[0.15.0]: https://github.com/paultendo/namespace-guard/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/paultendo/namespace-guard/compare/v0.13.0...v0.14.0
+[0.13.0]: https://github.com/paultendo/namespace-guard/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/paultendo/namespace-guard/compare/v0.11.1...v0.12.0
+[0.11.1]: https://github.com/paultendo/namespace-guard/compare/v0.11.0...v0.11.1
+[0.11.0]: https://github.com/paultendo/namespace-guard/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/paultendo/namespace-guard/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/paultendo/namespace-guard/compare/v0.8.2...v0.9.0
+[0.8.2]: https://github.com/paultendo/namespace-guard/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/paultendo/namespace-guard/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/paultendo/namespace-guard/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/paultendo/namespace-guard/compare/v0.6.0...v0.7.0

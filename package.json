@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -68,6 +68,11 @@
       "types": "./dist/composability-vectors.d.ts",
       "import": "./dist/composability-vectors.mjs",
       "require": "./dist/composability-vectors.js"
+    },
+    "./confusable-weights": {
+      "types": "./dist/confusable-weights.d.ts",
+      "import": "./dist/confusable-weights.mjs",
+      "require": "./dist/confusable-weights.js"
     }
   },
   "files": [

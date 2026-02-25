@@ -3349,6 +3349,75 @@ describe("confusableDistance", () => {
     expect(result.divergenceCount).toBe(0);
     expect(result.distance).toBeGreaterThanOrEqual(1);
   });
+
+  describe("with visual weights", () => {
+    // Minimal weight graph for testing
+    const testWeights = {
+      // Cyrillic а -> Latin a: TR39 pair with measured low cost
+      "\u0430": { a: { danger: 1, stableDanger: 1, cost: 0, xidContinue: true, idnaPvalid: true } },
+      // Novel pair not in TR39: Gothic giba (U+10332) -> x
+      "\ud800\udf32": { x: { danger: 0.94, stableDanger: 0.88, cost: 0.12, xidContinue: true } },
+      // A pair only valid in identifiers, not domains
+      "\u0261": { g: { danger: 1, stableDanger: 0.8, cost: 0.2, xidContinue: true, idnaPvalid: false } },
+    };
+
+    it("uses measured cost for TR39 pairs when weights are provided", () => {
+      // Without weights: hardcoded 0.35 base + 0.2 cross-script = 0.55
+      const without = confusableDistance("\u0430", "a");
+      // With weights: measured cost 0 + 0.2 cross-script = 0.2
+      const withW = confusableDistance("\u0430", "a", { weights: testWeights });
+      expect(withW.distance).toBeLessThan(without.distance);
+      expect(withW.skeletonEqual).toBe(true);
+    });
+
+    it("recognizes novel pairs via visual-weight reason", () => {
+      // Without weights: Gothic U+10332 vs x = cost 1 (unknown pair)
+      const without = confusableDistance("\ud800\udf32", "x");
+      expect(without.distance).toBeGreaterThanOrEqual(1);
+      // With weights: uses measured cost 0.12
+      const withW = confusableDistance("\ud800\udf32", "x", { weights: testWeights });
+      expect(withW.distance).toBeLessThan(1);
+      const visualStep = withW.steps.find(s => s.reason === "visual-weight");
+      expect(visualStep).toBeDefined();
+      expect(visualStep!.cost).toBe(0.12);
+    });
+
+    it("falls back to hardcoded cost when weight is missing", () => {
+      // Pair not in weights: should behave exactly like no-weights
+      const without = confusableDistance("paypal", "\u0440\u0430ypal");
+      const withW = confusableDistance("paypal", "\u0440\u0430ypal", { weights: testWeights });
+      // Cyrillic а has a weight, but р does not, so р still uses hardcoded
+      // Both should have same skeleton equality
+      expect(withW.skeletonEqual).toBe(without.skeletonEqual);
+    });
+
+    it("returns identical results when weights are empty", () => {
+      const without = confusableDistance("paypal", "\u0440\u0430ypal");
+      const withEmpty = confusableDistance("paypal", "\u0440\u0430ypal", { weights: {} });
+      expect(withEmpty.distance).toBe(without.distance);
+      expect(withEmpty.similarity).toBe(without.similarity);
+    });
+
+    it("filters by identifier context", () => {
+      // With 'identifier' context, xidContinue=true weights apply
+      const result = confusableDistance("\u0261", "g", {
+        weights: testWeights,
+        context: "identifier",
+      });
+      expect(result.distance).toBeLessThan(1);
+    });
+
+    it("filters by domain context", () => {
+      // With 'domain' context, idnaPvalid=false weight is skipped
+      const result = confusableDistance("\u0261", "g", {
+        weights: testWeights,
+        context: "domain",
+      });
+      // ɡ (U+0261) maps to 'g' via TR39 so confusable-substitution still fires
+      // but the weight has idnaPvalid=false so measured cost is NOT used
+      expect(result.distance).toBeGreaterThan(0);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

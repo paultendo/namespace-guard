@@ -14,6 +14,7 @@ export default defineConfig({
     "src/adapters/mongoose.ts",
     "src/profanity-en.ts",
     "src/composability-vectors.ts",
+    "src/confusable-weights.ts",
     "src/cli.ts",
   ],
   format: ["cjs", "esm"],

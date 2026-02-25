@@ -165,10 +165,40 @@ export type SkeletonOptions = {
   map?: Record<string, string>;
 };
 
+/** Measured visual weight for a single confusable pair. */
+export type ConfusableWeight = {
+  /** Maximum SSIM across all font comparisons (attacker perspective). */
+  danger: number;
+  /** 95th percentile SSIM across all font comparisons (defender perspective). */
+  stableDanger: number;
+  /** 1 - stableDanger, clamped [0, 1]. Lower cost = more dangerous. */
+  cost: number;
+  /** True if font cmap reveals intentional glyph reuse. */
+  glyphReuse?: boolean;
+  /** Source char is valid in UAX #31 identifiers (XID_Continue). */
+  xidContinue?: boolean;
+  /** Source char is PVALID in IDNA 2008 (relevant for domain spoofing). */
+  idnaPvalid?: boolean;
+  /** Source char is TR39 Identifier_Status=Allowed. */
+  tr39Allowed?: boolean;
+};
+
+/** Lookup table of measured visual weights, keyed by source char then target char. */
+export type ConfusableWeights = Record<string, Record<string, ConfusableWeight>>;
+
 /** Options for `confusableDistance()`. */
 export type ConfusableDistanceOptions = {
   /** Confusable character map to use (default: `CONFUSABLE_MAP_FULL`). */
   map?: Record<string, string>;
+  /** Optional measured visual weights from confusable-vision scoring.
+   *  When provided, TR39 pairs use measured cost instead of hardcoded 0.35,
+   *  and novel pairs (not in TR39 map) use their visual-weight cost. */
+  weights?: ConfusableWeights;
+  /** Filter weights by deployment context.
+   *  - `'identifier'`: only apply weights for XID_Continue sources
+   *  - `'domain'`: only apply weights for IDNA PVALID sources
+   *  - `'all'` (default): apply all weights regardless of properties */
+  context?: "identifier" | "domain" | "all";
 };
 
 /** Step-by-step edit operation in a confusable distance path. */
@@ -192,7 +222,7 @@ export type ConfusableDistanceStep = {
   /** True when substitution uses a known NFKC/TR39 divergent mapping. */
   divergence?: boolean;
   /** Human-readable signal for high-risk operations. */
-  reason?: "default-ignorable" | "cross-script" | "nfkc-divergence" | "nfkc-equivalent";
+  reason?: "default-ignorable" | "cross-script" | "nfkc-divergence" | "nfkc-equivalent" | "visual-weight";
 };
 
 /** Result of weighted confusable distance analysis between two strings. */
@@ -2508,17 +2538,35 @@ function isNfkcDivergentMapping(ch: string, mapped: string): boolean {
   return /^[a-z0-9]$/.test(nfkc) && nfkc !== mapped;
 }
 
+function lookupWeight(
+  from: string,
+  to: string,
+  weights: ConfusableWeights | undefined,
+  context: "identifier" | "domain" | "all"
+): ConfusableWeight | undefined {
+  if (!weights) return undefined;
+  const w = weights[from]?.[to] ?? weights[to]?.[from];
+  if (!w) return undefined;
+  // Context filtering: skip weights that don't match the deployment context
+  if (context === "identifier" && !w.xidContinue) return undefined;
+  if (context === "domain" && !w.idnaPvalid) return undefined;
+  return w;
+}
+
 function buildSubstitutionStep(
   from: string,
   to: string,
   fromIndex: number,
   toIndex: number,
-  map: Record<string, string>
+  map: Record<string, string>,
+  weights?: ConfusableWeights,
+  context?: "identifier" | "domain" | "all"
 ): ConfusableDistanceStep {
   if (from === to) {
     return { op: "match", from, to, fromIndex, toIndex, cost: 0 };
   }
 
+  const weight = lookupWeight(from, to, weights, context ?? "all");
   const fromPrototype = map[from] ?? from;
   const toPrototype = map[to] ?? to;
 
@@ -2533,7 +2581,8 @@ function buildSubstitutionStep(
       isNfkcDivergentMapping(from, fromPrototype) ||
       isNfkcDivergentMapping(to, toPrototype);
 
-    let cost = 0.35;
+    // Use measured cost when weights are available; fall back to hardcoded 0.35
+    let cost = weight?.glyphReuse ? 0 : (weight?.cost ?? 0.35);
     let reason: ConfusableDistanceStep["reason"];
     if (crossScript) {
       cost += 0.2;
@@ -2569,6 +2618,19 @@ function buildSubstitutionStep(
       toIndex,
       cost: 0.45,
       reason: "nfkc-equivalent",
+    };
+  }
+
+  // Novel pairs: not in TR39 map or NFKC, but present in weight graph
+  if (weight) {
+    return {
+      op: "substitution",
+      from,
+      to,
+      fromIndex,
+      toIndex,
+      cost: weight.cost,
+      reason: "visual-weight",
     };
   }
 
@@ -2660,6 +2722,8 @@ export function confusableDistance(
   options?: ConfusableDistanceOptions
 ): ConfusableDistanceResult {
   const map = options?.map ?? CONFUSABLE_MAP_FULL;
+  const weights = options?.weights;
+  const context = options?.context ?? "all";
   const left = toCodePoints(a.normalize("NFD").toLowerCase());
   const right = toCodePoints(b.normalize("NFD").toLowerCase());
   const m = left.length;
@@ -2688,7 +2752,7 @@ export function confusableDistance(
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      const substitution = buildSubstitutionStep(left[i - 1], right[j - 1], i - 1, j - 1, map);
+      const substitution = buildSubstitutionStep(left[i - 1], right[j - 1], i - 1, j - 1, map, weights, context);
       const deletion = buildDeletionStep(left[i - 1], i - 1, j);
       const insertion = buildInsertionStep(right[j - 1], i, j - 1);
       const candidates = [
