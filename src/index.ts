@@ -1102,6 +1102,10 @@ export function createProfanityValidator(
  * excluding characters already handled by NFKC normalization (either collapsed
  * to the same target, or mapped to a different valid Latin char/digit).
  * Regenerate: `npx tsx scripts/generate-confusables.ts`
+ *
+ * Data source: Unicode confusables.txt (https://unicode.org/Public/security/latest/confusables.txt)
+ * Copyright 1991-Present Unicode, Inc. Licensed under the Unicode License v3.
+ * See https://www.unicode.org/terms_of_use.html
  */
 /* prettier-ignore */
 export const CONFUSABLE_MAP: Record<string, string> = {
@@ -1358,6 +1362,10 @@ export const CONFUSABLE_MAP: Record<string, string> = {
  * TR39 and NFKC disagree on the target letter.
  *
  * Regenerate: `npx tsx scripts/generate-confusables.ts`
+ *
+ * Data source: Unicode confusables.txt (https://unicode.org/Public/security/latest/confusables.txt)
+ * Copyright 1991-Present Unicode, Inc. Licensed under the Unicode License v3.
+ * See https://www.unicode.org/terms_of_use.html
  */
 /* prettier-ignore */
 export const CONFUSABLE_MAP_FULL: Record<string, string> = {

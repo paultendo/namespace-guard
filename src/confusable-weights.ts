@@ -4,6 +4,12 @@
 //
 // DO NOT EDIT MANUALLY. Regenerate with:
 //   node scripts/generate-confusable-weights.js
+//
+// LICENCE: This data is derived from confusable-vision output and is
+// licensed under CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/).
+// Attribution: Paul Wood FRSA (@paultendo), confusable-vision
+// (https://github.com/paultendo/confusable-vision).
+// The surrounding namespace-guard code is MIT-licensed.
 
 import type { ConfusableWeight, ConfusableWeights } from "./index";
 
@@ -16,6 +22,10 @@ import type { ConfusableWeight, ConfusableWeights } from "./index";
  * and identifier property flags (xidContinue, idnaPvalid, tr39Allowed).
  *
  * Import from "namespace-guard/confusable-weights" to use with confusableDistance().
+ *
+ * @licence CC-BY-4.0 (data); MIT (code)
+ * @attribution Paul Wood FRSA, confusable-vision
+ * @see https://github.com/paultendo/confusable-vision
  */
 export const CONFUSABLE_WEIGHTS: ConfusableWeights = {
   "|": {
