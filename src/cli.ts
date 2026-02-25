@@ -5,9 +5,9 @@ import { resolve } from "path";
 import {
   createNamespaceGuard,
   normalize,
+  COMPOSABILITY_VECTORS,
   CONFUSABLE_MAP,
   CONFUSABLE_MAP_FULL,
-  NFKC_TR39_DIVERGENCE_VECTORS,
 } from "./index";
 import type {
   NamespaceConfig,
@@ -1820,7 +1820,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
         return 1;
       }
 
-      const baselineRows: DriftDatasetRow[] = NFKC_TR39_DIVERGENCE_VECTORS.map(
+      const baselineRows: DriftDatasetRow[] = COMPOSABILITY_VECTORS.map(
         (row) => ({
           identifier: row.char,
           target: row.tr39,
@@ -1830,7 +1830,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
       let driftBaseline: DriftAnalysisOutput;
       try {
         driftBaseline = analyzeDrift(driftGuard, baselineRows, {
-          datasetLabel: "builtin:nfkc-tr39-divergence-vectors",
+          datasetLabel: "builtin:composability-vectors",
           protect,
           includeReserved,
           warnThreshold,
@@ -1915,7 +1915,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
     const driftRows: DriftDatasetRow[] = [];
     const datasetLabel = slug
       ? resolve(slug)
-      : "builtin:nfkc-tr39-divergence-vectors";
+      : "builtin:composability-vectors";
     // Drift/composability analysis compares visual mappings on raw input.
     const driftGuard = createNamespaceGuard(
       { ...guardConfig, normalizeUnicode: false },
@@ -1946,7 +1946,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
       }
       driftRows.push(...(parsed as DriftDatasetRow[]));
     } else {
-      for (const row of NFKC_TR39_DIVERGENCE_VECTORS) {
+      for (const row of COMPOSABILITY_VECTORS) {
         driftRows.push({
           identifier: row.char,
           target: row.tr39,

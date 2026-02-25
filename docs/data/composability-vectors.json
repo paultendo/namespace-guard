@@ -1,0 +1,188 @@
+[
+  {
+    "char": "ſ",
+    "codePoint": "U+017F",
+    "tr39": "f",
+    "nfkc": "s"
+  },
+  {
+    "char": "ℐ",
+    "codePoint": "U+2110",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "ℑ",
+    "codePoint": "U+2111",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "Ⅰ",
+    "codePoint": "U+2160",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "Ｉ",
+    "codePoint": "U+FF29",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𜳞",
+    "codePoint": "U+1CCDE",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𜳰",
+    "codePoint": "U+1CCF0",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "𜳱",
+    "codePoint": "U+1CCF1",
+    "tr39": "l",
+    "nfkc": "1"
+  },
+  {
+    "char": "𝐈",
+    "codePoint": "U+1D408",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝐼",
+    "codePoint": "U+1D43C",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝑰",
+    "codePoint": "U+1D470",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝓘",
+    "codePoint": "U+1D4D8",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝕀",
+    "codePoint": "U+1D540",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝕴",
+    "codePoint": "U+1D574",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝖨",
+    "codePoint": "U+1D5A8",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝗜",
+    "codePoint": "U+1D5DC",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝘐",
+    "codePoint": "U+1D610",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝙄",
+    "codePoint": "U+1D644",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝙸",
+    "codePoint": "U+1D678",
+    "tr39": "l",
+    "nfkc": "i"
+  },
+  {
+    "char": "𝟎",
+    "codePoint": "U+1D7CE",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "𝟏",
+    "codePoint": "U+1D7CF",
+    "tr39": "l",
+    "nfkc": "1"
+  },
+  {
+    "char": "𝟘",
+    "codePoint": "U+1D7D8",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "𝟙",
+    "codePoint": "U+1D7D9",
+    "tr39": "l",
+    "nfkc": "1"
+  },
+  {
+    "char": "𝟢",
+    "codePoint": "U+1D7E2",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "𝟣",
+    "codePoint": "U+1D7E3",
+    "tr39": "l",
+    "nfkc": "1"
+  },
+  {
+    "char": "𝟬",
+    "codePoint": "U+1D7EC",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "𝟭",
+    "codePoint": "U+1D7ED",
+    "tr39": "l",
+    "nfkc": "1"
+  },
+  {
+    "char": "𝟶",
+    "codePoint": "U+1D7F6",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "𝟷",
+    "codePoint": "U+1D7F7",
+    "tr39": "l",
+    "nfkc": "1"
+  },
+  {
+    "char": "🯰",
+    "codePoint": "U+1FBF0",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "🯱",
+    "codePoint": "U+1FBF1",
+    "tr39": "l",
+    "nfkc": "1"
+  }
+]

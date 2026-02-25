@@ -1,0 +1,14 @@
+import {
+  COMPOSABILITY_VECTOR_SUITE,
+  COMPOSABILITY_VECTORS,
+  COMPOSABILITY_VECTORS_COUNT,
+  type ComposabilityVector,
+} from "./index";
+
+export {
+  COMPOSABILITY_VECTOR_SUITE,
+  COMPOSABILITY_VECTORS,
+  COMPOSABILITY_VECTORS_COUNT,
+};
+
+export type { ComposabilityVector };

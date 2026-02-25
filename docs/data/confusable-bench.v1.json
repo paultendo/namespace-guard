@@ -1,0 +1,1682 @@
+[
+  {
+    "id": "bench-0001",
+    "identifier": "ſ",
+    "label": "malicious",
+    "target": "f",
+    "protect": [
+      "f"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+017F: TR39=f, NFKC=s"
+  },
+  {
+    "id": "bench-0002",
+    "identifier": "ℐ",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+2110: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0003",
+    "identifier": "ℑ",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+2111: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0004",
+    "identifier": "Ⅰ",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+2160: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0005",
+    "identifier": "Ｉ",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+FF29: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0006",
+    "identifier": "𜳞",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1CCDE: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0007",
+    "identifier": "𜳰",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1CCF0: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0008",
+    "identifier": "𜳱",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1CCF1: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0009",
+    "identifier": "𝐈",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D408: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0010",
+    "identifier": "𝐼",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D43C: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0011",
+    "identifier": "𝑰",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D470: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0012",
+    "identifier": "𝓘",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D4D8: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0013",
+    "identifier": "𝕀",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D540: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0014",
+    "identifier": "𝕴",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D574: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0015",
+    "identifier": "𝖨",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D5A8: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0016",
+    "identifier": "𝗜",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D5DC: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0017",
+    "identifier": "𝘐",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D610: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0018",
+    "identifier": "𝙄",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D644: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0019",
+    "identifier": "𝙸",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D678: TR39=l, NFKC=i"
+  },
+  {
+    "id": "bench-0020",
+    "identifier": "𝟎",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7CE: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0021",
+    "identifier": "𝟏",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7CF: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0022",
+    "identifier": "𝟘",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7D8: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0023",
+    "identifier": "𝟙",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7D9: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0024",
+    "identifier": "𝟢",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7E2: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0025",
+    "identifier": "𝟣",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7E3: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0026",
+    "identifier": "𝟬",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7EC: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0027",
+    "identifier": "𝟭",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7ED: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0028",
+    "identifier": "𝟶",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7F6: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0029",
+    "identifier": "𝟷",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1D7F7: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0030",
+    "identifier": "🯰",
+    "label": "malicious",
+    "target": "o",
+    "protect": [
+      "o"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1FBF0: TR39=o, NFKC=0"
+  },
+  {
+    "id": "bench-0031",
+    "identifier": "🯱",
+    "label": "malicious",
+    "target": "l",
+    "protect": [
+      "l"
+    ],
+    "category": "nfkc-tr39-divergence",
+    "threatClass": "composability",
+    "notes": "U+1FBF1: TR39=l, NFKC=1"
+  },
+  {
+    "id": "bench-0032",
+    "identifier": "þaypal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "p -> þ (U+00FE) at index 0"
+  },
+  {
+    "id": "bench-0033",
+    "identifier": "pɑypal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "a -> ɑ (U+0251) at index 1"
+  },
+  {
+    "id": "bench-0034",
+    "identifier": "paɣpal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "y -> ɣ (U+0263) at index 2"
+  },
+  {
+    "id": "bench-0035",
+    "identifier": "payþal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "p -> þ (U+00FE) at index 3"
+  },
+  {
+    "id": "bench-0036",
+    "identifier": "þɑypal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on paypal."
+  },
+  {
+    "id": "bench-0037",
+    "identifier": "pay​pal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0038",
+    "identifier": "pay‌pal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0039",
+    "identifier": "pay‮pal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0040",
+    "identifier": "pay⁦pal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0041",
+    "identifier": "páypal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0042",
+    "identifier": "pȧypal",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0043",
+    "identifier": "ƍithub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "g -> ƍ (U+018D) at index 0"
+  },
+  {
+    "id": "bench-0044",
+    "identifier": "gıthub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "i -> ı (U+0131) at index 1"
+  },
+  {
+    "id": "bench-0045",
+    "identifier": "giΤhub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "t -> Τ (U+03A4) at index 2"
+  },
+  {
+    "id": "bench-0046",
+    "identifier": "gitΗub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "h -> Η (U+0397) at index 3"
+  },
+  {
+    "id": "bench-0047",
+    "identifier": "ƍıthub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on github."
+  },
+  {
+    "id": "bench-0048",
+    "identifier": "git​hub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0049",
+    "identifier": "git‌hub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0050",
+    "identifier": "git‮hub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0051",
+    "identifier": "git⁦hub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0052",
+    "identifier": "gíthub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0053",
+    "identifier": "gi̇thub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0054",
+    "identifier": "Οpenai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "o -> Ο (U+039F) at index 0"
+  },
+  {
+    "id": "bench-0055",
+    "identifier": "oþenai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "p -> þ (U+00FE) at index 1"
+  },
+  {
+    "id": "bench-0056",
+    "identifier": "opΕnai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "e -> Ε (U+0395) at index 2"
+  },
+  {
+    "id": "bench-0057",
+    "identifier": "opeΝai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "n -> Ν (U+039D) at index 3"
+  },
+  {
+    "id": "bench-0058",
+    "identifier": "Οþenai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on openai."
+  },
+  {
+    "id": "bench-0059",
+    "identifier": "ope​nai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0060",
+    "identifier": "ope‌nai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0061",
+    "identifier": "ope‮nai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0062",
+    "identifier": "ope⁦nai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0063",
+    "identifier": "ópenai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0064",
+    "identifier": "ȯpenai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0065",
+    "identifier": "νercel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "v -> ν (U+03BD) at index 0"
+  },
+  {
+    "id": "bench-0066",
+    "identifier": "vΕrcel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "e -> Ε (U+0395) at index 1"
+  },
+  {
+    "id": "bench-0067",
+    "identifier": "veƦcel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "r -> Ʀ (U+01A6) at index 2"
+  },
+  {
+    "id": "bench-0068",
+    "identifier": "verϲel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "c -> ϲ (U+03F2) at index 3"
+  },
+  {
+    "id": "bench-0069",
+    "identifier": "νΕrcel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on vercel."
+  },
+  {
+    "id": "bench-0070",
+    "identifier": "ver​cel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0071",
+    "identifier": "ver‌cel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0072",
+    "identifier": "ver‮cel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0073",
+    "identifier": "ver⁦cel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0074",
+    "identifier": "vércel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0075",
+    "identifier": "vėrcel",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0076",
+    "identifier": "ɑdmin",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "a -> ɑ (U+0251) at index 0"
+  },
+  {
+    "id": "bench-0077",
+    "identifier": "aԁmin",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "d -> ԁ (U+0501) at index 1"
+  },
+  {
+    "id": "bench-0078",
+    "identifier": "adΜin",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "m -> Μ (U+039C) at index 2"
+  },
+  {
+    "id": "bench-0079",
+    "identifier": "admın",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "i -> ı (U+0131) at index 3"
+  },
+  {
+    "id": "bench-0080",
+    "identifier": "ɑԁmin",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on admin."
+  },
+  {
+    "id": "bench-0081",
+    "identifier": "ad​min",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0082",
+    "identifier": "ad‌min",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0083",
+    "identifier": "ad‮min",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0084",
+    "identifier": "ad⁦min",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0085",
+    "identifier": "ádmin",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0086",
+    "identifier": "ȧdmin",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0087",
+    "identifier": "ƽupport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "s -> ƽ (U+01BD) at index 0"
+  },
+  {
+    "id": "bench-0088",
+    "identifier": "sʋpport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "u -> ʋ (U+028B) at index 1"
+  },
+  {
+    "id": "bench-0089",
+    "identifier": "suþport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "p -> þ (U+00FE) at index 2"
+  },
+  {
+    "id": "bench-0090",
+    "identifier": "supþort",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "p -> þ (U+00FE) at index 3"
+  },
+  {
+    "id": "bench-0091",
+    "identifier": "ƽʋpport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on support."
+  },
+  {
+    "id": "bench-0092",
+    "identifier": "sup​port",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0093",
+    "identifier": "sup‌port",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0094",
+    "identifier": "sup‮port",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0095",
+    "identifier": "sup⁦port",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0096",
+    "identifier": "súpport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0097",
+    "identifier": "su̇pport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0098",
+    "identifier": "ƽtripe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "s -> ƽ (U+01BD) at index 0"
+  },
+  {
+    "id": "bench-0099",
+    "identifier": "sΤripe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "t -> Τ (U+03A4) at index 1"
+  },
+  {
+    "id": "bench-0100",
+    "identifier": "stƦipe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "r -> Ʀ (U+01A6) at index 2"
+  },
+  {
+    "id": "bench-0101",
+    "identifier": "strıpe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "mixed-script-confusable",
+    "threatClass": "impersonation",
+    "notes": "i -> ı (U+0131) at index 3"
+  },
+  {
+    "id": "bench-0102",
+    "identifier": "ƽΤripe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "confusable-chain",
+    "threatClass": "impersonation",
+    "notes": "Two-step confusable substitution chain on stripe."
+  },
+  {
+    "id": "bench-0103",
+    "identifier": "str​ipe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200B into target."
+  },
+  {
+    "id": "bench-0104",
+    "identifier": "str‌ipe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "invisible-default-ignorable",
+    "threatClass": "evasion",
+    "notes": "Inserted U+200C into target."
+  },
+  {
+    "id": "bench-0105",
+    "identifier": "str‮ipe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+202E into target."
+  },
+  {
+    "id": "bench-0106",
+    "identifier": "str⁦ipe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "invisible-bidi-control",
+    "threatClass": "evasion",
+    "notes": "Inserted U+2066 into target."
+  },
+  {
+    "id": "bench-0107",
+    "identifier": "strípe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0301 after base letter."
+  },
+  {
+    "id": "bench-0108",
+    "identifier": "stri̇pe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "combining-mark-evasion",
+    "threatClass": "evasion",
+    "notes": "Inserted combining mark U+0307 after base letter."
+  },
+  {
+    "id": "bench-0109",
+    "identifier": "paypa1",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0110",
+    "identifier": "paypaI",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0111",
+    "identifier": "paypa-l",
+    "label": "malicious",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0112",
+    "identifier": "g1thub",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0113",
+    "identifier": "githu8",
+    "label": "malicious",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0114",
+    "identifier": "0penai",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0115",
+    "identifier": "opena1",
+    "label": "malicious",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0116",
+    "identifier": "verce1",
+    "label": "malicious",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0117",
+    "identifier": "adm1n",
+    "label": "malicious",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0118",
+    "identifier": "5upport",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0119",
+    "identifier": "supp0rt",
+    "label": "malicious",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0120",
+    "identifier": "str1pe",
+    "label": "malicious",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "ascii-lookalike",
+    "threatClass": "evasion",
+    "notes": "ASCII lookalike/leet-style substitution."
+  },
+  {
+    "id": "bench-0121",
+    "identifier": "sarah",
+    "label": "benign",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Common ASCII username."
+  },
+  {
+    "id": "bench-0122",
+    "identifier": "acme-corp",
+    "label": "benign",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Organization slug style."
+  },
+  {
+    "id": "bench-0123",
+    "identifier": "teamspace",
+    "label": "benign",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign product/workspace word."
+  },
+  {
+    "id": "bench-0124",
+    "identifier": "developer-hub",
+    "label": "benign",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Hyphenated benign slug."
+  },
+  {
+    "id": "bench-0125",
+    "identifier": "build-2026",
+    "label": "benign",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign alpha-numeric slug."
+  },
+  {
+    "id": "bench-0126",
+    "identifier": "cafe",
+    "label": "benign",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign control for accent pairing."
+  },
+  {
+    "id": "bench-0127",
+    "identifier": "café",
+    "label": "benign",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "benign-unicode-precomposed",
+    "threatClass": "control",
+    "notes": "Precomposed accent character."
+  },
+  {
+    "id": "bench-0128",
+    "identifier": "naïve",
+    "label": "benign",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "benign-unicode-precomposed",
+    "threatClass": "control",
+    "notes": "Precomposed diaeresis."
+  },
+  {
+    "id": "bench-0129",
+    "identifier": "jalapeño",
+    "label": "benign",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "benign-unicode-precomposed",
+    "threatClass": "control",
+    "notes": "Precomposed tilde."
+  },
+  {
+    "id": "bench-0130",
+    "identifier": "résumé",
+    "label": "benign",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "benign-unicode-precomposed",
+    "threatClass": "control",
+    "notes": "Precomposed acute accents."
+  },
+  {
+    "id": "bench-0131",
+    "identifier": "café",
+    "label": "benign",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "benign-combining-legit",
+    "threatClass": "control",
+    "notes": "Legitimate decomposed acute accent."
+  },
+  {
+    "id": "bench-0132",
+    "identifier": "naïve",
+    "label": "benign",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "benign-combining-legit",
+    "threatClass": "control",
+    "notes": "Legitimate decomposed diaeresis."
+  },
+  {
+    "id": "bench-0133",
+    "identifier": "megadeth",
+    "label": "benign",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Should not be blocked by overbroad filters."
+  },
+  {
+    "id": "bench-0134",
+    "identifier": "algae-labs",
+    "label": "benign",
+    "target": "stripe",
+    "protect": [
+      "stripe"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Avoids false positives on short substrings."
+  },
+  {
+    "id": "bench-0135",
+    "identifier": "hardcore-band",
+    "label": "benign",
+    "target": "paypal",
+    "protect": [
+      "paypal"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign term with possible moderation overlap."
+  },
+  {
+    "id": "bench-0136",
+    "identifier": "unicode-safe",
+    "label": "benign",
+    "target": "github",
+    "protect": [
+      "github"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Control sample for security branding terms."
+  },
+  {
+    "id": "bench-0137",
+    "identifier": "rocketship",
+    "label": "benign",
+    "target": "openai",
+    "protect": [
+      "openai"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign noun."
+  },
+  {
+    "id": "bench-0138",
+    "identifier": "customer-success",
+    "label": "benign",
+    "target": "vercel",
+    "protect": [
+      "vercel"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign enterprise slug."
+  },
+  {
+    "id": "bench-0139",
+    "identifier": "open-source",
+    "label": "benign",
+    "target": "admin",
+    "protect": [
+      "admin"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign hyphenated phrase."
+  },
+  {
+    "id": "bench-0140",
+    "identifier": "workflow",
+    "label": "benign",
+    "target": "support",
+    "protect": [
+      "support"
+    ],
+    "category": "benign-ascii",
+    "threatClass": "control",
+    "notes": "Benign common product term."
+  }
+]

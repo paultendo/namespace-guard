@@ -6,6 +6,7 @@ import {
   createPredicateValidator,
   createProfanityValidator,
   createHomoglyphValidator,
+  createInvisibleCharacterValidator,
   skeleton,
   areConfusable,
   confusableDistance,
@@ -14,6 +15,9 @@ import {
   NAMESPACE_PROFILES,
   DEFAULT_PROTECTED_TOKENS,
   NFKC_TR39_DIVERGENCE_VECTORS,
+  COMPOSABILITY_VECTOR_SUITE,
+  COMPOSABILITY_VECTORS,
+  COMPOSABILITY_VECTORS_COUNT,
   CONFUSABLE_MAP,
   CONFUSABLE_MAP_FULL,
   type NamespaceAdapter,
@@ -2729,6 +2733,72 @@ describe("createHomoglyphValidator", () => {
 });
 
 // ---------------------------------------------------------------------------
+// createInvisibleCharacterValidator
+// ---------------------------------------------------------------------------
+describe("createInvisibleCharacterValidator", () => {
+  it("rejects default-ignorable characters (zero-width space)", async () => {
+    const validator = createInvisibleCharacterValidator();
+    const result = await validator("pay\u200Bpal");
+    expect(result).not.toBeNull();
+    expect(result?.message).toContain("invisible");
+  });
+
+  it("rejects bidi controls by default", async () => {
+    const validator = createInvisibleCharacterValidator();
+    const result = await validator("abc\u202Edef");
+    expect(result).not.toBeNull();
+  });
+
+  it("supports custom message", async () => {
+    const validator = createInvisibleCharacterValidator({
+      message: "No invisible chars.",
+    });
+    const result = await validator("a\u200Db");
+    expect(result?.message).toBe("No invisible chars.");
+  });
+
+  it("can allow default-ignorables when configured", async () => {
+    const validator = createInvisibleCharacterValidator({
+      rejectDefaultIgnorables: false,
+      rejectBidiControls: true,
+    });
+    expect(await validator("pay\u200Bpal")).toBeNull();
+    expect(await validator("abc\u202Edef")).not.toBeNull();
+  });
+
+  it("can allow bidi controls when both checks are disabled", async () => {
+    const validator = createInvisibleCharacterValidator({
+      rejectDefaultIgnorables: false,
+      rejectBidiControls: false,
+    });
+    expect(await validator("abc\u202Edef")).toBeNull();
+    expect(await validator("a\u200Db")).toBeNull();
+  });
+
+  it("does not reject combining marks by default", async () => {
+    const validator = createInvisibleCharacterValidator();
+    expect(await validator("e\u0301clair")).toBeNull();
+  });
+
+  it("can reject combining marks when enabled", async () => {
+    const validator = createInvisibleCharacterValidator({
+      rejectCombiningMarks: true,
+    });
+    const result = await validator("e\u0301clair");
+    expect(result).not.toBeNull();
+  });
+
+  it("can allow combining marks explicitly when enabled checks are disabled", async () => {
+    const validator = createInvisibleCharacterValidator({
+      rejectDefaultIgnorables: true,
+      rejectBidiControls: true,
+      rejectCombiningMarks: false,
+    });
+    expect(await validator("e\u0301clair")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CONFUSABLE_MAP export
 // ---------------------------------------------------------------------------
 describe("CONFUSABLE_MAP", () => {
@@ -3306,6 +3376,12 @@ describe("NFKC/TR39 divergence vectors", () => {
     );
     const sorted = [...cps].sort((a, b) => a - b);
     expect(cps).toEqual(sorted);
+  });
+
+  it("exports the named composability suite aliases", () => {
+    expect(COMPOSABILITY_VECTOR_SUITE).toBe("nfkc-tr39-divergence-v1");
+    expect(COMPOSABILITY_VECTORS_COUNT).toBe(COMPOSABILITY_VECTORS.length);
+    expect(COMPOSABILITY_VECTORS).toEqual(NFKC_TR39_DIVERGENCE_VECTORS);
   });
 });
 

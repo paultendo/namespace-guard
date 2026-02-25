@@ -63,6 +63,11 @@
       "types": "./dist/profanity-en.d.ts",
       "import": "./dist/profanity-en.mjs",
       "require": "./dist/profanity-en.js"
+    },
+    "./composability-vectors": {
+      "types": "./dist/composability-vectors.d.ts",
+      "import": "./dist/composability-vectors.mjs",
+      "require": "./dist/composability-vectors.js"
     }
   },
   "files": [
@@ -70,6 +75,8 @@
   ],
   "scripts": {
     "build:profanity-data": "node scripts/generate-profanity-global.js",
+    "build:composability-data": "node scripts/generate-composability-vectors.js",
+    "build:confusable-bench": "node scripts/generate-confusable-bench.js",
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",

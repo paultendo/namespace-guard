@@ -145,6 +145,18 @@ export type ProfanityValidatorOptions = {
   maxFoldVariants?: number;
 };
 
+/** Options for `createInvisibleCharacterValidator()`. */
+export type InvisibleCharacterValidatorOptions = {
+  /** Custom rejection message. */
+  message?: string;
+  /** Reject Unicode Default_Ignorable_Code_Point characters (default: `true`). */
+  rejectDefaultIgnorables?: boolean;
+  /** Reject bidi direction/control characters (default: `true`). */
+  rejectBidiControls?: boolean;
+  /** Reject combining marks (Unicode category `M*`) often used for visual obfuscation (default: `false`). */
+  rejectCombiningMarks?: boolean;
+};
+
 /** Options for the `skeleton()` and `areConfusable()` functions. */
 export type SkeletonOptions = {
   /** Confusable character map to use.
@@ -218,6 +230,9 @@ export type NfkcTr39DivergenceVector = {
   /** NFKC lowercase result for the source character. */
   nfkc: string;
 };
+
+/** Canonical composability regression vector (alias of `NfkcTr39DivergenceVector`). */
+export type ComposabilityVector = NfkcTr39DivergenceVector;
 
 /** Risk reason code returned by `checkRisk()`. */
 export type RiskReasonCode =
@@ -2297,6 +2312,16 @@ export function deriveNfkcTr39DivergenceVectors(
 export const NFKC_TR39_DIVERGENCE_VECTORS: NfkcTr39DivergenceVector[] =
   deriveNfkcTr39DivergenceVectors(CONFUSABLE_MAP_FULL);
 
+/** Named composability regression suite (TR39-full vs NFKC lowercase). */
+export const COMPOSABILITY_VECTOR_SUITE = "nfkc-tr39-divergence-v1";
+
+/** Named alias for `NFKC_TR39_DIVERGENCE_VECTORS` for cross-library regression tests. */
+export const COMPOSABILITY_VECTORS: readonly ComposabilityVector[] =
+  NFKC_TR39_DIVERGENCE_VECTORS;
+
+/** Number of vectors in the composability regression suite. */
+export const COMPOSABILITY_VECTORS_COUNT = COMPOSABILITY_VECTORS.length;
+
 
 /**
  * Create a validator that rejects identifiers containing homoglyph/confusable characters.
@@ -2374,6 +2399,8 @@ export function createHomoglyphValidator(options?: {
 const DEFAULT_IGNORABLE_RE =
   /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\u{1BCA0}-\u{1BCA3}\u{1D173}-\u{1D17A}\u{E0000}-\u{E0FFF}]/gu;
 const DEFAULT_IGNORABLE_SINGLE_RE = new RegExp(DEFAULT_IGNORABLE_RE.source, "u");
+const BIDI_CONTROL_RE = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u;
+const COMBINING_MARK_RE = /\p{M}/u;
 const LETTER_RE = /\p{L}/u;
 const LATIN_SCRIPT_RE = /\p{Script=Latin}/u;
 const SCRIPT_DETECTORS: Array<[string, RegExp]> = [
@@ -2388,6 +2415,44 @@ const SCRIPT_DETECTORS: Array<[string, RegExp]> = [
   ["hiragana", /\p{Script=Hiragana}/u],
   ["katakana", /\p{Script=Katakana}/u],
 ];
+
+/**
+ * Create a validator that rejects invisible/control Unicode characters often used
+ * for evasion and text-direction spoofing (Trojan Source style).
+ *
+ * @param options - Optional settings
+ * @param options.message - Custom rejection message
+ * @param options.rejectDefaultIgnorables - Reject Unicode Default_Ignorable_Code_Point characters (default: true)
+ * @param options.rejectBidiControls - Reject bidi direction/control characters (default: true)
+ * @param options.rejectCombiningMarks - Reject combining marks (default: false)
+ * @returns An async validator function for use in `config.validators`
+ */
+export function createInvisibleCharacterValidator(
+  options?: InvisibleCharacterValidatorOptions
+): NamespaceValidator {
+  const message =
+    options?.message ??
+    "That name contains invisible or direction-control characters.";
+  const rejectDefaultIgnorables = options?.rejectDefaultIgnorables ?? true;
+  const rejectBidiControls = options?.rejectBidiControls ?? true;
+  const rejectCombiningMarks = options?.rejectCombiningMarks ?? false;
+
+  return async (value: string) => {
+    if (rejectBidiControls && BIDI_CONTROL_RE.test(value)) {
+      return { available: false, message };
+    }
+
+    if (rejectDefaultIgnorables && DEFAULT_IGNORABLE_SINGLE_RE.test(value)) {
+      return { available: false, message };
+    }
+
+    if (rejectCombiningMarks && COMBINING_MARK_RE.test(value)) {
+      return { available: false, message };
+    }
+
+    return null;
+  };
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

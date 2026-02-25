@@ -352,7 +352,7 @@ describe("CLI", () => {
     expect(typeof parsed.recommendedConfig.risk.blockThreshold).toBe("number");
     expect(typeof parsed.calibrate.expectedCost.totalCost).toBe("number");
     expect(typeof parsed.drift.actionFlips).toBe("number");
-    expect(parsed.driftBaseline.dataset).toContain("builtin:nfkc-tr39-divergence-vectors");
+    expect(parsed.driftBaseline.dataset).toContain("builtin:composability-vectors");
     expect(parsed.ciGate.budgets.maxActionFlips).toBeGreaterThan(0);
     expect(parsed.ciGate.command).toContain("ci:drift-gate");
   });
@@ -387,7 +387,7 @@ describe("CLI", () => {
     const code = await run(argv("drift", "--json"));
     expect(code).toBe(0);
     const parsed = JSON.parse(logs[0]);
-    expect(parsed.dataset).toContain("builtin:nfkc-tr39-divergence-vectors");
+    expect(parsed.dataset).toContain("builtin:composability-vectors");
     expect(parsed.total).toBeGreaterThan(0);
     expect(typeof parsed.actionFlips).toBe("number");
   });

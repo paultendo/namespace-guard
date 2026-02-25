@@ -13,6 +13,7 @@ export default defineConfig({
     "src/adapters/sequelize.ts",
     "src/adapters/mongoose.ts",
     "src/profanity-en.ts",
+    "src/composability-vectors.ts",
     "src/cli.ts",
   ],
   format: ["cjs", "esm"],
