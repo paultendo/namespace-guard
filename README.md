@@ -72,7 +72,7 @@ await guard.assertClaimable("acme-corp");
 | Async validators | Custom hooks (profanity, etc.) | Manual wiring |
 | Batch checking | `checkMany()` | Loop it yourself |
 | ORM agnostic | Prisma, Drizzle, Kysely, Knex, TypeORM, MikroORM, Sequelize, Mongoose, raw SQL | Tied to your ORM |
-| CLI | `check`, `risk`, `attack-gen`, `calibrate`, `recommend`, `drift` | None |
+| CLI | `check`, `risk`, `attack-gen`, `audit-canonical`, `calibrate`, `recommend`, `drift` | None |
 
 ## Adapters
 
@@ -196,10 +196,289 @@ import { createRawAdapter } from "namespace-guard/adapters/raw";
 const db = new Database("app.db");
 const adapter = createRawAdapter(async (sql, params) => {
   const sqliteSql = sql.replace(/\$\d+/g, "?").replace(/"/g, "");
-  const rows = db.prepare(sqliteSql).all(...params);
+const rows = db.prepare(sqliteSql).all(...params);
   return { rows: rows as Record<string, unknown>[] };
 });
 ```
+
+## Canonical Uniqueness Migration (Per Adapter)
+
+To fully close Unicode/canonicalization edge cases and race windows, enforce uniqueness on a canonical column in your database.
+
+Use this rollout plan:
+
+1. Add a canonical column (nullable first).
+2. Dual-write canonical values on every create/update (`normalize(raw)`).
+3. Backfill existing rows in batches.
+4. Resolve duplicates found after backfill.
+5. Add a unique index/constraint and make canonical non-null.
+6. Point `namespace-guard` `sources[*].column` at the canonical column.
+
+Example dual-write pattern:
+
+```typescript
+import { normalize } from "namespace-guard";
+
+const raw = input.handle;
+const canonical = normalize(raw);
+
+await guard.assertClaimable(raw);
+await db.user.create({
+  data: {
+    handle: raw,                 // display value
+    handleCanonical: canonical,  // canonical key
+  },
+});
+```
+
+After cutover, configure sources to check canonical columns:
+
+```typescript
+sources: [{ name: "user", column: "handleCanonical", scopeKey: "id" }]
+```
+
+### Prisma
+
+`schema.prisma`:
+
+```prisma
+model User {
+  id              String  @id @default(cuid())
+  handle          String
+  handleCanonical String? @unique
+}
+```
+
+Create/apply migration:
+
+```bash
+npx prisma migrate dev --name add_handle_canonical
+```
+
+Then backfill via Prisma client in batches, resolve duplicates, and finally make `handleCanonical` required.
+
+### Drizzle
+
+`schema.ts` (Postgres example):
+
+```typescript
+import { pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+
+export const users = pgTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    handle: text("handle").notNull(),
+    handleCanonical: text("handle_canonical"),
+  },
+  (table) => [uniqueIndex("users_handle_canonical_uidx").on(table.handleCanonical)]
+);
+```
+
+Generate/apply migration:
+
+```bash
+npx drizzle-kit generate --name add-handle-canonical
+npx drizzle-kit migrate
+```
+
+### Kysely
+
+Migration (up):
+
+```typescript
+import { Kysely } from "kysely";
+
+export async function up(db: Kysely<any>): Promise<void> {
+  await db.schema
+    .alterTable("users")
+    .addColumn("handle_canonical", "varchar(255)")
+    .execute();
+
+  await db.schema
+    .createIndex("users_handle_canonical_uidx")
+    .on("users")
+    .column("handle_canonical")
+    .unique()
+    .execute();
+}
+```
+
+Backfill in app code, dedupe, then add `NOT NULL` in a follow-up migration.
+
+### Knex
+
+Migration:
+
+```typescript
+export async function up(knex) {
+  await knex.schema.alterTable("users", (table) => {
+    table.string("handle_canonical", 255);
+  });
+
+  await knex.schema.alterTable("users", (table) => {
+    table.unique(["handle_canonical"], "users_handle_canonical_uidx");
+  });
+}
+```
+
+### TypeORM
+
+Entity:
+
+```typescript
+import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
+
+@Entity("user")
+export class User {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  handle!: string;
+
+  @Index("IDX_user_handle_canonical_unique", { unique: true })
+  @Column({ name: "handle_canonical", type: "varchar", length: 255, nullable: true })
+  handleCanonical!: string | null;
+}
+```
+
+Migration (up):
+
+```typescript
+import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from "typeorm";
+
+export class AddHandleCanonical1730000000000 implements MigrationInterface {
+  async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.addColumn(
+      "user",
+      new TableColumn({
+        name: "handle_canonical",
+        type: "varchar",
+        length: "255",
+        isNullable: true,
+      })
+    );
+
+    await queryRunner.createIndex(
+      "user",
+      new TableIndex({
+        name: "IDX_user_handle_canonical_unique",
+        columnNames: ["handle_canonical"],
+        isUnique: true,
+      })
+    );
+  }
+}
+```
+
+### MikroORM
+
+Entity:
+
+```typescript
+import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
+
+@Entity()
+export class User {
+  @PrimaryKey()
+  id!: string;
+
+  @Property()
+  handle!: string;
+
+  @Property({
+    fieldName: "handle_canonical",
+    length: 255,
+    nullable: true,
+    unique: true,
+  })
+  handleCanonical?: string;
+}
+```
+
+Generate/apply migration:
+
+```bash
+npx mikro-orm migration:create
+npx mikro-orm migration:up
+```
+
+### Sequelize
+
+Migration:
+
+```typescript
+export async function up(queryInterface, Sequelize) {
+  await queryInterface.addColumn("Users", "handleCanonical", {
+    type: Sequelize.DataTypes.STRING(255),
+    allowNull: true,
+  });
+
+  await queryInterface.addIndex("Users", ["handleCanonical"], {
+    name: "users_handle_canonical_uidx",
+    unique: true,
+  });
+}
+```
+
+If you use model definitions directly, keep `handleCanonical` persisted and indexed there too.
+
+### Mongoose
+
+Schema:
+
+```typescript
+import { Schema, model } from "mongoose";
+
+const userSchema = new Schema({
+  handle: { type: String, required: true },
+  handleCanonical: { type: String, required: true, unique: true, index: true },
+});
+
+export const User = model("User", userSchema);
+```
+
+Build indexes after deploying the schema change:
+
+```typescript
+await User.init();
+```
+
+### Raw SQL (PostgreSQL)
+
+```sql
+ALTER TABLE users ADD COLUMN handle_canonical text;
+-- backfill from application code using namespace-guard normalize()
+CREATE UNIQUE INDEX users_handle_canonical_uidx ON users (handle_canonical);
+ALTER TABLE users ALTER COLUMN handle_canonical SET NOT NULL;
+```
+
+### Backfill + duplicate check
+
+Before adding `UNIQUE`/`NOT NULL`, run a duplicate report:
+
+```sql
+SELECT handle_canonical, COUNT(*)
+FROM users
+GROUP BY handle_canonical
+HAVING COUNT(*) > 1;
+```
+
+Resolve these rows first, then enforce the constraint.
+
+### Official docs used for adapter syntax
+
+- Prisma schema unique fields: https://www.prisma.io/docs/orm/reference/prisma-schema-reference#unique
+- Prisma migrations (`migrate dev`): https://www.prisma.io/docs/concepts/components/prisma-migrate/migrate-development-production
+- Drizzle column/index uniqueness and migrations: https://orm.drizzle.team/docs/indexes-constraints and https://orm.drizzle.team/docs/drizzle-kit-migrate
+- Kysely migrations and index builder: https://www.kysely.dev/docs/migrations and https://kysely-org.github.io/kysely-apidoc/classes/CreateIndexBuilder.html
+- Knex `table.unique(...)`: https://knexjs.org/guide/schema-builder.html#unique
+- TypeORM `@Column({ unique: true })` / `@Index({ unique: true })`: https://typeorm.io/docs/entity/entities and https://typeorm.io/docs/help/decorator-reference/
+- MikroORM `@Property({ unique: true })` and migrations: https://mikro-orm.io/docs/decorators and https://mikro-orm.io/docs/migrations
+- Sequelize QueryInterface migrations (`addColumn`, `addIndex`): https://sequelize.org/api/v6/class/src/dialects/abstract/query-interface.js~queryinterface
+- Mongoose indexes and `unique`: https://mongoosejs.com/docs/guide.html#indexes and https://mongoosejs.com/docs/schematypes.html
+- PostgreSQL unique indexes: https://www.postgresql.org/docs/current/indexes-unique.html
 
 ## Configuration
 
@@ -717,6 +996,28 @@ Useful for finding:
 - high-risk variants your policy already blocks
 - non-blocking variants (`allow` or `warn`) that still pass format checks (useful for tightening thresholds/protect lists)
 
+### Audit-canonical command
+
+Audit an exported dataset for canonical collisions before enforcing a DB unique constraint:
+
+```bash
+# Dataset must be a JSON array. Identifier can be in: identifier/raw/handle/slug/username/value
+npx namespace-guard audit-canonical ./users-export.json
+npx namespace-guard audit-canonical ./users-export.json --json
+```
+
+Accepted optional stored-canonical fields:
+- `canonical`
+- `normalized`
+- `handleCanonical`
+- `slugCanonical`
+- `handle_canonical`
+- `slug_canonical`
+
+Exit code:
+- `0` when no collisions/mismatches are found
+- `1` when collisions or canonical mismatches are found
+
 ### Calibrate command
 
 Use labeled examples to recommend warn/block thresholds for your namespace:
@@ -900,6 +1201,35 @@ Throws an `Error` if the identifier should not be claimed.
 
 ---
 
+### `guard.claim(identifier, write, options?)`
+
+Race-safe claim helper. Runs claimability checks, then executes your write callback with the normalized identifier.
+
+If a duplicate-key/unique-constraint race happens, it returns an unavailable result instead of throwing.
+
+```typescript
+const result = await guard.claim(input.handle, async (canonical) => {
+  return prisma.user.create({
+    data: {
+      handle: input.handle,
+      handleCanonical: canonical,
+    },
+  });
+});
+
+if (!result.claimed) {
+  // show result.message to user
+}
+```
+
+**Options:**
+- All `assertClaimable` options
+- `scope?: OwnershipScope`
+- `isUniqueViolation?: (error) => boolean` custom duplicate detector
+- `takenMessage?: string` custom duplicate-race message
+
+---
+
 ### `guard.validateFormat(identifier)`
 
 Validate format, purely-numeric restriction, and reserved name status without querying the database.
@@ -946,6 +1276,14 @@ import { normalize } from "namespace-guard";
 normalize("  @Sarah  "); // "sarah"
 normalize("ACME-Corp"); // "acme-corp"
 ```
+
+---
+
+### `isLikelyUniqueViolationError(error)`
+
+Best-effort detector for duplicate-key / unique-constraint write errors across common stacks (Postgres `23505`, Prisma `P2002`, MySQL `ER_DUP_ENTRY`, SQLite constraint errors, Mongo `E11000`).
+
+Useful when you want custom race handling outside `guard.claim()`.
 
 ---
 
@@ -1120,6 +1458,7 @@ import {
   areConfusable,
   confusableDistance,
   deriveNfkcTr39DivergenceVectors,
+  isLikelyUniqueViolationError,
   NAMESPACE_PROFILES,
   DEFAULT_PROTECTED_TOKENS,
   NFKC_TR39_DIVERGENCE_VECTORS,
@@ -1145,8 +1484,11 @@ import {
   type CheckRiskOptions,
   type RiskCheckResult,
   type AssertClaimableOptions,
+  type ClaimOptions,
+  type ClaimResult,
   type EnforceRiskOptions,
   type EnforceRiskResult,
+  type UniqueViolationDetector,
   type RiskReason,
   type RiskMatch,
   type RiskLevel,
