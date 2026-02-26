@@ -1007,6 +1007,7 @@
             <li>Checks collisions across multiple data sources</li>
             <li>Blocks reserved names</li>
             <li>Scores and enforces Unicode confusable risk</li>
+            <li>Preprocesses mixed-script text for LLM pipelines (<code class="inline-chip">canonicalise</code>/<code class="inline-chip">scan</code>)</li>
             <li>Flags invisible and direction-control characters</li>
             <li>Lets you plug in moderation or policy validators</li>
           </ul>
@@ -1495,6 +1496,20 @@
             <span class="fn">confusableDistance</span><span class="br">(</span>a, b, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span>, <span class="var">context</span>: <span class="str">"identifier"</span> <span class="br">}</span><span class="br">)</span>;
           </div>
           <p class="research-links"><a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0 data)</p>
+        </div>
+
+        <div class="glass-card insight-card">
+          <h3>LLM preprocessing helpers</h3>
+          <p>Run deterministic Unicode cleanup before model calls. Detect confusable substitutions, canonicalise to Latin equivalents, and fast-gate suspicious payloads. Use <code class="inline-chip">strategy:&nbsp;"all"</code> for known-Latin documents.</p>
+          <div class="example">
+            <span class="kw">import</span> <span class="br">{</span> <span class="fn">canonicalise</span>, <span class="fn">scan</span>, <span class="fn">isClean</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
+            <span class="kw">const</span> rawText = <span class="str">"The seller li\u0430bility clause applies."</span>;<br>
+            <span class="kw">const</span> report = <span class="fn">scan</span><span class="br">(</span>rawText<span class="br">)</span>;<br>
+            <span class="kw">const</span> clean = <span class="fn">canonicalise</span><span class="br">(</span>rawText<span class="br">)</span>;<br>
+            <span class="dim">// For English contracts: replace every confusable</span><br>
+            <span class="fn">canonicalise</span><span class="br">(</span>rawText, <span class="br">{</span> <span class="var">strategy</span>: <span class="str">"all"</span> <span class="br">}</span><span class="br">)</span>;
+          </div>
+          <p class="research-links"><a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#llm-pipeline-preprocessing" target="_blank" rel="noopener">Reference: LLM Pipeline Preprocessing</a></p>
         </div>
       </div>
     </section>

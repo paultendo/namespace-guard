@@ -83,6 +83,52 @@ Details:
 - Suggestion strategies for taken names
 - CLI for red-team generation, calibration, drift, and CI gates
 
+## LLM Pipeline Preprocessing
+
+LLM tokenizers process Unicode codepoints, not rendered glyphs. Confusable substitutions can inflate token counts and hide important terms in mixed-script text, especially on smaller models.
+
+Use namespace-guard as a deterministic preprocess layer before model calls:
+
+```text
+Document ingestion
+       |
+       v
++----------------+
+| namespace-     |  <-- Detect mixed-script confusable substitution
+| guard          |  <-- Canonicalise to Latin equivalents
+| (microseconds) |  <-- Flag suspicious patterns for review
++----------------+
+       |
+       v
++----------------+
+| LLM API        |  <-- Any model/provider
+| (GPT/Claude/   |  <-- Receives canonicalised text
+| Llama/etc)     |
++----------------+
+       |
+       v
+   Analysis output
+```
+
+```typescript
+import { canonicalise, scan, isClean } from "namespace-guard";
+
+const raw = "The seller аssumes аll liаbility.";
+
+const report = scan(raw);        // detailed findings + risk level
+const clean = canonicalise(raw); // "The seller assumes all liability."
+const ok = isClean(raw);         // false (mixed-script confusable detected)
+
+// For known-Latin documents (e.g. English contracts), use strategy: "all"
+// to also catch words where every character was substituted:
+canonicalise("поп-refundable", { strategy: "all" }); // "non-refundable"
+```
+
+Research context:
+- Launch: https://paultendo.github.io/posts/namespace-guard-launch/
+- NFKC/TR39 composability: https://paultendo.github.io/posts/unicode-confusables-nfkc-conflict/
+- Confusable detection without NFKC: https://paultendo.github.io/posts/confusable-detection-without-nfkc/
+
 ## Built-in Profiles
 
 Use `createNamespaceGuardWithProfile(profile, overrides, adapter)`:
@@ -187,6 +233,7 @@ Migration guides per adapter: [docs/reference.md#canonical-uniqueness-migration-
 - Validators (profanity, homoglyph, invisible): [docs/reference.md#async-validators](docs/reference.md#async-validators)
 - Canonical preflight audit (`audit-canonical`): [docs/reference.md#audit-canonical-command](docs/reference.md#audit-canonical-command)
 - Anti-spoofing pipeline and composability vectors: [docs/reference.md#how-the-anti-spoofing-pipeline-works](docs/reference.md#how-the-anti-spoofing-pipeline-works)
+- LLM preprocessing (`canonicalise`, `scan`, `isClean`): [docs/reference.md#llm-pipeline-preprocessing](docs/reference.md#llm-pipeline-preprocessing)
 - Benchmark corpus (`confusable-bench.v1`): [docs/reference.md#confusable-benchmark-corpus-artifact](docs/reference.md#confusable-benchmark-corpus-artifact)
 - Advanced primitives (`skeleton`, `areConfusable`, `confusableDistance`): [docs/reference.md#advanced-security-primitives](docs/reference.md#advanced-security-primitives)
 - Confusable weights (SSIM-scored pairs): [docs/reference.md#confusable-weights-subpath](docs/reference.md#confusable-weights-subpath)

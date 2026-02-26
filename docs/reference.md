@@ -831,6 +831,92 @@ This dataset includes labeled malicious and benign rows across:
 Generation/source notes:
 - `docs/data/confusable-bench.v1.SOURCE.md`
 
+## LLM Pipeline Preprocessing
+
+LLM tokenizers operate on raw Unicode codepoints, not visual glyph similarity. Confusable substitutions can survive tokenization, inflate token counts, and hide targeted terms in mixed-script text.
+
+Use namespace-guard as a deterministic preprocessing stage before sending text to your model:
+
+```text
+Document ingestion
+       |
+       v
++----------------+
+| namespace-     |  <-- Detect mixed-script confusable substitution
+| guard          |  <-- Canonicalise to Latin equivalents
+| (microseconds) |  <-- Flag suspicious patterns for review
++----------------+
+       |
+       v
++----------------+
+| LLM API        |  <-- Any model/provider
+| (GPT/Claude/   |  <-- Receives canonicalised text
+| Llama/etc)     |
++----------------+
+       |
+       v
+   Analysis output
+```
+
+### `canonicalise(text, options?)`
+
+Rewrites confusable characters to Latin equivalents. By default (`strategy: "mixed"`), only rewrites characters inside tokens that already contain Latin letters. Standalone non-Latin words are preserved to reduce false positives in multilingual text.
+
+With `strategy: "all"`, rewrites every confusable character regardless of surrounding context. Use this when the document is known to be Latin-script (e.g. an English contract) and you need to catch words where every character was substituted.
+
+```typescript
+import { canonicalise } from "namespace-guard";
+
+canonicalise("The seller аssumes аll liаbility.");
+// "The seller assumes all liability."
+
+canonicalise("Москва is the capital");
+// "Москва is the capital" (standalone Cyrillic word preserved)
+
+// Strategy "all": rewrites even standalone non-Latin confusable words
+canonicalise("поп-refundable", { strategy: "all" });
+// "non-refundable" (all Cyrillic п/о/п replaced)
+
+canonicalise("ԝаіⅴеѕ any right", { strategy: "all" });
+// "waives any right" (every confusable character replaced)
+```
+
+### `scan(text, options?)`
+
+Returns structured findings (`codepoint`, `script`, `latinEquivalent`, `ssimScore`, `source`, position, word context) plus a summary risk level (`none | low | medium | high`).
+
+```typescript
+import { scan } from "namespace-guard";
+
+const report = scan("The seller liаbility clause applies.");
+// report.hasConfusables === true
+// report.summary.riskLevel === "medium" | "high" (context dependent)
+```
+
+### `isClean(text, options?)`
+
+Fast boolean gate for confusable substitution. Short-circuits on first suspicious match.
+
+With the default `strategy: "mixed"`, only mixed-script confusables fail the gate. With `strategy: "all"`, any confusable character fails the gate.
+
+```typescript
+import { isClean } from "namespace-guard";
+
+isClean("The seller assumes all liability."); // true
+isClean("The seller liаbility clause applies."); // false
+
+// Strategy "all": any confusable fails, even standalone non-Latin
+isClean("поп-refundable", { strategy: "all" }); // false
+```
+
+### Options (`canonicalise`, `scan`, `isClean`)
+
+- `strategy` -- `"mixed"` (default) only acts on tokens containing both Latin and non-Latin characters; `"all"` acts on every confusable character regardless of context. Use `"all"` for known-Latin documents.
+- `threshold` -- minimum SSIM score for replacement/detection (default: `0.7`)
+- `includeNovel` -- include confusable-vision novel mappings in addition to TR39 baseline (default: `true`)
+- `scripts` -- optional allowlist of source scripts (case-insensitive)
+- `riskTerms` (`scan`/`isClean`) -- optional list of high-value terms used by risk heuristics
+
 ## Unicode Normalization
 
 By default, `normalize()` applies [NFKC normalization](https://unicode.org/reports/tr15/) before lowercasing. This collapses full-width characters, ligatures, superscripts, and other Unicode compatibility forms to their canonical equivalents:
@@ -1354,6 +1440,71 @@ normalize("ACME-Corp"); // "acme-corp"
 Best-effort detector for duplicate-key / unique-constraint write errors across common stacks (Postgres `23505`, Prisma `P2002`, MySQL `ER_DUP_ENTRY`, SQLite constraint errors, Mongo `E11000`).
 
 Useful when you want custom race handling outside `guard.claim()`.
+
+---
+
+### `canonicalise(text, options?)`
+
+LLM preprocessing helper that rewrites confusable characters to Latin equivalents in Latin-containing tokens.
+
+**Returns:** `string`
+
+**Options:**
+- `threshold?: number` (default `0.7`)
+- `includeNovel?: boolean` (default `true`)
+- `scripts?: string[]` (optional script allowlist)
+
+---
+
+### `scan(text, options?)`
+
+LLM preprocessing scanner that returns structured confusable findings and summary risk metadata.
+
+**Returns:** `ScanResult`
+
+`ScanResult`:
+- `hasConfusables: boolean`
+- `count: number`
+- `findings: ScanFinding[]`
+- `summary: { distinctChars, wordsAffected, scriptsDetected, riskLevel }`
+
+`ScanFinding`:
+- `char`, `codepoint`, `script`, `latinEquivalent`
+- `ssimScore`, `source` (`"tr39" | "novel"`)
+- `index`, `word`, `mixedScript`
+
+**Options:**
+- `threshold?: number` (default `0.7`)
+- `includeNovel?: boolean` (default `true`)
+- `scripts?: string[]` (optional script allowlist)
+- `riskTerms?: string[]` (optional targeted-term hints for risk scoring)
+
+---
+
+### `isClean(text, options?)`
+
+Fast boolean gate for mixed-script confusable substitutions. Short-circuits on first suspicious finding.
+
+**Returns:** `boolean`
+
+**Options:** same as `scan()`.
+
+---
+
+### `LLM_CONFUSABLE_MAP`, `LLM_CONFUSABLE_MAP_PAIR_COUNT`, `LLM_CONFUSABLE_MAP_CHAR_COUNT`, `LLM_CONFUSABLE_MAP_SOURCE_COUNTS`
+
+Static lookup data powering the LLM preprocessing helpers.
+
+- `LLM_CONFUSABLE_MAP`: source char -> candidate Latin mappings with SSIM score and source metadata
+- `LLM_CONFUSABLE_MAP_PAIR_COUNT`: total mapping rows
+- `LLM_CONFUSABLE_MAP_CHAR_COUNT`: number of source characters
+- `LLM_CONFUSABLE_MAP_SOURCE_COUNTS`: split by `{ tr39, novel }`
+
+Regenerate from source artifacts with:
+
+```bash
+npm run build:llm-confusable-map
+```
 
 ---
 

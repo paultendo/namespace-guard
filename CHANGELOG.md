@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.16.1] - 2026-02-26
+
+### Added
+- LLM preprocessing APIs:
+  - `canonicalise(text, options?)`
+  - `scan(text, options?)`
+  - `isClean(text, options?)`
+- Exported LLM preprocessing types:
+  - `CanonicaliseOptions`
+  - `ScanOptions`
+  - `ScanFinding`
+  - `ScanResult`
+- Generated static lookup dataset for preprocessing:
+  - `src/llm-confusable-map.ts` (`LLM_CONFUSABLE_MAP` + metadata/count exports)
+  - `scripts/generate-llm-confusable-map.js`
+  - `build:llm-confusable-map` npm script
+- Test coverage for LLM preprocessing behavior and performance sanity:
+  - `tests/llm-preprocessing.test.ts`
+
+### Changed
+- README now includes a dedicated "LLM Pipeline Preprocessing" section with usage and pipeline diagram
+- Reference docs now document LLM preprocessing behavior/options and API contracts
+- Playground now surfaces LLM preprocessing in "What It Does" and "Advanced API primitives"
+
 ## [0.16.0] - 2026-02-25
 
 ### Added
