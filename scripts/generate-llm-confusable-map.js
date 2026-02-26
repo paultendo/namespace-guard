@@ -20,6 +20,10 @@ const DEFAULT_WEIGHTS_JSON = path.resolve(
   __dirname,
   "../../confusable-vision/data/output/confusable-weights.json"
 );
+const DEFAULT_SIZE_RATIO_JSON = path.resolve(
+  __dirname,
+  "../../confusable-vision/data/output/size-ratio-diagnostics.json"
+);
 const OUTPUT_PATH = path.resolve(ROOT, "src/llm-confusable-map.ts");
 
 const weightsPath = process.argv[2] || DEFAULT_WEIGHTS_JSON;
@@ -38,6 +42,24 @@ if (!fs.existsSync(weightsPath)) {
 
 const { CONFUSABLE_MAP_FULL } = require(DIST_INDEX_PATH);
 const weightsData = JSON.parse(fs.readFileSync(weightsPath, "utf8"));
+
+// Load size-ratio diagnostics (optional -- pairs without data get null ratios)
+const sizeRatioByPair = new Map();
+if (fs.existsSync(DEFAULT_SIZE_RATIO_JSON)) {
+  const sizeData = JSON.parse(fs.readFileSync(DEFAULT_SIZE_RATIO_JSON, "utf8"));
+  const allPairs = [...(sizeData.flagged || []), ...(sizeData.clean || [])];
+  for (const p of allPairs) {
+    const key = `${p.source}::${p.target}`;
+    // Keep the entry with the highest width ratio (worst case across fonts)
+    const existing = sizeRatioByPair.get(key);
+    if (!existing || p.widthRatio > existing.widthRatio) {
+      sizeRatioByPair.set(key, { widthRatio: p.widthRatio, heightRatio: p.heightRatio });
+    }
+  }
+  console.log(`  Loaded ${sizeRatioByPair.size} size-ratio entries from diagnostics`);
+} else {
+  console.log(`  Size-ratio diagnostics not found (${DEFAULT_SIZE_RATIO_JSON}), ratios will be null`);
+}
 
 if (!CONFUSABLE_MAP_FULL || typeof CONFUSABLE_MAP_FULL !== "object") {
   console.error("CONFUSABLE_MAP_FULL export missing from dist/index.js");
@@ -132,12 +154,18 @@ function pushEntry(sourceChar, latin, score, source, cpOverride) {
   if (seen.has(key)) return;
   seen.add(key);
 
+  // Look up size ratio from diagnostics
+  const sizeKey = `${sourceChar}::${latin}`;
+  const sizeInfo = sizeRatioByPair.get(sizeKey);
+
   const row = {
     latin,
     ssimScore: round4(clamp01(score)),
     source,
     script: detectScriptName(sourceChar),
     codepoint: cpOverride || codePointLabel(sourceChar),
+    widthRatio: sizeInfo ? sizeInfo.widthRatio : null,
+    heightRatio: sizeInfo ? sizeInfo.heightRatio : null,
   };
 
   const list = mapByChar.get(sourceChar) || [];
@@ -208,6 +236,10 @@ out += `  ssimScore: number;\n`;
 out += `  source: LlmConfusableSource;\n`;
 out += `  script: string;\n`;
 out += `  codepoint: string;\n`;
+out += `  /** Width ratio between source and target at natural rendering size. Null if not measured. */\n`;
+out += `  widthRatio?: number | null;\n`;
+out += `  /** Height ratio between source and target at natural rendering size. Null if not measured. */\n`;
+out += `  heightRatio?: number | null;\n`;
 out += `};\n`;
 out += `\n`;
 out += `export type LlmConfusableMap = Readonly<Record<string, readonly LlmConfusableMapEntry[]>>;\n`;
@@ -218,7 +250,9 @@ for (const ch of sourceChars) {
   const rows = mapByChar.get(ch);
   out += `  "${escapeChar(ch)}": [\n`;
   for (const row of rows) {
-    out += `    { latin: "${escapeChar(row.latin)}", ssimScore: ${row.ssimScore}, source: "${row.source}", script: "${row.script}", codepoint: "${row.codepoint}" },\n`;
+    const wr = row.widthRatio !== null ? row.widthRatio : "null";
+    const hr = row.heightRatio !== null ? row.heightRatio : "null";
+    out += `    { latin: "${escapeChar(row.latin)}", ssimScore: ${row.ssimScore}, source: "${row.source}", script: "${row.script}", codepoint: "${row.codepoint}", widthRatio: ${wr}, heightRatio: ${hr} },\n`;
   }
   out += `  ],\n`;
 }

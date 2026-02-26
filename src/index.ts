@@ -186,6 +186,18 @@ export type CanonicaliseOptions = {
    *   every character in a word.
    */
   strategy?: "mixed" | "all";
+  /**
+   * Maximum allowed width or height ratio between source and target at natural
+   * rendering size (default: `3.0`). Pairs where the source character is more
+   * than this many times wider or taller than the Latin target are skipped,
+   * because the size difference would be visible in running text even if the
+   * shapes match after normalisation.
+   *
+   * Set to `Infinity` to disable size-ratio filtering. Set to `2.0` for
+   * stricter filtering. Only applies to novel (non-TR39) pairs that have
+   * measured size ratios.
+   */
+  maxSizeRatio?: number;
 };
 
 /** Options for `scan()` and `isClean()`. */
@@ -2562,6 +2574,7 @@ type NormalizedScanOptions = {
   scripts: Set<string> | null;
   riskTerms: string[];
   strategy: "mixed" | "all";
+  maxSizeRatio: number;
 };
 
 type TokenChar = {
@@ -2586,7 +2599,9 @@ function normalizeScanOptions(options?: ScanOptions): NormalizedScanOptions {
       ? options.riskTerms.map((value) => value.toLowerCase())
       : [...DEFAULT_SCAN_RISK_TERMS];
 
-  return { threshold, includeNovel, scripts, riskTerms, strategy };
+  const maxSizeRatio = options?.maxSizeRatio ?? 3.0;
+
+  return { threshold, includeNovel, scripts, riskTerms, strategy, maxSizeRatio };
 }
 
 function isWordTokenChar(ch: string): boolean {
@@ -2626,6 +2641,16 @@ function pickConfusableEntry(
     if (candidate.ssimScore < options.threshold) continue;
     if (!options.includeNovel && candidate.source === "novel") continue;
     if (options.scripts && !options.scripts.has(candidate.script.toLowerCase())) continue;
+    // Size-ratio filter: skip novel pairs with extreme size differences.
+    // TR39 pairs and pairs without measured ratios are always allowed.
+    if (
+      candidate.source === "novel" &&
+      Number.isFinite(options.maxSizeRatio) &&
+      (
+        (candidate.widthRatio != null && candidate.widthRatio > options.maxSizeRatio) ||
+        (candidate.heightRatio != null && candidate.heightRatio > options.maxSizeRatio)
+      )
+    ) continue;
     return candidate;
   }
 
