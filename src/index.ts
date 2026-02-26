@@ -1,3 +1,11 @@
+import {
+  LLM_CONFUSABLE_MAP,
+  LLM_CONFUSABLE_MAP_CHAR_COUNT,
+  LLM_CONFUSABLE_MAP_PAIR_COUNT,
+  LLM_CONFUSABLE_MAP_SOURCE_COUNTS,
+  type LlmConfusableMapEntry,
+} from "./llm-confusable-map";
+
 /** A database table or model to check for slug/handle collisions. */
 export type NamespaceSource = {
   /** Table/model name (must match the adapter's lookup key) */
@@ -156,6 +164,84 @@ export type InvisibleCharacterValidatorOptions = {
   /** Reject combining marks (Unicode category `M*`) often used for visual obfuscation (default: `false`). */
   rejectCombiningMarks?: boolean;
 };
+
+/** Options for `canonicalise()` LLM preprocessing. */
+export type CanonicaliseOptions = {
+  /** Minimum SSIM score required for replacement (default: `0.7`). */
+  threshold?: number;
+  /** Include confusable-vision novel discoveries in addition to TR39 mappings (default: `true`). */
+  includeNovel?: boolean;
+  /** Restrict replacement to specific source scripts (case-insensitive, e.g. `["Cyrillic", "Greek"]`). */
+  scripts?: string[];
+  /**
+   * Canonicalisation strategy (default: `"mixed"`).
+   *
+   * - `"mixed"` -- only replace confusable characters inside tokens that already
+   *   contain Latin letters. Standalone non-Latin words (e.g. "Москва") are
+   *   preserved.  Safe for multilingual text.
+   *
+   * - `"all"` -- replace every confusable character regardless of surrounding
+   *   context.  Use this when the document is known to be Latin-script (e.g.
+   *   an English contract) and you want to catch attackers who substitute
+   *   every character in a word.
+   */
+  strategy?: "mixed" | "all";
+};
+
+/** Options for `scan()` and `isClean()`. */
+export type ScanOptions = CanonicaliseOptions & {
+  /** Optional list of high-value terms used to raise `riskLevel` when targeted (default: built-in legal/financial list). */
+  riskTerms?: string[];
+};
+
+/** Single confusable finding returned by `scan()`. */
+export type ScanFinding = {
+  /** The confusable character found in the input. */
+  char: string;
+  /** Codepoint label in `U+XXXX` format. */
+  codepoint: string;
+  /** Script name of the source character. */
+  script: string;
+  /** Canonical Latin equivalent selected by the lookup table. */
+  latinEquivalent: string;
+  /** SSIM score used for this mapping. */
+  ssimScore: number;
+  /** Mapping source (`tr39` baseline or `novel` discovery). */
+  source: "tr39" | "novel";
+  /** UTF-16 code-unit offset in the input string. */
+  index: number;
+  /** Token/word containing this character. */
+  word: string;
+  /** Whether the token mixes Latin and non-Latin letters. */
+  mixedScript: boolean;
+};
+
+/** Structured confusable scan result for LLM preprocessing pipelines. */
+export type ScanResult = {
+  /** Whether any confusable mapping candidates were detected. */
+  hasConfusables: boolean;
+  /** Number of findings in `findings`. */
+  count: number;
+  /** Detailed findings with script/source/position metadata. */
+  findings: ScanFinding[];
+  /** Aggregate scan summary for policy and logging. */
+  summary: {
+    /** Number of distinct confusable characters found. */
+    distinctChars: number;
+    /** Number of distinct words/tokens affected. */
+    wordsAffected: number;
+    /** Distinct scripts detected among findings. */
+    scriptsDetected: string[];
+    /** Heuristic risk level from confusable density + targeting. */
+    riskLevel: "none" | "low" | "medium" | "high";
+  };
+};
+
+/** Static confusable lookup map used by LLM preprocessing helpers. */
+export { LLM_CONFUSABLE_MAP, LLM_CONFUSABLE_MAP_CHAR_COUNT, LLM_CONFUSABLE_MAP_PAIR_COUNT };
+
+/** Pair counts by source (`tr39` vs `novel`) for the LLM confusable lookup map. */
+export { LLM_CONFUSABLE_MAP_SOURCE_COUNTS };
 
 /** Options for the `skeleton()` and `areConfusable()` functions. */
 export type SkeletonOptions = {
@@ -2453,6 +2539,152 @@ const SCRIPT_DETECTORS: Array<[string, RegExp]> = [
   ["hiragana", /\p{Script=Hiragana}/u],
   ["katakana", /\p{Script=Katakana}/u],
 ];
+const WORD_TOKEN_CHAR_RE = /[\p{L}\p{N}\p{M}_]/u;
+const DEFAULT_SCAN_RISK_TERMS = Object.freeze([
+  "liability",
+  "indemnity",
+  "penalty",
+  "damages",
+  "termination",
+  "breach",
+  "warranty",
+  "payment",
+  "invoice",
+  "governing",
+  "jurisdiction",
+  "arbitration",
+  "confidentiality",
+]);
+
+type NormalizedScanOptions = {
+  threshold: number;
+  includeNovel: boolean;
+  scripts: Set<string> | null;
+  riskTerms: string[];
+  strategy: "mixed" | "all";
+};
+
+type TokenChar = {
+  ch: string;
+  index: number;
+};
+
+function normalizeScanOptions(options?: ScanOptions): NormalizedScanOptions {
+  const threshold = clamp(options?.threshold ?? 0.7, 0, 1);
+  const includeNovel = options?.includeNovel ?? true;
+  const strategy = options?.strategy === "all" ? "all" as const : "mixed" as const;
+  const scripts =
+    options?.scripts && options.scripts.length > 0
+      ? new Set(
+          options.scripts
+            .map((value) => value.trim().toLowerCase())
+            .filter((value) => value.length > 0)
+        )
+      : null;
+  const riskTerms =
+    options?.riskTerms && options.riskTerms.length > 0
+      ? options.riskTerms.map((value) => value.toLowerCase())
+      : [...DEFAULT_SCAN_RISK_TERMS];
+
+  return { threshold, includeNovel, scripts, riskTerms, strategy };
+}
+
+function isWordTokenChar(ch: string): boolean {
+  return WORD_TOKEN_CHAR_RE.test(ch);
+}
+
+function hasMixedScriptsInToken(token: TokenChar[]): { hasLatin: boolean; mixedScript: boolean } {
+  let hasLatin = false;
+  let hasNonLatin = false;
+
+  for (const { ch } of token) {
+    if (!LETTER_RE.test(ch)) continue;
+    if (LATIN_SCRIPT_RE.test(ch)) hasLatin = true;
+    else hasNonLatin = true;
+    if (hasLatin && hasNonLatin) break;
+  }
+
+  return { hasLatin, mixedScript: hasLatin && hasNonLatin };
+}
+
+function applyLatinCase(source: string, latin: string): string {
+  if (!/^[a-z]$/.test(latin)) return latin;
+  const upper = source.toUpperCase();
+  const lower = source.toLowerCase();
+  if (source === upper && source !== lower) return latin.toUpperCase();
+  return latin;
+}
+
+function pickConfusableEntry(
+  ch: string,
+  options: NormalizedScanOptions
+): LlmConfusableMapEntry | null {
+  const candidates = LLM_CONFUSABLE_MAP[ch];
+  if (!candidates || candidates.length === 0) return null;
+
+  for (const candidate of candidates) {
+    if (candidate.ssimScore < options.threshold) continue;
+    if (!options.includeNovel && candidate.source === "novel") continue;
+    if (options.scripts && !options.scripts.has(candidate.script.toLowerCase())) continue;
+    return candidate;
+  }
+
+  return null;
+}
+
+function forEachToken(
+  input: string,
+  onToken: (token: TokenChar[]) => boolean | void,
+  onSeparator?: (separator: string) => void
+): boolean {
+  let token: TokenChar[] = [];
+  let index = 0;
+
+  const flush = () => {
+    if (token.length === 0) return true;
+    const keepGoing = onToken(token);
+    token = [];
+    return keepGoing !== false;
+  };
+
+  for (const ch of input) {
+    if (isWordTokenChar(ch)) {
+      token.push({ ch, index });
+    } else {
+      if (!flush()) return false;
+      if (onSeparator) onSeparator(ch);
+    }
+    index += ch.length;
+  }
+
+  if (!flush()) return false;
+  return true;
+}
+
+function riskLevelFromFindings(
+  findings: ScanFinding[],
+  mixedWords: Set<string>,
+  targetedWords: Set<string>,
+  treatAllAsMixed = false
+): "none" | "low" | "medium" | "high" {
+  if (findings.length === 0) return "none";
+
+  const mixedFindings = treatAllAsMixed
+    ? findings
+    : findings.filter((finding) => finding.mixedScript);
+  if (mixedFindings.length === 0) return "low";
+
+  if (
+    mixedWords.size >= 3 ||
+    mixedFindings.length >= 6 ||
+    targetedWords.size >= 2 ||
+    (targetedWords.size >= 1 && mixedFindings.length >= 3)
+  ) {
+    return "high";
+  }
+
+  return "medium";
+}
 
 /**
  * Create a validator that rejects invisible/control Unicode characters often used
@@ -2490,6 +2722,162 @@ export function createInvisibleCharacterValidator(
 
     return null;
   };
+}
+
+/**
+ * Canonicalise confusable characters in text for LLM preprocessing.
+ *
+ * With the default `strategy: "mixed"`, only rewrites characters inside tokens
+ * that already contain Latin letters.  Standalone non-Latin words are preserved
+ * to reduce false positives in multilingual text.
+ *
+ * With `strategy: "all"`, rewrites every confusable character regardless of
+ * context.  Use this when the document is known to be Latin-script.
+ */
+export function canonicalise(text: string, options?: CanonicaliseOptions): string {
+  if (text.length === 0) return "";
+
+  const normalized = normalizeScanOptions(options);
+  const replaceAll = normalized.strategy === "all";
+  const out: string[] = [];
+
+  forEachToken(
+    text,
+    (token) => {
+      const { hasLatin } = hasMixedScriptsInToken(token);
+      for (const item of token) {
+        const entry = pickConfusableEntry(item.ch, normalized);
+        if (entry && (replaceAll || hasLatin)) {
+          out.push(applyLatinCase(item.ch, entry.latin));
+        } else {
+          out.push(item.ch);
+        }
+      }
+    },
+    (separator) => {
+      out.push(separator);
+    }
+  );
+
+  return out.join("");
+}
+
+/**
+ * Scan text for confusable characters and return structured findings + risk summary.
+ */
+export function scan(text: string, options?: ScanOptions): ScanResult {
+  const normalized = normalizeScanOptions(options);
+  if (text.length === 0) {
+    return {
+      hasConfusables: false,
+      count: 0,
+      findings: [],
+      summary: {
+        distinctChars: 0,
+        wordsAffected: 0,
+        scriptsDetected: [],
+        riskLevel: "none",
+      },
+    };
+  }
+
+  const findings: ScanFinding[] = [];
+  const distinctChars = new Set<string>();
+  const wordsAffected = new Set<string>();
+  const scriptsDetected = new Set<string>();
+  const mixedWords = new Set<string>();
+  const targetedWords = new Set<string>();
+
+  const treatAllAsMixed = normalized.strategy === "all";
+
+  forEachToken(text, (token) => {
+    if (token.length === 0) return;
+
+    const word = token.map((item) => item.ch).join("");
+    const lowerWord = word.toLowerCase();
+    const { mixedScript } = hasMixedScriptsInToken(token);
+    const effectiveMixed = mixedScript || treatAllAsMixed;
+    const selected = new Map<number, LlmConfusableMapEntry>();
+
+    for (const item of token) {
+      const entry = pickConfusableEntry(item.ch, normalized);
+      if (!entry) continue;
+      selected.set(item.index, entry);
+      findings.push({
+        char: item.ch,
+        codepoint: entry.codepoint || formatCodePoint(item.ch),
+        script: entry.script,
+        latinEquivalent: entry.latin,
+        ssimScore: entry.ssimScore,
+        source: entry.source,
+        index: item.index,
+        word,
+        mixedScript,
+      });
+      distinctChars.add(item.ch);
+      wordsAffected.add(lowerWord);
+      scriptsDetected.add(entry.script);
+      if (effectiveMixed) mixedWords.add(lowerWord);
+    }
+
+    if (effectiveMixed && selected.size > 0) {
+      const canonicalWord = token
+        .map((item) => {
+          const entry = selected.get(item.index);
+          return entry ? applyLatinCase(item.ch, entry.latin) : item.ch;
+        })
+        .join("")
+        .toLowerCase();
+      if (normalized.riskTerms.some((term) => canonicalWord.includes(term))) {
+        targetedWords.add(lowerWord);
+      }
+    }
+  });
+
+  const riskLevel = riskLevelFromFindings(findings, mixedWords, targetedWords, treatAllAsMixed);
+  return {
+    hasConfusables: findings.length > 0,
+    count: findings.length,
+    findings,
+    summary: {
+      distinctChars: distinctChars.size,
+      wordsAffected: wordsAffected.size,
+      scriptsDetected: [...scriptsDetected].sort((a, b) => a.localeCompare(b)),
+      riskLevel,
+    },
+  };
+}
+
+/**
+ * Fast gate for LLM pipelines.
+ *
+ * With the default `strategy: "mixed"`, returns `false` as soon as a
+ * mixed-script confusable substitution is found.  Standalone non-Latin
+ * words do not fail this gate.
+ *
+ * With `strategy: "all"`, returns `false` if any confusable character is
+ * found, regardless of surrounding context.
+ */
+export function isClean(text: string, options?: ScanOptions): boolean {
+  if (text.length === 0) return true;
+  const normalized = normalizeScanOptions(options);
+  const checkAll = normalized.strategy === "all";
+
+  let clean = true;
+  forEachToken(text, (token) => {
+    if (!checkAll) {
+      const { mixedScript } = hasMixedScriptsInToken(token);
+      if (!mixedScript) return;
+    }
+    for (const item of token) {
+      if (pickConfusableEntry(item.ch, normalized)) {
+        clean = false;
+        return false;
+      }
+    }
+  });
+
+  return clean;
 }
 
 function clamp(value: number, min: number, max: number): number {

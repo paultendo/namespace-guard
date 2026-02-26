@@ -82,6 +82,7 @@
     "build:profanity-data": "node scripts/generate-profanity-global.js",
     "build:composability-data": "node scripts/generate-composability-vectors.js",
     "build:confusable-bench": "node scripts/generate-confusable-bench.js",
+    "build:llm-confusable-map": "npm run build && node scripts/generate-llm-confusable-map.js",
     "build:weights-global": "node scripts/generate-confusable-weights-global.js",
     "build": "tsup",
     "test": "vitest run",
