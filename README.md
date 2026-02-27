@@ -155,7 +155,7 @@ Two research tracks feed the library:
 
 **Visual measurement.** 1,397 confusable pairs rendered across 230 system fonts, scored by structural similarity (SSIM). 494 of these are novel cross-script pairs between non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic, and more) with zero coverage in any existing standard. Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
 
-**Normalisation composability.** 31 characters where Unicode's confusables.txt and NFKC normalisation disagree. Two production maps (`CONFUSABLE_MAP` for NFKC-first, `CONFUSABLE_MAP_FULL` for raw-input pipelines), a benchmark corpus, and composability vectors wired into CLI drift baselines. Findings accepted into [Unicode public review (PRI #540)](https://www.unicode.org/review/pri540/).
+**Normalisation composability.** 31 characters where Unicode's confusables.txt and NFKC normalisation disagree. Two production maps (`CONFUSABLE_MAP` for NFKC-first, `CONFUSABLE_MAP_FULL` for raw-input pipelines), a benchmark corpus, and composability vectors wired into CLI drift baselines. Submitted to [Unicode public review (PRI #540)](https://www.unicode.org/review/pri540/) and published in [accumulated feedback](https://www.unicode.org/review/pri540/feedback.html).
 
 - Technical reference: [docs/reference.md#how-the-anti-spoofing-pipeline-works](docs/reference.md#how-the-anti-spoofing-pipeline-works)
 - Launch write-up: https://paultendo.github.io/posts/namespace-guard-launch/
