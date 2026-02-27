@@ -11,9 +11,9 @@ For the fast-start overview, see [../README.md](../README.md).
 
 **[Live Demo](https://paultendo.github.io/namespace-guard/)** - try it in your browser | **[Blog Post](https://paultendo.github.io/posts/namespace-guard-launch/)** - why this exists
 
-**Check slug/handle claimability across multiple database tables, with reserved-name and anti-spoofing protection.**
+**The world's first library that detects confusable characters across non-Latin scripts.** Slug claimability, Unicode anti-spoofing, and LLM Denial of Spend defence in one zero-dependency package.
 
-Perfect for multi-tenant apps where usernames, organization slugs, and reserved routes all share one URL namespace - like Twitter (`@username`), GitHub (`github.com/username`), or any SaaS with vanity URLs.
+For multi-tenant apps where usernames, organisation slugs, and reserved routes share one URL namespace, and for LLM pipelines where confusable substitution inflates token costs up to 5.2x.
 
 ## The Problem
 
@@ -833,7 +833,7 @@ Generation/source notes:
 
 ## LLM Pipeline Preprocessing
 
-LLM tokenizers operate on raw Unicode codepoints, not visual glyph similarity. Confusable substitutions can survive tokenization, inflate token counts, and hide targeted terms in mixed-script text.
+Confusable characters are pixel-identical to Latin letters but encode as multi-byte BPE tokens. A 95-line contract inflates from 881 to 4,567 tokens when flooded with confusables: **5.2x the API bill**. We tested this across 4 models, 8 attack types, and 130+ API calls. The model reads through every substitution. The billing attack succeeds. We call it **Denial of Spend**. Full research: [The new DDoS: Unicode confusables can't fool LLMs, but they can 5x your API bill](https://paultendo.github.io/posts/confusable-vision-llm-attack-tests/).
 
 Use namespace-guard as a deterministic preprocessing stage before sending text to your model:
 
@@ -1532,14 +1532,39 @@ skeleton("pa\u0443pal", { map: CONFUSABLE_MAP }); // explicit NFKC-first map mod
 
 ### `areConfusable(a, b, options?)`
 
-Boolean helper built on `skeleton()` equality.
+Boolean helper. Without weights, uses `skeleton()` equality (TR39 coverage only). With weights, also checks character-level visual similarity from confusable-vision's SSIM data, including cross-script pairs.
 
 ```typescript
 import { areConfusable } from "namespace-guard";
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
 
-areConfusable("paypal", "pa\u0443pal"); // true
+areConfusable("paypal", "pa\u0443pal"); // true (skeleton match)
 areConfusable("hello", "world"); // false
+
+// With weights: catches cross-script pairs that skeleton() misses
+areConfusable("\u1175", "\u4E28", { weights: CONFUSABLE_WEIGHTS }); // true (Hangul/Han)
+areConfusable("\u0406", "\u0399", { weights: CONFUSABLE_WEIGHTS }); // true (Cyrillic/Greek)
+areConfusable("\u1175", "\u4E28"); // false (no weights = skeleton only)
 ```
+
+---
+
+### `detectCrossScriptRisk(identifier, options?)`
+
+Analyse an identifier for cross-script confusable risk. Returns the scripts present, any confusable pairs found between different scripts, and a risk level.
+
+```typescript
+import { detectCrossScriptRisk } from "namespace-guard";
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+
+detectCrossScriptRisk("hello"); // { riskLevel: "none", scripts: ["latin"], crossScriptPairs: [] }
+
+detectCrossScriptRisk("\u1175\u4E28", { weights: CONFUSABLE_WEIGHTS });
+// { riskLevel: "high", scripts: ["hangul", "han"], crossScriptPairs: [{ a: { char: "ᅵ", script: "hangul" }, b: { char: "丨", script: "han" }, ssim: 0.999 }] }
+```
+
+**Options:**
+- `weights` -- optional SSIM-scored weights for cross-script pair lookup
 
 ---
 
