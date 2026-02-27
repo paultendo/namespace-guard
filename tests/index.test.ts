@@ -10,6 +10,7 @@ import {
   skeleton,
   areConfusable,
   confusableDistance,
+  detectCrossScriptRisk,
   deriveNfkcTr39DivergenceVectors,
   isLikelyUniqueViolationError,
   NAMESPACE_PROFILES,
@@ -23,6 +24,7 @@ import {
   type NamespaceAdapter,
   type NamespaceSource,
 } from "../src/index";
+import { CONFUSABLE_WEIGHTS } from "../src/confusable-weights";
 
 // ---------------------------------------------------------------------------
 // normalize()
@@ -3416,6 +3418,113 @@ describe("confusableDistance", () => {
       // ɡ (U+0261) maps to 'g' via TR39 so confusable-substitution still fires
       // but the weight has idnaPvalid=false so measured cost is NOT used
       expect(result.distance).toBeGreaterThan(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-script confusable detection
+// ---------------------------------------------------------------------------
+describe("cross-script confusable detection", () => {
+  const weights = CONFUSABLE_WEIGHTS;
+
+  describe("areConfusable with weights", () => {
+    it("detects Hangul-Han cross-script pair with weights", () => {
+      // U+1175 (Hangul) vs U+4E28 (Han), SSIM ~0.999
+      expect(areConfusable("\u1175", "\u4E28", { weights })).toBe(true);
+    });
+
+    it("detects Thai-Devanagari cross-script pair with weights", () => {
+      // U+0E50 (Thai ๐) vs U+0966 (Devanagari ०)
+      expect(areConfusable("\u0E50", "\u0966", { weights })).toBe(true);
+    });
+
+    it("returns false for unrelated cross-script pair", () => {
+      // Arabic ع (U+0639) vs Devanagari अ (U+0905) - no discovery
+      expect(areConfusable("\u0639", "\u0905", { weights })).toBe(false);
+    });
+
+    it("backward compat: skeleton-based detection still works without weights", () => {
+      // Cyrillic р (U+0440) + а (U+0430) look like Latin pa
+      expect(areConfusable("paypal", "\u0440\u0430ypal")).toBe(true);
+    });
+
+    it("returns false for cross-script pair without weights option", () => {
+      // Hangul vs Han: no skeleton match, and no weights provided
+      expect(areConfusable("\u1175", "\u4E28")).toBe(false);
+    });
+
+    it("respects context filtering", () => {
+      // Cross-script edges have xidContinue=false, so identifier context filters them out
+      expect(areConfusable("\u1175", "\u4E28", { weights, context: "identifier" })).toBe(false);
+      // But "all" context includes them
+      expect(areConfusable("\u1175", "\u4E28", { weights, context: "all" })).toBe(true);
+    });
+  });
+
+  describe("confusableDistance with cross-script weights", () => {
+    it("produces visual-weight step for cross-script pair", () => {
+      const result = confusableDistance("\u1175", "\u4E28", { weights });
+      expect(result.distance).toBeLessThan(1);
+      const weightStep = result.steps.find(s => s.reason === "visual-weight");
+      expect(weightStep).toBeDefined();
+    });
+  });
+
+  describe("detectCrossScriptRisk", () => {
+    it("returns none for single-script identifier", () => {
+      const result = detectCrossScriptRisk("hello");
+      expect(result.riskLevel).toBe("none");
+      expect(result.scripts).toEqual(["latin"]);
+      expect(result.crossScriptPairs).toHaveLength(0);
+    });
+
+    it("returns none for single non-Latin script", () => {
+      const result = detectCrossScriptRisk("\u0410\u0411\u0412"); // АБВ Cyrillic
+      expect(result.riskLevel).toBe("none");
+      expect(result.scripts).toEqual(["cyrillic"]);
+    });
+
+    it("detects high risk for Hangul-Han pair with high SSIM", () => {
+      const result = detectCrossScriptRisk("\u1175\u4E28", { weights });
+      expect(result.riskLevel).toBe("high");
+      expect(result.scripts).toContain("hangul");
+      expect(result.scripts).toContain("han");
+      expect(result.crossScriptPairs.length).toBeGreaterThan(0);
+      expect(result.crossScriptPairs[0].ssim).toBeGreaterThanOrEqual(0.8);
+    });
+
+    it("returns none for multi-script without weights", () => {
+      // Multi-script but no weights provided, so no pairs found
+      const result = detectCrossScriptRisk("\u1175\u4E28");
+      expect(result.riskLevel).toBe("none");
+      expect(result.scripts.length).toBe(2);
+      expect(result.crossScriptPairs).toHaveLength(0);
+    });
+
+    it("returns none for purely numeric/punctuation input", () => {
+      const result = detectCrossScriptRisk("123-456");
+      expect(result.riskLevel).toBe("none");
+      expect(result.scripts).toHaveLength(0);
+    });
+
+    it("returns none for empty string", () => {
+      const result = detectCrossScriptRisk("");
+      expect(result.riskLevel).toBe("none");
+      expect(result.scripts).toHaveLength(0);
+      expect(result.crossScriptPairs).toHaveLength(0);
+    });
+  });
+
+  describe("early-exit optimization", () => {
+    it("returns false quickly for ASCII-only strings with weights", () => {
+      // Pure ASCII: no chars in weight table, early exit before O(n*m) loop
+      expect(areConfusable("hello", "world", { weights })).toBe(false);
+    });
+
+    it("still detects skeleton matches with weights (no loop needed)", () => {
+      // Cyrillic р/а map to Latin p/a via skeleton, before the weight loop
+      expect(areConfusable("paypal", "\u0440\u0430ypal", { weights })).toBe(true);
     });
   });
 });

@@ -263,6 +263,18 @@ export type SkeletonOptions = {
   map?: Record<string, string>;
 };
 
+/** Options for `areConfusable()` with optional weight-based matching. */
+export type AreConfusableOptions = SkeletonOptions & {
+  /** Optional measured visual weights for weight-based confusable matching.
+   *  When provided, character pairs in the weight table are also considered confusable. */
+  weights?: ConfusableWeights;
+  /** Filter weights by deployment context.
+   *  - `'identifier'`: only apply weights for XID_Continue sources
+   *  - `'domain'`: only apply weights for IDNA PVALID sources
+   *  - `'all'` (default): apply all weights regardless of properties */
+  context?: "identifier" | "domain" | "all";
+};
+
 /** Measured visual weight for a single confusable pair. */
 export type ConfusableWeight = {
   /** Maximum SSIM across all font comparisons (attacker perspective). */
@@ -2550,6 +2562,9 @@ const SCRIPT_DETECTORS: Array<[string, RegExp]> = [
   ["han", /\p{Script=Han}/u],
   ["hiragana", /\p{Script=Hiragana}/u],
   ["katakana", /\p{Script=Katakana}/u],
+  ["hangul", /\p{Script=Hangul}/u],
+  ["georgian", /\p{Script=Georgian}/u],
+  ["thai", /\p{Script=Thai}/u],
 ];
 const WORD_TOKEN_CHAR_RE = /[\p{L}\p{N}\p{M}_]/u;
 const DEFAULT_SCAN_RISK_TERMS = Object.freeze([
@@ -2582,12 +2597,24 @@ type TokenChar = {
   index: number;
 };
 
+/** Cached default options (frozen, safe to share across calls). */
+const DEFAULT_NORMALIZED_SCAN_OPTIONS: NormalizedScanOptions = Object.freeze({
+  threshold: 0.7,
+  includeNovel: true,
+  scripts: null,
+  riskTerms: DEFAULT_SCAN_RISK_TERMS as unknown as string[],
+  strategy: "mixed" as const,
+  maxSizeRatio: 3.0,
+});
+
 function normalizeScanOptions(options?: ScanOptions): NormalizedScanOptions {
-  const threshold = clamp(options?.threshold ?? 0.7, 0, 1);
-  const includeNovel = options?.includeNovel ?? true;
-  const strategy = options?.strategy === "all" ? "all" as const : "mixed" as const;
+  if (!options) return DEFAULT_NORMALIZED_SCAN_OPTIONS;
+
+  const threshold = clamp(options.threshold ?? 0.7, 0, 1);
+  const includeNovel = options.includeNovel ?? true;
+  const strategy = options.strategy === "all" ? "all" as const : "mixed" as const;
   const scripts =
-    options?.scripts && options.scripts.length > 0
+    options.scripts && options.scripts.length > 0
       ? new Set(
           options.scripts
             .map((value) => value.trim().toLowerCase())
@@ -2595,13 +2622,36 @@ function normalizeScanOptions(options?: ScanOptions): NormalizedScanOptions {
         )
       : null;
   const riskTerms =
-    options?.riskTerms && options.riskTerms.length > 0
+    options.riskTerms && options.riskTerms.length > 0
       ? options.riskTerms.map((value) => value.toLowerCase())
       : [...DEFAULT_SCAN_RISK_TERMS];
 
-  const maxSizeRatio = options?.maxSizeRatio ?? 3.0;
+  const maxSizeRatio = options.maxSizeRatio ?? 3.0;
 
   return { threshold, includeNovel, scripts, riskTerms, strategy, maxSizeRatio };
+}
+
+/** Fast ASCII check via code-unit scan. No confusable char exists below U+00D7. */
+function isAllAscii(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    if (s.charCodeAt(i) > 0x7f) return false;
+  }
+  return true;
+}
+
+/** Precomputed codepoint set for O(1) confusable-char membership testing. */
+const CONFUSABLE_CODEPOINT_SET: Set<number> = new Set(
+  Object.keys(LLM_CONFUSABLE_MAP).map(ch => ch.codePointAt(0)!)
+);
+
+/** Check if any character is a key in the LLM confusable map via codepoint set. */
+function hasAnyConfusableChar(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const cp = s.codePointAt(i)!;
+    if (CONFUSABLE_CODEPOINT_SET.has(cp)) return true;
+    if (cp > 0xffff) i++; // skip low surrogate
+  }
+  return false;
 }
 
 function isWordTokenChar(ch: string): boolean {
@@ -2761,38 +2811,45 @@ export function createInvisibleCharacterValidator(
  */
 export function canonicalise(text: string, options?: CanonicaliseOptions): string {
   if (text.length === 0) return "";
+  // Fast path: pure ASCII or no confusable chars means nothing to rewrite
+  if (isAllAscii(text) || !hasAnyConfusableChar(text)) return text;
 
   const normalized = normalizeScanOptions(options);
   const replaceAll = normalized.strategy === "all";
-  const out: string[] = [];
 
-  forEachToken(
-    text,
-    (token) => {
-      const { hasLatin } = hasMixedScriptsInToken(token);
-      for (const item of token) {
-        const entry = pickConfusableEntry(item.ch, normalized);
-        if (entry && (replaceAll || hasLatin)) {
-          out.push(applyLatinCase(item.ch, entry.latin));
-        } else {
-          out.push(item.ch);
-        }
+  // Collect sparse replacements: [index, charLength, replacement]
+  const replacements: Array<[number, number, string]> = [];
+
+  forEachToken(text, (token) => {
+    const { hasLatin } = hasMixedScriptsInToken(token);
+    if (!replaceAll && !hasLatin) return; // skip pickConfusableEntry for non-mixed tokens
+    for (const item of token) {
+      const entry = pickConfusableEntry(item.ch, normalized);
+      if (entry) {
+        replacements.push([item.index, item.ch.length, applyLatinCase(item.ch, entry.latin)]);
       }
-    },
-    (separator) => {
-      out.push(separator);
     }
-  );
+  });
 
-  return out.join("");
+  if (replacements.length === 0) return text;
+
+  // Rebuild from original text slices + replacements (avoids per-char push+join)
+  let result = "";
+  let pos = 0;
+  for (const [idx, len, replacement] of replacements) {
+    result += text.slice(pos, idx) + replacement;
+    pos = idx + len;
+  }
+  result += text.slice(pos);
+  return result;
 }
 
 /**
  * Scan text for confusable characters and return structured findings + risk summary.
  */
 export function scan(text: string, options?: ScanOptions): ScanResult {
-  const normalized = normalizeScanOptions(options);
-  if (text.length === 0) {
+  // Fast path: empty, pure ASCII, or no confusable chars
+  if (text.length === 0 || isAllAscii(text) || !hasAnyConfusableChar(text)) {
     return {
       hasConfusables: false,
       count: 0,
@@ -2806,6 +2863,7 @@ export function scan(text: string, options?: ScanOptions): ScanResult {
     };
   }
 
+  const normalized = normalizeScanOptions(options);
   const findings: ScanFinding[] = [];
   const distinctChars = new Set<string>();
   const wordsAffected = new Set<string>();
@@ -2885,6 +2943,11 @@ export function scan(text: string, options?: ScanOptions): ScanResult {
  */
 export function isClean(text: string, options?: ScanOptions): boolean {
   if (text.length === 0) return true;
+  // Fast path: pure ASCII text cannot contain confusables (lowest map key is U+00D7)
+  if (isAllAscii(text)) return true;
+  // Fast path: if no character is even a key in the confusable map, skip tokenization
+  if (!hasAnyConfusableChar(text)) return true;
+
   const normalized = normalizeScanOptions(options);
   const checkAll = normalized.strategy === "all";
 
@@ -3263,26 +3326,129 @@ export function confusableDistance(
 }
 
 /**
- * Check whether two strings are visually confusable by comparing their TR39 skeletons.
+ * Check whether two strings are visually confusable.
+ *
+ * Without `weights`, compares TR39 skeletons only (backward compatible).
+ * With `weights`, also checks whether any character pair in `a` x `b`
+ * has a measured visual weight, enabling cross-script confusable detection.
  *
  * @param a - First string
  * @param b - Second string
- * @param options - Optional settings (custom confusable map)
- * @returns `true` if the strings produce the same skeleton
+ * @param options - Optional settings (custom confusable map, weights, context)
+ * @returns `true` if the strings are considered confusable
  *
  * @example
  * ```ts
- * areConfusable("paypal", "\u0440\u0430ypal") // true
- * areConfusable("google", "g\u043e\u043egle") // true
- * areConfusable("hello", "world")             // false
+ * areConfusable("paypal", "\u0440\u0430ypal")           // true (skeleton match)
+ * areConfusable("hello", "world")                        // false
+ * areConfusable("\u1175", "\u4E28", { weights })         // true (cross-script weight)
+ * areConfusable("\u1175", "\u4E28")                      // false (no weights = skeleton only)
  * ```
  */
 export function areConfusable(
   a: string,
   b: string,
-  options?: SkeletonOptions
+  options?: AreConfusableOptions
 ): boolean {
-  return skeleton(a, options) === skeleton(b, options);
+  if (skeleton(a, options) === skeleton(b, options)) return true;
+  if (!options?.weights) return false;
+  const ctx = options.context ?? "all";
+  const w = options.weights;
+  // Early exit: skip O(n*m) loop if no char in either string is a weight-table key
+  let anyKey = false;
+  for (const ch of a) { if (w[ch]) { anyKey = true; break; } }
+  if (!anyKey) { for (const ch of b) { if (w[ch]) { anyKey = true; break; } } }
+  if (!anyKey) return false;
+  for (const chA of a) {
+    for (const chB of b) {
+      if (chA === chB) continue;
+      if (lookupWeight(chA, chB, w, ctx)) return true;
+    }
+  }
+  return false;
+}
+
+/** Result of cross-script risk analysis on an identifier. */
+export type CrossScriptRiskResult = {
+  /** Distinct Unicode scripts detected in the identifier. */
+  scripts: string[];
+  /** Character pairs from different scripts that are visually confusable. */
+  crossScriptPairs: Array<{
+    a: { char: string; script: string };
+    b: { char: string; script: string };
+    ssim: number;
+  }>;
+  /** Overall risk level: "none" (single script), "low" (matches below 0.8), "high" (ssim >= 0.8 or 3+ matches). */
+  riskLevel: "none" | "low" | "high";
+};
+
+/**
+ * Detect cross-script confusable risk in an identifier.
+ *
+ * Analyzes an identifier for characters from multiple Unicode scripts and
+ * checks whether any cross-script character pairs are visually confusable
+ * according to measured weights.
+ *
+ * @param identifier - The identifier to analyze
+ * @param options - Optional settings (weights for cross-script lookup)
+ * @returns Cross-script risk analysis result
+ *
+ * @example
+ * ```ts
+ * detectCrossScriptRisk("hello")                          // riskLevel: "none"
+ * detectCrossScriptRisk("\u1175\u4E28", { weights })      // riskLevel: "high"
+ * ```
+ */
+export function detectCrossScriptRisk(
+  identifier: string,
+  options?: { weights?: ConfusableWeights }
+): CrossScriptRiskResult {
+  // Collect characters with their scripts
+  const charScripts: Array<{ char: string; script: string }> = [];
+  const scriptSet = new Set<string>();
+  for (const ch of identifier) {
+    const tag = getScriptTag(ch);
+    if (tag === "non-letter" || tag === "other-letter") continue;
+    charScripts.push({ char: ch, script: tag });
+    scriptSet.add(tag);
+  }
+
+  const scripts = [...scriptSet].sort();
+  if (scripts.length <= 1) {
+    return { scripts, crossScriptPairs: [], riskLevel: "none" };
+  }
+
+  const crossScriptPairs: CrossScriptRiskResult["crossScriptPairs"] = [];
+  const weights = options?.weights;
+
+  if (weights) {
+    for (let i = 0; i < charScripts.length; i++) {
+      for (let j = i + 1; j < charScripts.length; j++) {
+        const ci = charScripts[i];
+        const cj = charScripts[j];
+        if (ci.script === cj.script) continue;
+        const w = lookupWeight(ci.char, cj.char, weights, "all");
+        if (w) {
+          crossScriptPairs.push({
+            a: { char: ci.char, script: ci.script },
+            b: { char: cj.char, script: cj.script },
+            ssim: Math.round((1 - w.cost) * 10000) / 10000,
+          });
+        }
+      }
+    }
+  }
+
+  let riskLevel: CrossScriptRiskResult["riskLevel"];
+  if (crossScriptPairs.length === 0) {
+    riskLevel = "none";
+  } else if (crossScriptPairs.some(p => p.ssim >= 0.8) || crossScriptPairs.length >= 3) {
+    riskLevel = "high";
+  } else {
+    riskLevel = "low";
+  }
+
+  return { scripts, crossScriptPairs, riskLevel };
 }
 
 function countConfusableChars(value: string, map: Record<string, string>): {
