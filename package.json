@@ -1,7 +1,7 @@
 {
   "name": "namespace-guard",
-  "version": "0.17.1",
-  "description": "Check slug/handle uniqueness across multiple database tables with reserved name protection",
+  "version": "0.18.0",
+  "description": "Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Zero dependencies.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
