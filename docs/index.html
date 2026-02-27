@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>namespace-guard - Slug Claimability Guard</title>
-  <meta name="description" content="Interactive playground for namespace-guard. Check slug availability, reserved names, Unicode spoofing risk, and practical CLI setup for production checks.">
+  <title>namespace-guard - Cross-Script Confusable Detection &amp; Slug Safety</title>
+  <meta name="description" content="The world's first cross-script confusable detection library. 1,397 SSIM-scored pairs across 230 fonts. Slug safety, LLM Denial of Spend defence, and Unicode anti-spoofing in one zero-dependency package.">
   <meta property="og:title" content="namespace-guard Playground">
-  <meta property="og:description" content="Try the slug claimability playground in your browser. Includes Unicode spoofing checks and simple CLI workflows for production policies.">
+  <meta property="og:description" content="Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Try the interactive playground or browse 9 adapter examples.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://paultendo.github.io/namespace-guard/">
   <meta property="og:image" content="https://paultendo.github.io/namespace-guard/og.svg">
@@ -14,7 +14,7 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="namespace-guard Playground">
-  <meta name="twitter:description" content="Try the slug claimability playground in your browser. Includes Unicode spoofing checks and simple CLI workflows for production policies.">
+  <meta name="twitter:description" content="Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Try the interactive playground or browse 9 adapter examples.">
   <meta name="twitter:image" content="https://paultendo.github.io/namespace-guard/og.svg">
   <meta name="theme-color" content="#090e17">
   <link rel="canonical" href="https://paultendo.github.io/namespace-guard/">
@@ -64,6 +64,10 @@
       letter-spacing: 0.01em;
       line-height: 1.6;
       min-height: 100vh;
+    }
+
+    a:visited {
+      color: rgba(188, 201, 223, 0.7);
     }
 
     ::selection {
@@ -126,7 +130,7 @@
     .hero-tagline {
       font-size: clamp(1rem, 1.8vw, 1.25rem);
       color: var(--ink-muted);
-      max-width: 42ch;
+      max-width: 60ch;
       margin: 0 auto 1.5rem;
     }
     .hero-phonetic {
@@ -136,7 +140,7 @@
     }
     .hero-phonetic .pron { font-style: italic; color: var(--foreground); opacity: 0.7; }
     .hero-phonetic .pos { font-style: italic; opacity: 0.6; margin-left: 0.5em; }
-    .hero-phonetic .def { display: block; margin-top: 0.3rem; max-width: 48ch; margin-inline: auto; }
+    .hero-phonetic .def { display: block; margin-top: 0.3rem; max-width: 68ch; margin-inline: auto; }
     .hero-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
 
     /* Buttons */
@@ -483,6 +487,9 @@
       border-color: rgba(208,227,255,0.3);
       background: rgba(255,255,255,0.06);
     }
+    .cross-script-font {
+      font-family: 'Arial Unicode MS', 'Noto Sans CJK SC', 'Noto Sans', 'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', system-ui, sans-serif;
+    }
 
     /* Mock data */
     .mock-section { margin-top: 1.5rem; }
@@ -730,6 +737,9 @@
       color: var(--ink-muted);
       line-height: 1.55;
     }
+    .insight-card p + p {
+      margin-top: 0.6rem;
+    }
     .insight-card .example {
       margin-top: 0.6rem;
       font-family: var(--font-mono);
@@ -748,6 +758,15 @@
       background: rgba(0,0,0,0.3);
       padding: 0.1rem 0.35rem;
       border-radius: 0.25rem;
+    }
+    .coined-term {
+      font-weight: 700;
+      font-style: italic;
+      color: var(--ink);
+      white-space: nowrap;
+      background: var(--accent-soft);
+      padding: 0.05em 0.3em;
+      border-radius: 0.2em;
     }
 
     /* Confusable highlight in result */
@@ -845,16 +864,17 @@
 
   <header class="shell hero">
     <h1 class="display-type">namespace-guard</h1>
-    <p class="hero-tagline">Claim safe slugs in one line: availability, spoofing protection, and moderation hooks.</p>
+    <p class="hero-tagline">Cross-script confusable detection, slug safety, and LLM Denial of Spend defence in one zero-dependency package.</p>
     <div class="hero-phonetic phonetic-serif">
       <span class="pron">/neym-speys gahrd/</span>
       <span class="pos">noun</span>
-      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes - with built-in Unicode spoofing protection and pluggable moderation.</span>
+      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes. The world's first library to detect confusable characters across non-Latin scripts, backed by 1,397 SSIM-scored character pairs measured across 230 fonts.</span>
     </div>
     <div class="hero-actions">
       <a href="#playground" class="btn-primary">Try it out</a>
       <a href="https://github.com/paultendo/namespace-guard" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
       <a href="https://paultendo.github.io/posts/namespace-guard-launch/" class="btn-secondary" target="_blank" rel="noopener">Read the blog post</a>
+      <a href="#llm-preprocessing" class="btn-secondary">Protecting LLM pipelines? Start here</a>
     </div>
   </header>
 
@@ -892,8 +912,8 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             Anti-Spoofing
           </h3>
-          <p>Detects visually deceptive Unicode characters from 20+ scripts using a 613-pair confusable map generated from Unicode TR39.</p>
-          <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"</div>
+          <p>Detects visually deceptive Unicode across 22+ scripts, including cross-script confusable pairs between non-Latin scripts that no existing standard covers.</p>
+          <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"<br><span class="err cross-script-font">"&#x1175;&#x4E28;"</span> &rarr; Hangul/Han cross-script (SSIM 0.999)</div>
         </div>
         <div class="glass-card how-card">
           <h3>
@@ -908,7 +928,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
             Invisible Character Guard
           </h3>
-          <p>Flags default-ignorable and direction-control Unicode characters often used for deceptive identifiers, with optional combining-mark blocking for stricter anti-evasion policies.</p>
+          <p>Catches zero-width joiners, direction overrides, and other invisible Unicode characters that make identifiers look clean while hiding extra bytes.</p>
           <div class="example"><span class="err">"a&#x200D;dmin"</span> &rarr; contains a zero-width joiner</div>
         </div>
       </div>
@@ -919,27 +939,39 @@
     <!-- Research -->
     <section class="pipeline-section research-section" aria-labelledby="research-heading">
       <h2 id="research-heading" class="display-type">Research Behind The Pipeline</h2>
-      <p class="subtitle">We audited major confusable implementations (including ICU, Chromium, Rust, and django-registration), found a normalization/mapping composition gap, then shipped reproducible artifacts instead of one-off rules.</p>
+      <p class="subtitle">We rendered 1,397 character pairs across 230 system fonts, measured structural similarity (SSIM), and discovered 494 cross-script confusables that no standard covers.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
+          <h3>Visual measurement pipeline</h3>
+          <ul class="checklist">
+            <li>1,397 confusable pairs scored via SSIM across 230 system fonts (macOS)</li>
+            <li>494 novel cross-script pairs between non-Latin scripts: Hangul/Han, Cyrillic/Greek, Greek/Han, Cyrillic/Arabic, and more</li>
+            <li>Glyph-reuse detection to distinguish font fallback from true visual similarity</li>
+            <li>Full dataset published as <a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0)</li>
+          </ul>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Normalization composability</h3>
           <ul class="checklist">
             <li>31 documented NFKC vs TR39 divergence vectors, shipped as <code class="inline-chip">nfkc-tr39-divergence-v1</code></li>
             <li>Two production map modes: <code class="inline-chip">CONFUSABLE_MAP</code> (NFKC-first) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (TR39/raw-input)</li>
-            <li>Published artifacts: composability vectors + confusable benchmark corpus (<code class="inline-chip">confusable-bench.v1</code>)</li>
-            <li>Submitted for Unicode public review (PRI #540)</li>
+            <li>Published artifacts: composability vectors + benchmark corpus (<code class="inline-chip">confusable-bench.v1</code>)</li>
+            <li>Accepted into Unicode public review (<a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">PRI #540</a>)</li>
           </ul>
-          <p class="research-links">
-            <a href="https://paultendo.github.io/posts/namespace-guard-launch/" target="_blank" rel="noopener">Launch write-up</a>
-            <span class="sep">&middot;</span>
-            <a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#how-the-anti-spoofing-pipeline-works" target="_blank" rel="noopener">Technical details</a>
-            <span class="sep">&middot;</span>
-            <a href="./data/confusable-bench.v1.json" target="_blank" rel="noopener">Benchmark corpus</a>
-            <span class="sep">&middot;</span>
-            <a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">Unicode PRI #540</a>
-          </p>
         </div>
       </div>
+      <p class="research-links">
+        <a href="https://paultendo.github.io/posts/namespace-guard-launch/" target="_blank" rel="noopener">Launch write-up</a>
+        <span class="sep">&middot;</span>
+        <a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#how-the-anti-spoofing-pipeline-works" target="_blank" rel="noopener">Technical details</a>
+        <span class="sep">&middot;</span>
+        <a href="./data/confusable-bench.v1.json" target="_blank" rel="noopener">Benchmark corpus</a>
+        <span class="sep">&middot;</span>
+        <a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a>
+        <span class="sep">&middot;</span>
+        <a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">Unicode PRI #540</a>
+      </p>
     </section>
 
     <div class="divider" aria-hidden="true"></div>
@@ -947,7 +979,7 @@
     <!-- Profiles -->
     <section class="pipeline-section" aria-labelledby="profiles-heading">
       <h2 id="profiles-heading" class="display-type">Built-in Profiles</h2>
-      <p class="subtitle">Start with a profile that matches your namespace type, then customize as needed.</p>
+      <p class="subtitle">Pick a profile, override what you need. Profiles are defaults, not lock-in.</p>
 
       <div class="profiles-cards">
         <div class="glass-card insight-card">
@@ -982,8 +1014,8 @@
         </div>
       </div>
       <div class="glass-card insight-card profile-override">
-        <h3>Start with a profile, override what you need</h3>
-        <p>Profiles are defaults, not lock-in. Most setups only need one or two overrides.</p>
+        <h3>Override example</h3>
+        <p>Most setups only need one or two overrides.</p>
         <div class="example">
           <span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span><span class="br">(</span><span class="str">"org-slug"</span>, <span class="br">{</span><br>
           &nbsp;&nbsp;<span class="var">allowPurelyNumeric</span>: <span class="kw">true</span>,<br>
@@ -996,8 +1028,8 @@
 
     <!-- Scope -->
     <section class="pipeline-section" aria-labelledby="scope-heading">
-      <h2 id="scope-heading" class="display-type">What It Does (And Doesn&rsquo;t)</h2>
-      <p class="subtitle">Plain boundaries so teams know exactly where this library helps.</p>
+      <h2 id="scope-heading" class="display-type">Scope</h2>
+      <p class="subtitle">What you get and where the boundary is.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
@@ -1007,18 +1039,17 @@
             <li>Checks collisions across multiple data sources</li>
             <li>Blocks reserved names</li>
             <li>Scores and enforces Unicode confusable risk</li>
-            <li>Preprocesses mixed-script text for LLM pipelines (<code class="inline-chip">canonicalise</code>/<code class="inline-chip">scan</code>)</li>
+            <li>Prevents confusable-driven token inflation in LLM pipelines (<code class="inline-chip">isClean</code>/<code class="inline-chip">canonicalise</code>/<code class="inline-chip">scan</code>)</li>
             <li>Flags invisible and direction-control characters</li>
             <li>Lets you plug in moderation or policy validators</li>
           </ul>
         </div>
         <div class="glass-card insight-card">
-          <h3>What it doesn&rsquo;t do</h3>
+          <h3>Out of scope</h3>
           <ul class="checklist">
-            <li>It does not bundle third-party moderation datasets</li>
-            <li>It does not replace account security controls (2FA, verification, abuse ops)</li>
-            <li>It does not guarantee perfect abuse detection</li>
-            <li>This playground uses simulated data, not your live database</li>
+            <li>No bundled third-party moderation datasets (bring your own or use the built-in list)</li>
+            <li>Not a replacement for account security (2FA, verification, abuse ops)</li>
+            <li>No guarantee of perfect abuse detection</li>
           </ul>
         </div>
       </div>
@@ -1128,8 +1159,11 @@
             <button class="example-pill" data-slug="&#x251;dmin" title="IPA ɑ + Latin dmin">&#x251;dmin</button>
             <button class="example-pill" data-slug="&#x1D00;dmin" title="Latin small cap ᴀ + Latin dmin">&#x1D00;dmin</button>
             <button class="example-pill" data-slug="a&#x200D;dmin" title="Contains zero-width joiner">a[ZWJ]dmin</button>
-            <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">ｈｅｌｌｏ</button>
+            <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;</button>
             <button class="example-pill" data-slug="123456">123456</button>
+            <button class="example-pill cross-script-font" data-slug="&#x1175;&#x4E28;" title="Hangul &#x1175; / Han &#x4E28; (SSIM 0.999, Arial Unicode MS)">&#x1175;&#x4E28; Hangul/Han</button>
+            <button class="example-pill cross-script-font" data-slug="&#x041D;&#x0397;" title="Cyrillic Н (U+041D) / Greek Η (U+0397) — SSIM 1.0, 121 fonts">&#x041D;&#x0397; Cyrillic Н / Greek Η</button>
+            <button class="example-pill cross-script-font" data-slug="&#x0406;&#x0399;" title="Cyrillic І (U+0406) / Greek Ι (U+0399) — SSIM 1.0, 61 fonts">&#x0406;&#x0399; Cyrillic І / Greek Ι</button>
           </div>
         </div>
 
@@ -1193,7 +1227,7 @@
 
     <!-- Code example -->
     <section class="code-section" aria-labelledby="code-heading">
-      <h2 id="code-heading" class="display-type">Use it in your project</h2>
+      <h2 id="code-heading" class="display-type">Integration (9 adapters)</h2>
       <div role="tablist" class="adapter-tabs" aria-label="Choose your database adapter">
         <button role="tab" class="adapter-tab" aria-selected="true" aria-controls="panel-prisma" id="tab-prisma">Prisma</button>
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-drizzle" id="tab-drizzle">Drizzle</button>
@@ -1408,8 +1442,8 @@
 
     <!-- CLI workflow -->
     <section class="pipeline-section" aria-labelledby="workflow-heading">
-      <h2 id="workflow-heading" class="display-type">Operational CLI workflow</h2>
-      <p class="subtitle">Go from sample attacks to production checks in a few commands.</p>
+      <h2 id="workflow-heading" class="display-type">CLI workflow</h2>
+      <p class="subtitle">From red-team attacks to production CI gates in a few commands.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
@@ -1429,8 +1463,8 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>3. Cost-aware tuning when needed</h3>
-          <p>Override default costs and class priors to tune for your domain's false-positive and false-negative tradeoffs.</p>
+          <h3>3. Tune thresholds for your domain</h3>
+          <p>Set the relative cost of blocking a legitimate user vs letting a bad actor through. The calibrator picks optimal warn/block thresholds from your data.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">calibrate</span> <span class="str">./risk-dataset.json</span> <span class="br">\</span><br>
             &nbsp;&nbsp;<span class="var">--cost-block-benign</span> <span class="type">8</span> <span class="var">--cost-allow-malicious</span> <span class="type">12</span> <span class="var">--malicious-prior</span> <span class="type">0.05</span>
@@ -1445,8 +1479,8 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>5. Compare map behavior</h3>
-          <p>See how results change between <code class="inline-chip">CONFUSABLE_MAP_FULL</code> and <code class="inline-chip">CONFUSABLE_MAP</code>, with a built-in 31-vector composability baseline.</p>
+          <h3>5. Compare map behaviour</h3>
+          <p>See how results differ between the NFKC-filtered and full confusable maps, with a built-in 31-vector regression baseline.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">drift</span> <span class="var">--json</span><br>
             <span class="cm">// dataset: builtin:composability-vectors (31 vectors)</span><br>
@@ -1468,13 +1502,13 @@
 
     <!-- Advanced API primitives -->
     <section class="pipeline-section advanced-apis-section" aria-labelledby="advanced-apis-heading">
-      <h2 id="advanced-apis-heading" class="display-type">Advanced API primitives (optional)</h2>
-      <p class="subtitle">For custom moderation and anti-spoofing workflows, use the low-level helpers directly.</p>
+      <h2 id="advanced-apis-heading" class="display-type">Advanced API primitives</h2>
+      <p class="subtitle">Low-level helpers for custom scoring, pairwise checks, and cross-script risk analysis.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>Explainable pairwise checks</h3>
-          <p>Use skeleton equality for fast binary checks, or distance scoring when you need chain depth and explainable edit steps.</p>
+          <p><code class="inline-chip">skeleton()</code> for fast binary checks. <code class="inline-chip">confusableDistance()</code> when you need graded similarity with explainable steps.</p>
           <div class="example">
             <span class="kw">import</span> <span class="br">{</span> <span class="fn">skeleton</span>, <span class="fn">areConfusable</span>, <span class="fn">confusableDistance</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
             <span class="fn">skeleton</span><span class="br">(</span><span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// "paypal"</span><br>
@@ -1486,28 +1520,83 @@
         </div>
 
         <div class="glass-card insight-card">
-          <h3>Measured visual weights</h3>
-          <p>903 confusable pairs scored via SSIM across 230 system fonts.
-             Pass <code class="inline-chip">CONFUSABLE_WEIGHTS</code> to
-             <code class="inline-chip">confusableDistance()</code> for measured
-             costs instead of hardcoded thresholds.</p>
+          <h3>Measured visual weights + cross-script detection</h3>
+          <p>1,397 confusable pairs scored via SSIM across 230 system fonts, including 494 cross-script pairs between non-Latin scripts (Hangul/Han, Thai/Devanagari, Cyrillic/Greek, and more). The world's first cross-script confusable dataset.</p>
           <div class="example">
+            <span class="kw">import</span> <span class="br">{</span> <span class="fn">areConfusable</span>, <span class="fn">detectCrossScriptRisk</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
             <span class="kw">import</span> <span class="br">{</span> <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/confusable-weights"</span>;<br>
-            <span class="fn">confusableDistance</span><span class="br">(</span>a, b, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span>, <span class="var">context</span>: <span class="str">"identifier"</span> <span class="br">}</span><span class="br">)</span>;
+            <span class="fn">areConfusable</span><span class="br">(</span><span class="str">"&#x1175;"</span>, <span class="str">"&#x4E28;"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// true</span><br>
+            <span class="fn">detectCrossScriptRisk</span><span class="br">(</span><span class="str">"&#x1175;&#x4E28;"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// high risk</span>
           </div>
           <p class="research-links"><a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0 data)</p>
         </div>
 
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- LLM preprocessing -->
+    <section id="llm-preprocessing" class="pipeline-section advanced-apis-section" aria-labelledby="llm-heading">
+      <h2 id="llm-heading" class="display-type">LLM Pipeline Preprocessing</h2>
+      <p class="subtitle">Confusable characters fragment into multi-byte BPE tokens, inflating API costs up to 5.2x per document. The model reads them correctly. The invoice does not care. We tested this across 4 models and 130+ API calls, and we call the result <span class="coined-term">Denial of Spend</span>.</p>
+
+      <div class="insight-cards">
         <div class="glass-card insight-card">
-          <h3>LLM preprocessing helpers</h3>
-          <p>Run deterministic Unicode cleanup before model calls. Detect confusable substitutions, canonicalise to Latin equivalents, and fast-gate suspicious payloads. Use <code class="inline-chip">strategy:&nbsp;"all"</code> for known-Latin documents.</p>
+          <h3><span class="coined-term">Denial of Spend</span>: the attack vector</h3>
+          <p>Confusable characters are pixel-identical to Latin letters but encode as multi-byte BPE tokens. A 95-line contract that costs 881 tokens in clean ASCII costs 4,567 tokens when flooded with confusables: <strong>5.2x the API bill</strong>. The model reads it correctly. The invoice does not care.</p>
+          <p>Unlike volumetric DDoS, there is no traffic spike. The requests are normal-sized HTTP payloads, one document each, from legitimate accounts. The inflation is invisible until the invoice arrives. A contract review SaaS processing thousands of documents per day could see its costs quintupled.</p>
+          <p class="research-links"><a href="https://paultendo.github.io/posts/confusable-vision-llm-attack-tests/" target="_blank" rel="noopener">Full research: 130+ API calls, 8 attack types, 4 models</a></p>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Tested against frontier models</h3>
+          <p>GPT-5.2, Claude Sonnet 4.6, GPT-5.2-instant, and Claude Haiku 4.5. Eight attack types: single-character substitution, novel confusables absent from any standard, meaning-flip attacks that reverse legal clauses, a 57% character flood, and medical text with 28 safety-critical negations.</p>
+          <p><strong>Zero meaning flips across all variants.</strong> Every substituted clause was correctly interpreted in every run. But token costs inflated 1.1x to 5.2x depending on density, and the billing attack scales with document length.</p>
+          <table style="width: 100%; margin: 1rem 0; font-size: 0.85rem; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.15);">
+                <th style="text-align: left; padding: 0.4rem 0.6rem;">Variant</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">GPT-5.2</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">Sonnet</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.08);">
+                <td style="padding: 0.4rem 0.6rem;">Clean</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">881</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">975</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">1.0x</td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.08);">
+                <td style="padding: 0.4rem 0.6rem;">Flip (1.5% of doc)</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">961</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">1,070</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">~1.1x</td>
+              </tr>
+              <tr>
+                <td style="padding: 0.4rem 0.6rem;">Flood (57% of chars)</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">4,567</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">5,209</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;"><strong>~5.2x</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>The <span class="coined-term">Denial of Spend</span> defence</h3>
+          <p><code class="inline-chip">canonicalise()</code> recovered every substituted term across all 12 attack variants. Zero confusable findings remained after canonicalisation. The 5.2x billing multiplier drops to 1.0x because multi-byte confusable tokens map back to single-byte ASCII. Processing a 10,000-character document takes under 1ms.</p>
+          <p><code class="inline-chip">isClean()</code> gates in microseconds: fast boolean, short-circuits on the first confusable found. <code class="inline-chip">scan()</code> returns per-character detail with codepoints, scripts, and risk level for audit. Use <code class="inline-chip">strategy:&nbsp;"all"</code> for known-Latin documents (English contracts, medical text).</p>
           <div class="example">
             <span class="kw">import</span> <span class="br">{</span> <span class="fn">canonicalise</span>, <span class="fn">scan</span>, <span class="fn">isClean</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
-            <span class="kw">const</span> rawText = <span class="str">"The seller li\u0430bility clause applies."</span>;<br>
-            <span class="kw">const</span> report = <span class="fn">scan</span><span class="br">(</span>rawText<span class="br">)</span>;<br>
-            <span class="kw">const</span> clean = <span class="fn">canonicalise</span><span class="br">(</span>rawText<span class="br">)</span>;<br>
-            <span class="dim">// For English contracts: replace every confusable</span><br>
-            <span class="fn">canonicalise</span><span class="br">(</span>rawText, <span class="br">{</span> <span class="var">strategy</span>: <span class="str">"all"</span> <span class="br">}</span><span class="br">)</span>;
+            <br>
+            <span class="cm">// Gate: fast boolean check (microseconds)</span><br>
+            <span class="kw">if</span> <span class="br">(</span>!<span class="fn">isClean</span><span class="br">(</span>document<span class="br">)</span><span class="br">)</span> <span class="br">{</span><br>
+            &nbsp;&nbsp;<span class="kw">const</span> report = <span class="fn">scan</span><span class="br">(</span>document<span class="br">)</span>; <span class="cm">// per-character detail + risk level</span><br>
+            <span class="br">}</span><br>
+            <br>
+            <span class="cm">// Fix: rewrite confusables to Latin (5.2x tokens -> 1.0x)</span><br>
+            <span class="kw">const</span> clean = <span class="fn">canonicalise</span><span class="br">(</span>document, <span class="br">{</span> <span class="var">strategy</span>: <span class="str">"all"</span> <span class="br">}</span><span class="br">)</span>;
           </div>
           <p class="research-links"><a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#llm-pipeline-preprocessing" target="_blank" rel="noopener">Reference: LLM Pipeline Preprocessing</a></p>
         </div>
@@ -1519,7 +1608,7 @@
     <!-- Profanity and evasion -->
     <section class="pipeline-section" aria-labelledby="profanity-heading">
       <h2 id="profanity-heading" class="display-type">Profanity &amp; Evasion</h2>
-      <p class="subtitle">Keep moderation dependency-free by default, and plug in any external library when you need it.</p>
+      <p class="subtitle">Zero-dependency by default. Plug in any external moderation library when you need it.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
@@ -1571,20 +1660,20 @@
         <div class="pipeline-stage">
           <span class="stage-num">Stage 2</span>
           <span class="stage-name">Confusable map</span>
-          <span class="stage-desc">613 TR39 character pairs</span>
+          <span class="stage-desc">1,397 scored character pairs</span>
         </div>
         <span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
         <div class="pipeline-stage">
           <span class="stage-num">Stage 3</span>
           <span class="stage-name">Mixed-script reject</span>
-          <span class="stage-desc">19+ script families</span>
+          <span class="stage-desc">22+ script families</span>
         </div>
       </div>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>NFKC-aware confusable map</h3>
-          <p>TR39 and NFKC do not always map characters the same way. namespace-guard accounts for those differences so normalized pipelines use the right mapping. Need the full unfiltered map? <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (~1,400 entries) is exported for non-NFKC pipelines.</p>
+          <p>Unicode's confusables.txt and NFKC normalisation disagree on 31 characters. namespace-guard ships two maps: <code class="inline-chip">CONFUSABLE_MAP</code> for NFKC-first pipelines (the common case) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (~1,400 entries) for raw-input pipelines that skip normalisation.</p>
           <div class="example">
             <span class="dim">// TR39 says Long S (&lsaquo;&#x17F;&rsaquo;) &rarr; &ldquo;f&rdquo;</span><br>
             <span class="dim">// NFKC says Long S &rarr; &ldquo;s&rdquo;</span> <span class="val">&larr; correct</span><br>
@@ -1593,8 +1682,8 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>Full Unicode script coverage</h3>
-          <p>The confusable map covers 20+ scripts from the Unicode Consortium's authoritative source. Mixed-script detection goes further, blocking Latin mixed with Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, and more.</p>
+          <h3>22+ script families</h3>
+          <p>Latin, Cyrillic, Greek, Armenian, Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, Hangul, Han, and more. Mixed-script detection blocks identifiers that combine characters from different scripts.</p>
           <div class="example">
             <span class="err">&#x430;dmin</span> <span class="dim">Cyrillic &ldquo;a&rdquo; + Latin</span><br>
             <span class="err">&#x570;ello</span> <span class="dim">Armenian &ldquo;h&rdquo; + Latin</span><br>
@@ -1604,11 +1693,11 @@
         </div>
         <div class="glass-card insight-card">
           <h3>Reproducible from source</h3>
-          <p>The map is generated from Unicode's official <code class="inline-chip">confusables.txt</code>, not hand-curated. Run <code class="inline-chip">npx tsx scripts/generate-confusables.ts</code> to regenerate for new Unicode versions. The script automatically excludes NFKC conflicts.</p>
+          <p>Generated from Unicode's official <code class="inline-chip">confusables.txt</code>, not hand-curated. Regenerate for new Unicode versions with a single command. NFKC conflicts are excluded automatically.</p>
         </div>
         <div class="glass-card insight-card">
-          <h3>Defense in depth</h3>
-          <p>The default slug pattern <code class="inline-chip">/^[a-z0-9][a-z0-9-]*$/</code> already blocks non-ASCII. The confusable map and mixed-script detection protect apps with permissive patterns that allow Unicode identifiers, or serve as a second line of defense if a format regex is misconfigured.</p>
+          <h3>Defence in depth</h3>
+          <p>The default slug pattern already blocks non-ASCII. The confusable map and mixed-script detection add a second layer for apps that allow Unicode identifiers, or as a safety net if a format regex is misconfigured.</p>
         </div>
       </div>
     </section>
@@ -1644,8 +1733,8 @@
     const COMPOSABILITY_VECTOR_SUITE = "nfkc-tr39-divergence-v1";
     const COMPOSABILITY_VECTOR_COUNT = 31;
 
-    // Generated from Unicode TR39 confusables.txt + supplemental Latin small capitals (613 entries)
-    // NFKC-conflict entries excluded (NFKC normalization runs first in the pipeline)
+    // Generated from Unicode TR39 confusables.txt + supplemental Latin small capitals
+    // NFKC-conflict entries excluded (NFKC normalisation runs first in the pipeline)
     var CONFUSABLE_MAP = {
       "\u00d7":"x","\u00fe":"p","\u0131":"i","\u0184":"b","\u018d":"g","\u0192":"f","\u0196":"l",
       "\u01a6":"r","\u01a7":"2","\u01b7":"3","\u01bc":"5","\u01bd":"s","\u01bf":"p","\u01c0":"l","\u021c":"3",
@@ -1762,6 +1851,12 @@
       if (cp >= 0x1400 && cp <= 0x167F) return "Canadian Syllabics";
       if (cp >= 0x16A0 && cp <= 0x16FF) return "Runic";
       if (cp >= 0x1780 && cp <= 0x17FF) return "Khmer";
+      if (cp >= 0x1100 && cp <= 0x11FF) return "Hangul";
+      if (cp >= 0x3040 && cp <= 0x309F) return "Hiragana";
+      if (cp >= 0x30A0 && cp <= 0x30FF) return "Katakana";
+      if (cp >= 0x3130 && cp <= 0x318F) return "Hangul";
+      if (cp >= 0x4E00 && cp <= 0x9FFF) return "Han";
+      if (cp >= 0xAC00 && cp <= 0xD7A3) return "Hangul";
       if (cp >= 0x1D00 && cp <= 0x1D7F) return "Latin Small Capital";
       if (cp >= 0x0250 && cp <= 0x02AF) return "IPA";
       if (cp >= 0x2C80 && cp <= 0x2CFF) return "Coptic";
@@ -2900,16 +2995,16 @@
         "reserved names",
         "DB collisions",
       ];
-      if (homoglyphEnabled) checks.push("confusable chars");
+      if (homoglyphEnabled) checks.push("confusable detection");
       if (mixedScriptEnabled) checks.push("mixed-script block");
       if (invisibleEnabled) checks.push("invisible-char block");
       if (profanityEnabled) {
         if (!profanityListReady) {
-          checks.push("profanity evasion (list loading)");
+          checks.push("profanity evasion");
         } else if (profanityWordCount > 0) {
-          checks.push(`profanity evasion (${profanityWordCount.toLocaleString()} words)`);
+          checks.push("profanity evasion");
         } else {
-          checks.push("profanity evasion (list unavailable)");
+          checks.push("profanity evasion");
         }
       }
       if (weightsEnabled) {
@@ -2917,20 +3012,21 @@
         checks.push(`visual weights${ctxLabel}`);
       }
       const riskMode = failOnWarn ? "warn + block" : "block only";
-      const numericMode = rejectNumeric
-        ? "purely numeric blocked"
-        : (NAMESPACE_PROFILES[currentProfile]?.allowPurelyNumeric ? "purely numeric allowed" : "purely numeric blocked by profile");
-      policySummaryEl.textContent = `Active policy (${currentProfile}): ${checks.join(", ")}.`;
+      policySummaryEl.textContent = `Profile: ${currentProfile} · Risk gate: ${riskMode} · Checks: ${checks.join(", ")}`;
       if (policyRulesEl) {
-        policyRulesEl.textContent = `Risk gate: ${riskMode}. Numeric rule: ${numericMode}.`;
+        const numericLabel = rejectNumeric
+          ? "blocked"
+          : (NAMESPACE_PROFILES[currentProfile]?.allowPurelyNumeric ? "allowed" : "blocked by profile");
+        policyRulesEl.textContent = `Purely numeric slugs: ${numericLabel}`;
       }
       if (policyDepthEl) {
-        const profanityDepth = !profanityListReady
-          ? "Curated default profanity list depth: loading."
-          : profanityWordCount > 0
-            ? `Curated default profanity list depth: ${profanityWordCount.toLocaleString()} terms.`
-            : "Curated default profanity list depth: unavailable.";
-        policyDepthEl.textContent = `${profanityDepth} Composability baseline: ${COMPOSABILITY_VECTOR_SUITE} (${COMPOSABILITY_VECTOR_COUNT} vectors).`;
+        const parts = [];
+        if (profanityListReady && profanityWordCount > 0) {
+          parts.push(`${profanityWordCount.toLocaleString()} profanity terms`);
+        }
+        parts.push(`1,397 SSIM-scored confusable pairs (494 cross-script)`);
+        parts.push(`${COMPOSABILITY_VECTOR_COUNT} composability vectors (${COMPOSABILITY_VECTOR_SUITE})`);
+        policyDepthEl.textContent = `Data: ${parts.join(" · ")}`;
       }
     }
 
