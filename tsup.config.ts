@@ -15,6 +15,7 @@ export default defineConfig({
     "src/profanity-en.ts",
     "src/composability-vectors.ts",
     "src/confusable-weights.ts",
+    "src/font-specific-weights.ts",
     "src/cli.ts",
   ],
   format: ["cjs", "esm"],

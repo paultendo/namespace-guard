@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Zero dependencies.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -73,6 +73,11 @@
       "types": "./dist/confusable-weights.d.ts",
       "import": "./dist/confusable-weights.mjs",
       "require": "./dist/confusable-weights.js"
+    },
+    "./font-specific-weights": {
+      "types": "./dist/font-specific-weights.d.ts",
+      "import": "./dist/font-specific-weights.mjs",
+      "require": "./dist/font-specific-weights.js"
     }
   },
   "files": [
