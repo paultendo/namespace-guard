@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**The world's first library that detects confusable characters across non-Latin scripts.** Slug claimability, Unicode anti-spoofing, and LLM Denial of Spend defence in one zero-dependency package.
+**The world's first library that detects confusable characters across non-Latin scripts.** Slug claimability, Unicode anti-spoofing, and LLM [Denial of Spend](https://paultendo.github.io/posts/confusable-vision-llm-attack-tests/) defence in one zero-dependency package.
 
 - Live demo: https://paultendo.github.io/namespace-guard/
 - Blog post: https://paultendo.github.io/posts/namespace-guard-launch/
