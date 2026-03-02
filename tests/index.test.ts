@@ -3455,9 +3455,9 @@ describe("cross-script confusable detection", () => {
     });
 
     it("respects context filtering", () => {
-      // Cross-script edges have xidContinue=false, so identifier context filters them out
-      expect(areConfusable("\u1175", "\u4E28", { weights, context: "identifier" })).toBe(false);
-      // But "all" context includes them
+      // Hangul U+1175 and Han U+4E28 are both XID_Continue (Letter, other),
+      // so they appear in identifier context as well as "all"
+      expect(areConfusable("\u1175", "\u4E28", { weights, context: "identifier" })).toBe(true);
       expect(areConfusable("\u1175", "\u4E28", { weights, context: "all" })).toBe(true);
     });
   });

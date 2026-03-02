@@ -3,7 +3,7 @@
 /**
  * generate-confusable-weights-global.js
  *
- * Reads confusable-weights.json (from confusable-vision) and outputs a compact
+ * Reads confusable-weights-v2.json (from confusable-vision) and outputs a compact
  * browser-global JS file for the playground at docs/data/confusable-weights.global.js.
  *
  * Field compression:
@@ -21,7 +21,7 @@ const path = require("node:path");
 
 const DEFAULT_JSON_PATH = path.resolve(
   __dirname,
-  "../../confusable-vision/data/output/confusable-weights.json"
+  "../../confusable-vision/data/output/confusable-weights-v2.json"
 );
 
 const OUTPUT_PATH = path.resolve(__dirname, "../docs/data/confusable-weights.global.js");
@@ -62,8 +62,8 @@ for (const edge of data.edges) {
 }
 
 const output = [
-  "// Auto-generated from confusable-vision confusable-weights.json",
-  `// ${pairCount} SSIM-scored pairs. Do not edit manually.`,
+  "// Auto-generated from confusable-vision confusable-weights-v2.json",
+  `// ${pairCount} RaySpace-scored pairs. Do not edit manually.`,
   `// Regenerate: node scripts/generate-confusable-weights-global.js`,
   `window.__NG_CONFUSABLE_WEIGHTS__ = ${JSON.stringify(map)};`,
   "",
