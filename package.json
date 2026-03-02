@@ -1,6 +1,6 @@
 {
   "name": "namespace-guard",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "description": "Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Zero dependencies.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
