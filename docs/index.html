@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>namespace-guard - Cross-Script Confusable Detection &amp; Slug Safety</title>
-  <meta name="description" content="The world's first cross-script confusable detection library. 1,397 SSIM-scored pairs across 230 fonts. Slug safety, LLM Denial of Spend defence, and Unicode anti-spoofing in one zero-dependency package.">
+  <meta name="description" content="The world's first cross-script confusable detection library. 4,174 confusable pairs measured across 245 fonts using vector-outline raycasting (RaySpace). Slug safety, LLM Denial of Spend defence, and Unicode anti-spoofing in one zero-dependency package.">
   <meta property="og:title" content="namespace-guard Playground">
   <meta property="og:description" content="Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Try the interactive playground or browse 9 adapter examples.">
   <meta property="og:type" content="website">
@@ -868,7 +868,7 @@
     <div class="hero-phonetic phonetic-serif">
       <span class="pron">/neym-speys gahrd/</span>
       <span class="pos">noun</span>
-      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes. The world's first library to detect confusable characters across non-Latin scripts, backed by 1,397 SSIM-scored character pairs measured across 230 fonts.</span>
+      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes. The world's first library to detect confusable characters across non-Latin scripts, backed by 4,174 character pairs measured across 245 fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>).</span>
     </div>
     <div class="hero-actions">
       <a href="#playground" class="btn-primary">Try it out</a>
@@ -913,7 +913,7 @@
             Anti-Spoofing
           </h3>
           <p>Detects visually deceptive Unicode across 22+ scripts, including cross-script confusable pairs between non-Latin scripts that no existing standard covers.</p>
-          <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"<br><span class="err cross-script-font">"&#x1175;&#x4E28;"</span> &rarr; Hangul/Han cross-script (SSIM 0.999)</div>
+          <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"<br><span class="err cross-script-font">"&#x1175;&#x4E28;"</span> &rarr; Hangul/Han cross-script (ray distance 0.004)</div>
         </div>
         <div class="glass-card how-card">
           <h3>
@@ -931,6 +931,14 @@
           <p>Catches zero-width joiners, direction overrides, and other invisible Unicode characters that make identifiers look clean while hiding extra bytes.</p>
           <div class="example"><span class="err">"a&#x200D;dmin"</span> &rarr; contains a zero-width joiner</div>
         </div>
+        <div class="glass-card how-card">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Domain Spoof Detection
+          </h3>
+          <p>Detects realistic IDN homograph attacks. Only flags single-script spoofs that could actually be registered as domains &mdash; mixed-script labels are excluded because ICANN registrars reject them.</p>
+          <div class="example"><span class="err cross-script-font">"&#x0440;&#x0430;&#x0443;&#x0440;&#x0430;&#x04CF;"</span> spoofs "paypal" <small>(all-Cyrillic)</small></div>
+        </div>
       </div>
     </section>
 
@@ -939,14 +947,15 @@
     <!-- Research -->
     <section class="pipeline-section research-section" aria-labelledby="research-heading">
       <h2 id="research-heading" class="display-type">Research Behind The Pipeline</h2>
-      <p class="subtitle">We rendered 1,397 character pairs across 230 system fonts, measured structural similarity (SSIM), and discovered 494 cross-script confusables that no standard covers.</p>
+      <p class="subtitle">We measured 4,174 character pairs across 245 system fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>) and discovered 3,525 cross-script confusables that no standard covers.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>Visual measurement pipeline</h3>
           <ul class="checklist">
-            <li>1,397 confusable pairs scored via SSIM across 230 system fonts (macOS)</li>
-            <li>494 novel cross-script pairs between non-Latin scripts: Hangul/Han, Cyrillic/Greek, Greek/Han, Cyrillic/Arabic, and more</li>
+            <li>4,174 confusable pairs scored across 245 system fonts via vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>)</li>
+            <li>Each pair carries a <code class="inline-chip">danger</code> score (0&ndash;1) representing geometric similarity across fonts. The shipped dataset uses a 0.5 floor; for higher precision, filter at 0.7 (574 pairs)</li>
+            <li>3,525 novel cross-script pairs between non-Latin scripts: Hangul/Han, Cyrillic/Greek, Greek/Han, Cyrillic/Arabic, and more</li>
             <li>Glyph-reuse detection to distinguish font fallback from true visual similarity</li>
             <li>Full dataset published as <a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0)</li>
           </ul>
@@ -962,6 +971,8 @@
         </div>
       </div>
       <p class="research-links">
+        <a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace methodology</a>
+        <span class="sep">&middot;</span>
         <a href="https://paultendo.github.io/posts/namespace-guard-launch/" target="_blank" rel="noopener">Launch write-up</a>
         <span class="sep">&middot;</span>
         <a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#how-the-anti-spoofing-pipeline-works" target="_blank" rel="noopener">Technical details</a>
@@ -1117,7 +1128,7 @@
         <div class="strategy-section">
           <div class="strategy-label">Visual weights:</div>
           <div class="strategy-row" role="group" aria-label="Toggle visual weights">
-            <button class="strategy-chip" aria-pressed="false" id="toggle-weights">SSIM-scored weights</button>
+            <button class="strategy-chip" aria-pressed="false" id="toggle-weights">Visual weights</button>
           </div>
         </div>
 
@@ -1161,9 +1172,9 @@
             <button class="example-pill" data-slug="a&#x200D;dmin" title="Contains zero-width joiner">a[ZWJ]dmin</button>
             <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;</button>
             <button class="example-pill" data-slug="123456">123456</button>
-            <button class="example-pill cross-script-font" data-slug="&#x1175;&#x4E28;" title="Hangul &#x1175; / Han &#x4E28; (SSIM 0.999, Arial Unicode MS)">&#x1175;&#x4E28; Hangul/Han</button>
-            <button class="example-pill cross-script-font" data-slug="&#x041D;&#x0397;" title="Cyrillic Н (U+041D) / Greek Η (U+0397) — SSIM 1.0, 121 fonts">&#x041D;&#x0397; Cyrillic Н / Greek Η</button>
-            <button class="example-pill cross-script-font" data-slug="&#x0406;&#x0399;" title="Cyrillic І (U+0406) / Greek Ι (U+0399) — SSIM 1.0, 61 fonts">&#x0406;&#x0399; Cyrillic І / Greek Ι</button>
+            <button class="example-pill cross-script-font" data-slug="&#x1175;&#x4E28;" title="Hangul &#x1175; / Han &#x4E28; (ray distance 0.004, Arial Unicode MS)">&#x1175;&#x4E28; Hangul/Han</button>
+            <button class="example-pill cross-script-font" data-slug="&#x041D;&#x0397;" title="Cyrillic Н (U+041D) / Greek Η (U+0397) — identical outlines, 121 fonts">&#x041D;&#x0397; Cyrillic Н / Greek Η</button>
+            <button class="example-pill cross-script-font" data-slug="&#x0406;&#x0399;" title="Cyrillic І (U+0406) / Greek Ι (U+0399) — identical outlines, 62 fonts">&#x0406;&#x0399; Cyrillic І / Greek Ι</button>
           </div>
         </div>
 
@@ -1521,7 +1532,7 @@
 
         <div class="glass-card insight-card">
           <h3>Measured visual weights + cross-script detection</h3>
-          <p>1,397 confusable pairs scored via SSIM across 230 system fonts, including 494 cross-script pairs between non-Latin scripts (Hangul/Han, Thai/Devanagari, Cyrillic/Greek, and more). The world's first cross-script confusable dataset.</p>
+          <p>4,174 confusable pairs measured across 245 system fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>), including 3,525 cross-script pairs between non-Latin scripts (Hangul/Han, Thai/Devanagari, Cyrillic/Greek, and more). The world's first cross-script confusable dataset.</p>
           <div class="example">
             <span class="kw">import</span> <span class="br">{</span> <span class="fn">areConfusable</span>, <span class="fn">detectCrossScriptRisk</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
             <span class="kw">import</span> <span class="br">{</span> <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/confusable-weights"</span>;<br>
@@ -1660,7 +1671,7 @@
         <div class="pipeline-stage">
           <span class="stage-num">Stage 2</span>
           <span class="stage-name">Confusable map</span>
-          <span class="stage-desc">1,397 scored character pairs</span>
+          <span class="stage-desc">4,174 scored character pairs</span>
         </div>
         <span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
         <div class="pipeline-stage">
@@ -2320,7 +2331,7 @@
             // Lower cost = more visually similar = higher risk boost
             const boost = Math.round((1 - w.cost) * 15);
             score += boost;
-            // Novel pairs (not in TR39 map but found by SSIM) get extra signal
+            // Novel pairs (not in TR39 map but found by visual measurement) get extra signal
             if (!w.tr39Allowed && !map[idChars[i]]) {
               score += 5;
             }
@@ -2723,7 +2734,7 @@
           const matchReasons = [];
           if (distance.skeletonEqual) matchReasons.push("TR39 skeleton collision");
           if (distance.chainDepth >= 2) matchReasons.push(`chain depth ${distance.chainDepth}`);
-          if (distance.weightedPairs > 0) matchReasons.push(`${distance.weightedPairs} SSIM-weighted pair${distance.weightedPairs > 1 ? "s" : ""}`);
+          if (distance.weightedPairs > 0) matchReasons.push(`${distance.weightedPairs} visually-weighted pair${distance.weightedPairs > 1 ? "s" : ""}`);
 
           scoredMatches.push({
             target,
@@ -3024,7 +3035,7 @@
         if (profanityListReady && profanityWordCount > 0) {
           parts.push(`${profanityWordCount.toLocaleString()} profanity terms`);
         }
-        parts.push(`1,397 SSIM-scored confusable pairs (494 cross-script)`);
+        parts.push(`4,174 visually-scored confusable pairs (3,525 cross-script)`);
         parts.push(`${COMPOSABILITY_VECTOR_COUNT} composability vectors (${COMPOSABILITY_VECTOR_SUITE})`);
         policyDepthEl.textContent = `Data: ${parts.join(" · ")}`;
       }

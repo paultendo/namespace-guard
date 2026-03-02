@@ -5,7 +5,7 @@
  *
  * Sources:
  * - CONFUSABLE_MAP_FULL from namespace-guard (TR39 single-char Latin/digit mappings)
- * - confusable-vision confusable-weights.json (SSIM metadata + novel pairs)
+ * - confusable-vision confusable-weights.json (visual similarity metadata + novel pairs)
  *
  * Output:
  * - src/llm-confusable-map.ts
@@ -160,7 +160,7 @@ function pushEntry(sourceChar, latin, score, source, cpOverride) {
 
   const row = {
     latin,
-    ssimScore: round4(clamp01(score)),
+    visualScore: round4(clamp01(score)),
     source,
     script: detectScriptName(sourceChar),
     codepoint: cpOverride || codePointLabel(sourceChar),
@@ -208,7 +208,7 @@ const sourceChars = Array.from(mapByChar.keys()).sort((a, b) => {
 for (const ch of sourceChars) {
   const rows = mapByChar.get(ch);
   rows.sort((a, b) => {
-    if (b.ssimScore !== a.ssimScore) return b.ssimScore - a.ssimScore;
+    if (b.visualScore !== a.visualScore) return b.visualScore - a.visualScore;
     if (a.source !== b.source) return a.source === "tr39" ? -1 : 1;
     if (a.latin !== b.latin) return a.latin.localeCompare(b.latin);
     return a.script.localeCompare(b.script);
@@ -232,7 +232,7 @@ out += `export type LlmConfusableSource = "tr39" | "novel";\n`;
 out += `\n`;
 out += `export type LlmConfusableMapEntry = {\n`;
 out += `  latin: string;\n`;
-out += `  ssimScore: number;\n`;
+out += `  visualScore: number;\n`;
 out += `  source: LlmConfusableSource;\n`;
 out += `  script: string;\n`;
 out += `  codepoint: string;\n`;
@@ -252,7 +252,7 @@ for (const ch of sourceChars) {
   for (const row of rows) {
     const wr = row.widthRatio !== null ? row.widthRatio : "null";
     const hr = row.heightRatio !== null ? row.heightRatio : "null";
-    out += `    { latin: "${escapeChar(row.latin)}", ssimScore: ${row.ssimScore}, source: "${row.source}", script: "${row.script}", codepoint: "${row.codepoint}", widthRatio: ${wr}, heightRatio: ${hr} },\n`;
+    out += `    { latin: "${escapeChar(row.latin)}", visualScore: ${row.visualScore}, source: "${row.source}", script: "${row.script}", codepoint: "${row.codepoint}", widthRatio: ${wr}, heightRatio: ${hr} },\n`;
   }
   out += `  ],\n`;
 }

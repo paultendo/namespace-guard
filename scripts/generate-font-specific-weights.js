@@ -8,11 +8,11 @@
  *
  * Each font's data uses the existing ConfusableWeights type (nested
  * Record<string, Record<string, ConfusableWeight>>). For font-specific entries:
- *   - danger = the font-specific SSIM score
+ *   - danger = the font-specific visual similarity score
  *   - stableDanger = same value (single font, no aggregation)
  *   - cost = 1 - danger
  *
- * Only includes pairs with SSIM >= 0.7 (the high-risk threshold).
+ * Only includes pairs with visual score >= 0.7 (the high-risk threshold).
  *
  * Usage:
  *   node scripts/generate-font-specific-weights.js [path-to-json]
@@ -89,7 +89,7 @@ import type { ConfusableWeights } from "./index";
 /**
  * Per-font confusable weight maps for ${data.meta.fontCount} macOS system fonts.
  *
- * Each font's map contains only the high-risk pairs (SSIM >= ${SSIM_THRESHOLD}) that
+ * Each font's map contains only the high-risk pairs (visual score >= ${SSIM_THRESHOLD}) that
  * are visually confusable when the target character renders in that specific font.
  * This gives 10-28x less data than the universal CONFUSABLE_WEIGHTS map.
  *

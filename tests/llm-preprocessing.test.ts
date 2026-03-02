@@ -9,14 +9,14 @@ import {
 type Sample = {
   char: string;
   latin: string;
-  ssimScore: number;
+  visualScore: number;
 };
 
 function pickNovelSample(): Sample {
   for (const [char, entries] of Object.entries(LLM_CONFUSABLE_MAP)) {
-    const novel = entries.find((entry) => entry.source === "novel" && entry.ssimScore >= 0.7);
+    const novel = entries.find((entry) => entry.source === "novel" && entry.visualScore >= 0.7);
     if (!novel) continue;
-    return { char, latin: novel.latin, ssimScore: novel.ssimScore };
+    return { char, latin: novel.latin, visualScore: novel.visualScore };
   }
   throw new Error("No novel confusable sample found in LLM_CONFUSABLE_MAP.");
 }
@@ -24,10 +24,10 @@ function pickNovelSample(): Sample {
 function pickThresholdSample(): Sample {
   for (const [char, entries] of Object.entries(LLM_CONFUSABLE_MAP)) {
     const candidate = entries.find(
-      (entry) => entry.ssimScore >= 0.7 && entry.ssimScore <= 0.95
+      (entry) => entry.visualScore >= 0.7 && entry.visualScore <= 0.95
     );
     if (!candidate) continue;
-    return { char, latin: candidate.latin, ssimScore: candidate.ssimScore };
+    return { char, latin: candidate.latin, visualScore: candidate.visualScore };
   }
   throw new Error("No threshold sample found in LLM_CONFUSABLE_MAP.");
 }
@@ -67,10 +67,10 @@ describe("LLM preprocessing: canonicalise", () => {
     const sample = pickThresholdSample();
     const input = `a${sample.char}z`;
 
-    const canonicalised = canonicalise(input, { threshold: sample.ssimScore - 0.001 });
+    const canonicalised = canonicalise(input, { threshold: sample.visualScore - 0.001 });
     expect(canonicalised).toBe(`a${sample.latin}z`);
 
-    const blocked = canonicalise(input, { threshold: sample.ssimScore + 0.001 });
+    const blocked = canonicalise(input, { threshold: sample.visualScore + 0.001 });
     expect(blocked).toBe(input);
   });
 
@@ -133,9 +133,9 @@ describe("LLM preprocessing: scan", () => {
     expect(typeof finding.script).toBe("string");
     expect(finding.script.length).toBeGreaterThan(0);
     expect(/^[a-z0-9]$/i.test(finding.latinEquivalent)).toBe(true);
-    expect(typeof finding.ssimScore).toBe("number");
-    expect(finding.ssimScore).toBeGreaterThanOrEqual(0);
-    expect(finding.ssimScore).toBeLessThanOrEqual(1);
+    expect(typeof finding.visualScore).toBe("number");
+    expect(finding.visualScore).toBeGreaterThanOrEqual(0);
+    expect(finding.visualScore).toBeLessThanOrEqual(1);
     expect(finding.word.length).toBeGreaterThan(0);
     expect(typeof finding.mixedScript).toBe("boolean");
 

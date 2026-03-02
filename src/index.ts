@@ -167,7 +167,7 @@ export type InvisibleCharacterValidatorOptions = {
 
 /** Options for `canonicalise()` LLM preprocessing. */
 export type CanonicaliseOptions = {
-  /** Minimum SSIM score required for replacement (default: `0.7`). */
+  /** Minimum visual score required for replacement (default: `0.7`). */
   threshold?: number;
   /** Include confusable-vision novel discoveries in addition to TR39 mappings (default: `true`). */
   includeNovel?: boolean;
@@ -216,8 +216,8 @@ export type ScanFinding = {
   script: string;
   /** Canonical Latin equivalent selected by the lookup table. */
   latinEquivalent: string;
-  /** SSIM score used for this mapping. */
-  ssimScore: number;
+  /** Visual similarity score for this mapping (0–1, from RaySpace measurement). */
+  visualScore: number;
   /** Mapping source (`tr39` baseline or `novel` discovery). */
   source: "tr39" | "novel";
   /** UTF-16 code-unit offset in the input string. */
@@ -277,9 +277,9 @@ export type AreConfusableOptions = SkeletonOptions & {
 
 /** Measured visual weight for a single confusable pair. */
 export type ConfusableWeight = {
-  /** Maximum SSIM across all font comparisons (attacker perspective). */
+  /** Maximum visual similarity across all font comparisons (attacker perspective). */
   danger: number;
-  /** 95th percentile SSIM across all font comparisons (defender perspective). */
+  /** 95th percentile visual similarity across all font comparisons (defender perspective). */
   stableDanger: number;
   /** 1 - stableDanger, clamped [0, 1]. Lower cost = more dangerous. */
   cost: number;
@@ -2688,7 +2688,7 @@ function pickConfusableEntry(
   if (!candidates || candidates.length === 0) return null;
 
   for (const candidate of candidates) {
-    if (candidate.ssimScore < options.threshold) continue;
+    if (candidate.visualScore < options.threshold) continue;
     if (!options.includeNovel && candidate.source === "novel") continue;
     if (options.scripts && !options.scripts.has(candidate.script.toLowerCase())) continue;
     // Size-ratio filter: skip novel pairs with extreme size differences.
@@ -2891,7 +2891,7 @@ export function scan(text: string, options?: ScanOptions): ScanResult {
         codepoint: entry.codepoint || formatCodePoint(item.ch),
         script: entry.script,
         latinEquivalent: entry.latin,
-        ssimScore: entry.ssimScore,
+        visualScore: entry.visualScore,
         source: entry.source,
         index: item.index,
         word,
@@ -3376,9 +3376,9 @@ export type CrossScriptRiskResult = {
   crossScriptPairs: Array<{
     a: { char: string; script: string };
     b: { char: string; script: string };
-    ssim: number;
+    visualScore: number;
   }>;
-  /** Overall risk level: "none" (single script), "low" (matches below 0.8), "high" (ssim >= 0.8 or 3+ matches). */
+  /** Overall risk level: "none" (single script), "low" (matches below 0.8), "high" (visualScore >= 0.8 or 3+ matches). */
   riskLevel: "none" | "low" | "high";
 };
 
@@ -3432,7 +3432,7 @@ export function detectCrossScriptRisk(
           crossScriptPairs.push({
             a: { char: ci.char, script: ci.script },
             b: { char: cj.char, script: cj.script },
-            ssim: Math.round((1 - w.cost) * 10000) / 10000,
+            visualScore: Math.round((1 - w.cost) * 10000) / 10000,
           });
         }
       }
@@ -3442,13 +3442,201 @@ export function detectCrossScriptRisk(
   let riskLevel: CrossScriptRiskResult["riskLevel"];
   if (crossScriptPairs.length === 0) {
     riskLevel = "none";
-  } else if (crossScriptPairs.some(p => p.ssim >= 0.8) || crossScriptPairs.length >= 3) {
+  } else if (crossScriptPairs.some(p => p.visualScore >= 0.8) || crossScriptPairs.length >= 3) {
     riskLevel = "high";
   } else {
     riskLevel = "low";
   }
 
   return { scripts, crossScriptPairs, riskLevel };
+}
+
+// ---------------------------------------------------------------------------
+// isDomainSpoof — realistic domain spoofing guard
+// ---------------------------------------------------------------------------
+
+/** A single character-level substitution in a domain spoof. */
+export type DomainSpoofSubstitution = {
+  /** Position in the label. */
+  index: number;
+  /** The target's character at this position. */
+  from: string;
+  /** The label's character (the confusable replacement). */
+  to: string;
+  /** Visual similarity between the two characters (0–1). */
+  similarity: number;
+};
+
+/** Result of {@link isDomainSpoof}. */
+export type DomainSpoofResult = {
+  /** Opinionated verdict: `true` when `danger >= minDanger` and the label is
+   *  a single-script confusable of the target. */
+  spoof: boolean;
+  /** Script of the spoofing label (set whenever a full-script match is found,
+   *  even if `danger` is below the threshold). */
+  script?: string;
+  /** Average visual similarity across substitutions (0–1).
+   *  Always set when a script match is found, regardless of `spoof`.
+   *  Callers who want finer control can ignore `spoof` and threshold on
+   *  `danger` directly. */
+  danger?: number;
+  /** Per-character substitution details. */
+  substitutions?: DomainSpoofSubstitution[];
+};
+
+/** Options for {@link isDomainSpoof}. */
+export type DomainSpoofOptions = {
+  /** Confusable character map (default: `CONFUSABLE_MAP_FULL`). */
+  map?: Record<string, string>;
+  /** Measured visual weights for similarity scoring. */
+  weights?: ConfusableWeights;
+  /** Minimum average danger for `spoof` to be `true` (default `0.5`).
+   *  Set higher (e.g. `0.7`) for fewer false positives.
+   *  The `danger` score is always returned regardless — callers can apply
+   *  their own threshold. */
+  minDanger?: number;
+  /** Known-legitimate non-Latin labels to skip (e.g. `["банк", "москва"]`).
+   *  Checked after NFKC + lowercase normalisation. */
+  allowlist?: string[];
+};
+
+/** Collect the set of known script tags from an array of characters, ignoring non-letter and other-letter. */
+function collectScripts(chars: string[]): Set<string> {
+  const scripts = new Set<string>();
+  for (const ch of chars) {
+    const tag = getScriptTag(ch);
+    if (tag !== "non-letter" && tag !== "other-letter") {
+      scripts.add(tag);
+    }
+  }
+  return scripts;
+}
+
+/**
+ * Check whether a domain label is a realistic spoof of a target label.
+ *
+ * ICANN registrars enforce single-script labels under IDN rules, so a
+ * mixed-script domain like `pаypal.com` (Cyrillic а + Latin) cannot actually
+ * be registered.  This function only flags threats that could produce
+ * registrable domain names:
+ *
+ * - The label must be **single-script** (or single-script + Common characters
+ *   like digits and hyphens).
+ * - Every non-Common character must be a **confusable** of the corresponding
+ *   character in the target, verified against the confusable map and optional
+ *   measured weights.
+ *
+ * Mixed-script substitutions are deliberately excluded because registrars
+ * reject them.
+ *
+ * @param label  - The suspicious domain label to check (e.g. Cyrillic "раураl")
+ * @param target - The legitimate domain label (e.g. "paypal")
+ * @param options - Map, weights, threshold, and allowlist settings
+ * @returns Spoof analysis with opinionated verdict and detailed scores
+ *
+ * @example
+ * ```ts
+ * import { isDomainSpoof } from "namespace-guard";
+ * import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+ *
+ * // Full-Cyrillic lookalike — realistic, registrable spoof
+ * isDomainSpoof("\u0440\u0430\u0443\u0440\u0430\u04cf", "paypal",
+ *   { weights: CONFUSABLE_WEIGHTS });
+ * // { spoof: true, script: "cyrillic", danger: 0.91, substitutions: [...] }
+ *
+ * // Mixed-script — cannot be registered, not a spoof
+ * isDomainSpoof("\u0440aypal", "paypal",
+ *   { weights: CONFUSABLE_WEIGHTS });
+ * // { spoof: false }
+ * ```
+ */
+export function isDomainSpoof(
+  label: string,
+  target: string,
+  options?: DomainSpoofOptions,
+): DomainSpoofResult {
+  const map = options?.map ?? CONFUSABLE_MAP_FULL;
+  const weights = options?.weights;
+  const minDanger = options?.minDanger ?? 0.5;
+
+  // Normalise: NFKC + lowercase + strip default-ignorable characters.
+  const normLabel = label.normalize("NFKC").toLowerCase().replace(DEFAULT_IGNORABLE_RE, "");
+  const normTarget = target.normalize("NFKC").toLowerCase().replace(DEFAULT_IGNORABLE_RE, "");
+
+  // Early exits.
+  if (normLabel.length === 0 || normTarget.length === 0) return { spoof: false };
+  if (normLabel === normTarget) return { spoof: false };
+
+  const labelChars = Array.from(normLabel);
+  const targetChars = Array.from(normTarget);
+  if (labelChars.length !== targetChars.length) return { spoof: false };
+
+  // Allowlist check (after normalisation).
+  if (options?.allowlist) {
+    const allowed = new Set(
+      options.allowlist.map(a => a.normalize("NFKC").toLowerCase().replace(DEFAULT_IGNORABLE_RE, "")),
+    );
+    if (allowed.has(normLabel)) return { spoof: false };
+  }
+
+  // Determine the label's script (must be single non-Common script).
+  const labelScripts = collectScripts(labelChars);
+  if (labelScripts.size === 0) return { spoof: false };  // all digits/hyphens
+  if (labelScripts.size > 1) return { spoof: false };    // mixed-script
+  const labelScript = [...labelScripts][0];
+
+  // Determine the target's script.
+  const targetScripts = collectScripts(targetChars);
+  if (targetScripts.size === 1 && targetScripts.has(labelScript)) {
+    return { spoof: false };  // same script — not a cross-script spoof
+  }
+
+  // Walk characters pairwise and check confusable substitutions.
+  const substitutions: DomainSpoofSubstitution[] = [];
+  for (let i = 0; i < labelChars.length; i++) {
+    const lch = labelChars[i];
+    const tch = targetChars[i];
+
+    if (lch === tch) continue;  // identical — no substitution needed
+
+    // Script-neutral characters (digits, hyphens, uncategorised letters)
+    // don't need substitution checking.
+    const lTag = getScriptTag(lch);
+    if (lTag === "non-letter" || lTag === "other-letter") continue;
+
+    // Check if lch is a confusable of tch.
+    let similarity: number | undefined;
+    const w = lookupWeight(lch, tch, weights, "domain");
+
+    if (map[lch] === tch) {
+      // Found via TR39 confusable map — use measured weight or default.
+      similarity = w ? round3(1 - w.cost) : 0.5;
+    } else if (w) {
+      // Novel pair found in weights table (not in TR39 map).
+      similarity = round3(1 - w.cost);
+    }
+
+    if (similarity === undefined) {
+      // Not a confusable — the chain is broken.
+      return { spoof: false };
+    }
+
+    substitutions.push({ index: i, from: tch, to: lch, similarity });
+  }
+
+  // Must have at least one substitution (identical strings already exited).
+  if (substitutions.length === 0) return { spoof: false };
+
+  // Compute average danger.
+  const dangerSum = substitutions.reduce((sum, s) => sum + s.similarity, 0);
+  const danger = round3(dangerSum / substitutions.length);
+
+  return {
+    spoof: danger >= minDanger,
+    script: labelScript,
+    danger,
+    substitutions,
+  };
 }
 
 function countConfusableChars(value: string, map: Record<string, string>): {

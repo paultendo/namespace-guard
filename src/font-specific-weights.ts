@@ -16,7 +16,7 @@ import type { ConfusableWeights } from "./index";
 /**
  * Per-font confusable weight maps for 74 macOS system fonts.
  *
- * Each font's map contains only the high-risk pairs (SSIM >= 0.7) that
+ * Each font's map contains only the high-risk pairs (visual score >= 0.7) that
  * are visually confusable when the target character renders in that specific font.
  * This gives 10-28x less data than the universal CONFUSABLE_WEIGHTS map.
  *

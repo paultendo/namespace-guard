@@ -14,7 +14,7 @@
 
 Existing confusable standards (TR39, IDNA) map non-Latin characters to Latin equivalents. They have zero coverage for confusable pairs *between* two non-Latin scripts.
 
-namespace-guard ships 494 cross-script pairs from [confusable-vision](https://github.com/paultendo/confusable-vision) (measured across 245 system fonts using vector-outline raycasting). This catches attacks that no other library detects:
+namespace-guard ships 3,525 cross-script pairs from [confusable-vision](https://github.com/paultendo/confusable-vision) (measured across 245 system fonts using vector-outline raycasting — [RaySpace](https://paultendo.github.io/posts/rayspace-methodology/)). This catches attacks that no other library detects:
 
 ```typescript
 import { areConfusable, detectCrossScriptRisk } from "namespace-guard";
@@ -37,7 +37,7 @@ const risk = detectCrossScriptRisk("\u1175\u4E28", { weights: CONFUSABLE_WEIGHTS
 // { riskLevel: "high", scripts: ["han", "hangul"], crossScriptPairs: [...] }
 ```
 
-1,397 total confusable pairs scored by visual measurement (110 TR39-confirmed, 793 novel Latin-target, 494 cross-script). Cross-script data licensed CC-BY-4.0.
+4,174 total confusable pairs scored by visual measurement (3,111 TR39-confirmed, 1,063 novel). Each pair carries a `danger` score (0–1) representing geometric similarity across fonts; the shipped dataset uses a 0.5 floor. For higher precision, filter at `danger > 0.7` (574 pairs). Cross-script data licensed CC-BY-4.0.
 
 ## Installation
 
@@ -88,7 +88,7 @@ if (!result.claimed) {
 
 ## What You Get
 
-- **Cross-script confusable detection** with 494 measured pairs between non-Latin scripts
+- **Cross-script confusable detection** with 3,525 measured pairs between non-Latin scripts
 - Cross-table collision checks (users, orgs, teams, etc.)
 - Reserved-name blocking with category-aware messages
 - Unicode anti-spoofing (NFKC + confusable detection + mixed-script/risk controls)
@@ -136,7 +136,7 @@ areConfusable("paypal", "pa\u0443pal"); // true
 confusableDistance("paypal", "pa\u0443pal"); // graded similarity + chainDepth + explainable steps
 ```
 
-For measured visual scoring, pass the optional weights from confusable-vision (1,397 pairs scored across 245 fonts using vector-outline raycasting, including 494 cross-script pairs). The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
+For measured visual scoring, pass the optional weights from confusable-vision (4,174 pairs scored across 245 fonts using vector-outline raycasting, including 3,525 cross-script pairs). Each pair has a `danger` score (0–1); the default 0.5 floor favours recall, use `danger > 0.7` for precision. The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
 
 ```typescript
 import { confusableDistance } from "namespace-guard";
@@ -149,11 +149,37 @@ const result = confusableDistance("paypal", "pa\u0443pal", {
 // result.similarity, result.steps (including "visual-weight" reason for novel pairs)
 ```
 
+### Realistic Domain Spoof Detection
+
+For domain name validation, `isDomainSpoof()` only flags threats that could produce registrable domain names. ICANN registrars enforce single-script labels, so mixed-script spoofs (e.g., one Cyrillic letter in a Latin domain) are excluded — they can't actually be registered.
+
+```typescript
+import { isDomainSpoof } from "namespace-guard";
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+
+// Full-Cyrillic lookalike — registrable and deceptive
+isDomainSpoof("\u0440\u0430\u0443\u0440\u0430\u04CF", "paypal", { weights: CONFUSABLE_WEIGHTS });
+// { spoof: true, script: "cyrillic", danger: 0.91, substitutions: [...] }
+
+// Mixed-script — not registrable, not flagged
+isDomainSpoof("\u0440aypal", "paypal", { weights: CONFUSABLE_WEIGHTS });
+// { spoof: false }
+
+// Known-legitimate non-Latin domain — skip via allowlist
+isDomainSpoof("\u0430\u0441\u0435", "ace", {
+  weights: CONFUSABLE_WEIGHTS,
+  allowlist: ["\u0430\u0441\u0435"],
+});
+// { spoof: false }
+```
+
+The `danger` score (0–1) is always returned when a script match is found, even if below the `minDanger` threshold (default 0.5). Set `minDanger: 0.7` for higher precision.
+
 ## Research
 
 Two research tracks feed the library:
 
-**Visual measurement.** 1,397 confusable pairs measured across 245 system fonts using vector-outline raycasting (RaySpace). 494 of these are novel cross-script pairs between non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic, and more) with zero coverage in any existing standard. Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
+**Visual measurement.** 4,174 confusable pairs measured across 245 system fonts using vector-outline raycasting ([RaySpace](https://paultendo.github.io/posts/rayspace-methodology/)). 3,525 of these are cross-script pairs between non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic, and more) with zero coverage in any existing standard. Each pair carries a `danger` score (0–1) representing geometric similarity; the shipped floor is 0.5 (for higher precision, try 0.7). Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
 
 **Normalisation composability.** 31 characters where Unicode's confusables.txt and NFKC normalisation disagree. Two production maps (`CONFUSABLE_MAP` for NFKC-first, `CONFUSABLE_MAP_FULL` for raw-input pipelines), a benchmark corpus, and composability vectors wired into CLI drift baselines. Submitted to [Unicode public review (PRI #540)](https://www.unicode.org/review/pri540/) and published in [accumulated feedback](https://www.unicode.org/review/pri540/feedback.html).
 

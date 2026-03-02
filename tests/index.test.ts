@@ -11,6 +11,7 @@ import {
   areConfusable,
   confusableDistance,
   detectCrossScriptRisk,
+  isDomainSpoof,
   deriveNfkcTr39DivergenceVectors,
   isLikelyUniqueViolationError,
   NAMESPACE_PROFILES,
@@ -3430,7 +3431,7 @@ describe("cross-script confusable detection", () => {
 
   describe("areConfusable with weights", () => {
     it("detects Hangul-Han cross-script pair with weights", () => {
-      // U+1175 (Hangul) vs U+4E28 (Han), SSIM ~0.999
+      // U+1175 (Hangul) vs U+4E28 (Han), visual score ~0.999
       expect(areConfusable("\u1175", "\u4E28", { weights })).toBe(true);
     });
 
@@ -3485,13 +3486,13 @@ describe("cross-script confusable detection", () => {
       expect(result.scripts).toEqual(["cyrillic"]);
     });
 
-    it("detects high risk for Hangul-Han pair with high SSIM", () => {
+    it("detects high risk for Hangul-Han pair with high visual score", () => {
       const result = detectCrossScriptRisk("\u1175\u4E28", { weights });
       expect(result.riskLevel).toBe("high");
       expect(result.scripts).toContain("hangul");
       expect(result.scripts).toContain("han");
       expect(result.crossScriptPairs.length).toBeGreaterThan(0);
-      expect(result.crossScriptPairs[0].ssim).toBeGreaterThanOrEqual(0.8);
+      expect(result.crossScriptPairs[0].visualScore).toBeGreaterThanOrEqual(0.8);
     });
 
     it("returns none for multi-script without weights", () => {
@@ -3525,6 +3526,188 @@ describe("cross-script confusable detection", () => {
     it("still detects skeleton matches with weights (no loop needed)", () => {
       // Cyrillic р/а map to Latin p/a via skeleton, before the weight loop
       expect(areConfusable("paypal", "\u0440\u0430ypal", { weights })).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // isDomainSpoof
+  // -------------------------------------------------------------------------
+  describe("isDomainSpoof", () => {
+    // -- Core cases --
+
+    it("detects all-Cyrillic spoof of 'ace'", () => {
+      // Cyrillic а(0430) с(0441) е(0435) — all visually identical to Latin a, c, e
+      const result = isDomainSpoof("\u0430\u0441\u0435", "ace", { weights });
+      expect(result.spoof).toBe(true);
+      expect(result.script).toBe("cyrillic");
+      expect(result.danger).toBeGreaterThanOrEqual(0.5);
+      expect(result.substitutions).toHaveLength(3);
+    });
+
+    it("detects all-Cyrillic spoof of 'paypal' (6 substitutions)", () => {
+      // р(0440) а(0430) у(0443) р(0440) а(0430) ӏ(04CF)
+      const result = isDomainSpoof(
+        "\u0440\u0430\u0443\u0440\u0430\u04CF",
+        "paypal",
+        { weights },
+      );
+      expect(result.spoof).toBe(true);
+      expect(result.script).toBe("cyrillic");
+      expect(result.substitutions).toHaveLength(6);
+    });
+
+    it("returns spoof: false for mixed-script label", () => {
+      // Cyrillic р + Latin aypal — not registrable
+      const result = isDomainSpoof("\u0440aypal", "paypal", { weights });
+      expect(result.spoof).toBe(false);
+      expect(result.script).toBeUndefined();
+      expect(result.danger).toBeUndefined();
+    });
+
+    it("returns spoof: false for identical labels", () => {
+      expect(isDomainSpoof("paypal", "paypal").spoof).toBe(false);
+    });
+
+    it("returns spoof: false for different-length labels", () => {
+      expect(isDomainSpoof("paypall", "paypal").spoof).toBe(false);
+    });
+
+    it("returns spoof: false for empty labels", () => {
+      expect(isDomainSpoof("", "").spoof).toBe(false);
+      expect(isDomainSpoof("", "paypal").spoof).toBe(false);
+      expect(isDomainSpoof("test", "").spoof).toBe(false);
+    });
+
+    it("returns spoof: false when one char is not confusable", () => {
+      // Cyrillic а + Latin x — 'x' has no Cyrillic confusable
+      // Actually, let's use a clearly non-confusable Cyrillic char
+      // Cyrillic а(0430) + д(0434) vs Latin 'ad' — д doesn't map to 'd'
+      const result = isDomainSpoof("\u0430\u0434", "ad", { weights });
+      expect(result.spoof).toBe(false);
+    });
+
+    it("returns spoof: false when both labels are Latin", () => {
+      expect(isDomainSpoof("paypa1", "paypal").spoof).toBe(false);
+    });
+
+    it("detects Greek spoof (Greek ο vs Latin o)", () => {
+      // Greek omicron ο(03BF) looks identical to Latin o
+      const result = isDomainSpoof("\u03BF", "o", { weights });
+      expect(result.spoof).toBe(true);
+      expect(result.script).toBe("greek");
+    });
+
+    // -- Script-neutral characters --
+
+    it("digits do not block spoof detection", () => {
+      // Cyrillic а(0430) + с(0441) + е(0435) + shared digits '123'
+      const result = isDomainSpoof("\u0430\u0441\u0435123", "ace123", { weights });
+      expect(result.spoof).toBe(true);
+      expect(result.script).toBe("cyrillic");
+      // Only 3 substitutions (digits are identical, not substituted)
+      expect(result.substitutions).toHaveLength(3);
+    });
+
+    it("hyphens do not block spoof detection", () => {
+      // Cyrillic а(0430) + с(0441) + е(0435) with hyphen
+      const result = isDomainSpoof("\u0430-\u0441\u0435", "a-ce", { weights });
+      expect(result.spoof).toBe(true);
+    });
+
+    // -- Normalisation --
+
+    it("strips default-ignorable characters before comparison", () => {
+      // ZWJ (U+200D) inserted in the label
+      const result = isDomainSpoof("\u0430\u200D\u0441\u0435", "ace", { weights });
+      expect(result.spoof).toBe(true);
+    });
+
+    it("applies NFKC normalisation (fullwidth → ASCII)", () => {
+      // Fullwidth 'Ａ' normalises to 'a' via NFKC, so the label becomes
+      // identical to target after normalisation — not a spoof.
+      const result = isDomainSpoof("\uFF21ce", "ace");
+      expect(result.spoof).toBe(false); // normalised to "ace" === "ace"
+    });
+
+    // -- Danger score --
+
+    it("returns danger even when below minDanger threshold", () => {
+      const result = isDomainSpoof("\u0430\u0441\u0435", "ace", {
+        weights,
+        minDanger: 1.1, // impossibly high
+      });
+      expect(result.spoof).toBe(false);
+      // But danger/script/substitutions are still present
+      expect(result.script).toBe("cyrillic");
+      expect(result.danger).toBeGreaterThan(0);
+      expect(result.substitutions!.length).toBe(3);
+    });
+
+    it("higher minDanger makes spoof verdict stricter", () => {
+      const relaxed = isDomainSpoof("\u0430\u0441\u0435", "ace", {
+        weights,
+        minDanger: 0.1,
+      });
+      const strict = isDomainSpoof("\u0430\u0441\u0435", "ace", {
+        weights,
+        minDanger: 1.1,
+      });
+      expect(relaxed.spoof).toBe(true);
+      expect(strict.spoof).toBe(false);
+      // Same danger score either way
+      expect(relaxed.danger).toBe(strict.danger);
+    });
+
+    it("works without weights (TR39 map only, default similarity 0.5)", () => {
+      const result = isDomainSpoof("\u0430\u0441\u0435", "ace");
+      expect(result.spoof).toBe(true);
+      expect(result.danger).toBe(0.5);
+    });
+
+    // -- Allowlist --
+
+    it("allowlisted label returns spoof: false immediately", () => {
+      const result = isDomainSpoof("\u0430\u0441\u0435", "ace", {
+        weights,
+        allowlist: ["\u0430\u0441\u0435"],
+      });
+      expect(result.spoof).toBe(false);
+      // No details returned — exited before analysis
+      expect(result.script).toBeUndefined();
+    });
+
+    it("allowlist is normalised (case-insensitive)", () => {
+      // Allowlist entry in uppercase, label in lowercase
+      const result = isDomainSpoof("\u0430\u0441\u0435", "ace", {
+        weights,
+        allowlist: ["\u0410\u0421\u0415"], // uppercase Cyrillic АСЕ
+      });
+      // After NFKC + lowercase, both normalise to the same string
+      expect(result.spoof).toBe(false);
+    });
+
+    // -- Substitution details --
+
+    it("reports correct substitution details", () => {
+      const result = isDomainSpoof("\u0430\u0441\u0435", "ace", { weights });
+      expect(result.substitutions).toBeDefined();
+      const subs = result.substitutions!;
+      expect(subs[0]).toMatchObject({ index: 0, from: "a", to: "\u0430" });
+      expect(subs[1]).toMatchObject({ index: 1, from: "c", to: "\u0441" });
+      expect(subs[2]).toMatchObject({ index: 2, from: "e", to: "\u0435" });
+      // Each substitution has a similarity score
+      for (const sub of subs) {
+        expect(sub.similarity).toBeGreaterThan(0);
+        expect(sub.similarity).toBeLessThanOrEqual(1);
+      }
+    });
+
+    it("substitutions only include positions that differ", () => {
+      // "o" at position 0 is substituted, digits at positions 1-3 are identical
+      const result = isDomainSpoof("\u03BF123", "o123", { weights });
+      expect(result.spoof).toBe(true);
+      expect(result.substitutions).toHaveLength(1);
+      expect(result.substitutions![0].index).toBe(0);
     });
   });
 });

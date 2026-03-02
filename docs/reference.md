@@ -833,7 +833,7 @@ Generation/source notes:
 
 ## LLM Pipeline Preprocessing
 
-Confusable characters are pixel-identical to Latin letters but encode as multi-byte BPE tokens. A 95-line contract inflates from 881 to 4,567 tokens when flooded with confusables: **5.2x the API bill**. We tested this across 4 models, 8 attack types, and 130+ API calls. The model reads through every substitution. The billing attack succeeds. We call it **Denial of Spend**. Full research: [The new DDoS: Unicode confusables can't fool LLMs, but they can 5x your API bill](https://paultendo.github.io/posts/confusable-vision-llm-attack-tests/).
+Confusable characters are visually identical to Latin letters but encode as multi-byte BPE tokens. A 95-line contract inflates from 881 to 4,567 tokens when flooded with confusables: **5.2x the API bill**. We tested this across 4 models, 8 attack types, and 130+ API calls. The model reads through every substitution. The billing attack succeeds. We call it **Denial of Spend**. Full research: [The new DDoS: Unicode confusables can't fool LLMs, but they can 5x your API bill](https://paultendo.github.io/posts/confusable-vision-llm-attack-tests/).
 
 Use namespace-guard as a deterministic preprocessing stage before sending text to your model:
 
@@ -883,7 +883,7 @@ canonicalise("ԝаіⅴеѕ any right", { strategy: "all" });
 
 ### `scan(text, options?)`
 
-Returns structured findings (`codepoint`, `script`, `latinEquivalent`, `ssimScore`, `source`, position, word context) plus a summary risk level (`none | low | medium | high`).
+Returns structured findings (`codepoint`, `script`, `latinEquivalent`, `visualScore`, `source`, position, word context) plus a summary risk level (`none | low | medium | high`).
 
 ```typescript
 import { scan } from "namespace-guard";
@@ -912,7 +912,7 @@ isClean("поп-refundable", { strategy: "all" }); // false
 ### Options (`canonicalise`, `scan`, `isClean`)
 
 - `strategy` -- `"mixed"` (default) only acts on tokens containing both Latin and non-Latin characters; `"all"` acts on every confusable character regardless of context. Use `"all"` for known-Latin documents.
-- `threshold` -- minimum SSIM score for replacement/detection (default: `0.7`)
+- `threshold` -- minimum visual similarity score for replacement/detection (default: `0.7`)
 - `includeNovel` -- include confusable-vision novel mappings in addition to TR39 baseline (default: `true`)
 - `scripts` -- optional allowlist of source scripts (case-insensitive)
 - `riskTerms` (`scan`/`isClean`) -- optional list of high-value terms used by risk heuristics
@@ -1470,7 +1470,7 @@ LLM preprocessing scanner that returns structured confusable findings and summar
 
 `ScanFinding`:
 - `char`, `codepoint`, `script`, `latinEquivalent`
-- `ssimScore`, `source` (`"tr39" | "novel"`)
+- `visualScore`, `source` (`"tr39" | "novel"`)
 - `index`, `word`, `mixedScript`
 
 **Options:**
@@ -1495,7 +1495,7 @@ Fast boolean gate for mixed-script confusable substitutions. Short-circuits on f
 
 Static lookup data powering the LLM preprocessing helpers.
 
-- `LLM_CONFUSABLE_MAP`: source char -> candidate Latin mappings with SSIM score and source metadata
+- `LLM_CONFUSABLE_MAP`: source char -> candidate Latin mappings with visual similarity score and source metadata
 - `LLM_CONFUSABLE_MAP_PAIR_COUNT`: total mapping rows
 - `LLM_CONFUSABLE_MAP_CHAR_COUNT`: number of source characters
 - `LLM_CONFUSABLE_MAP_SOURCE_COUNTS`: split by `{ tr39, novel }`
@@ -1532,7 +1532,7 @@ skeleton("pa\u0443pal", { map: CONFUSABLE_MAP }); // explicit NFKC-first map mod
 
 ### `areConfusable(a, b, options?)`
 
-Boolean helper. Without weights, uses `skeleton()` equality (TR39 coverage only). With weights, also checks character-level visual similarity from confusable-vision's SSIM data, including cross-script pairs.
+Boolean helper. Without weights, uses `skeleton()` equality (TR39 coverage only). With weights, also checks character-level visual similarity from confusable-vision's measured data (v2: [RaySpace](https://paultendo.github.io/posts/rayspace-methodology/)), including cross-script pairs.
 
 ```typescript
 import { areConfusable } from "namespace-guard";
@@ -1560,11 +1560,11 @@ import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
 detectCrossScriptRisk("hello"); // { riskLevel: "none", scripts: ["latin"], crossScriptPairs: [] }
 
 detectCrossScriptRisk("\u1175\u4E28", { weights: CONFUSABLE_WEIGHTS });
-// { riskLevel: "high", scripts: ["hangul", "han"], crossScriptPairs: [{ a: { char: "ᅵ", script: "hangul" }, b: { char: "丨", script: "han" }, ssim: 0.999 }] }
+// { riskLevel: "high", scripts: ["hangul", "han"], crossScriptPairs: [{ a: { char: "ᅵ", script: "hangul" }, b: { char: "丨", script: "han" }, score: 0.996 }] }
 ```
 
 **Options:**
-- `weights` -- optional SSIM-scored weights for cross-script pair lookup
+- `weights` -- optional visually-scored weights for cross-script pair lookup
 
 ---
 
@@ -1602,8 +1602,46 @@ const result = confusableDistance("paypal", "pa\u0443pal", {
   weights: CONFUSABLE_WEIGHTS,
   context: "identifier",
 });
-// Steps with reason: "visual-weight" indicate novel pairs scored via SSIM
+// Steps with reason: "visual-weight" indicate novel pairs scored via RaySpace
 ```
+
+---
+
+### `isDomainSpoof(label, target, options?)`
+
+Check whether a domain label is a realistic spoof of a target label. Unlike `areConfusable()`, this function only flags threats that could produce registrable domain names under ICANN IDN rules — mixed-script labels are excluded because registrars reject them.
+
+```typescript
+import { isDomainSpoof } from "namespace-guard";
+import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
+
+// Full-Cyrillic lookalike of "paypal" — realistic, registrable spoof
+isDomainSpoof("\u0440\u0430\u0443\u0440\u0430\u04CF", "paypal", { weights: CONFUSABLE_WEIGHTS });
+// { spoof: true, script: "cyrillic", danger: 0.91, substitutions: [...] }
+
+// Mixed-script — cannot be registered, not a spoof
+isDomainSpoof("\u0440aypal", "paypal", { weights: CONFUSABLE_WEIGHTS });
+// { spoof: false }
+
+// Known-legitimate non-Latin domain — skip via allowlist
+isDomainSpoof("\u0430\u0441\u0435", "ace", {
+  weights: CONFUSABLE_WEIGHTS,
+  allowlist: ["\u0430\u0441\u0435"],
+});
+// { spoof: false }
+```
+
+**Options:**
+- `map` -- confusable character map (default: `CONFUSABLE_MAP_FULL`)
+- `weights` -- measured visual weights for similarity scoring
+- `minDanger` -- minimum average danger for `spoof` to be `true` (default: `0.5`). The `danger` score is always returned regardless, so callers can apply their own threshold
+- `allowlist` -- known-legitimate non-Latin labels to skip (checked after NFKC + lowercase normalisation)
+
+**Returns** `DomainSpoofResult`:
+- `spoof` -- opinionated verdict (`true` when `danger >= minDanger`)
+- `script` -- script of the spoofing label (always set when a match is found, even below threshold)
+- `danger` -- average visual similarity across substitutions (0–1)
+- `substitutions` -- per-character details: `{ index, from, to, similarity }`
 
 ---
 
@@ -1848,7 +1886,9 @@ Confusable weights subpath export:
 ```typescript
 import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
 
-// 903 SSIM-scored pairs (110 TR39 + 793 novel discoveries)
+// 4,174 visually-scored pairs (3,111 TR39 + 1,063 novel discoveries)
+// Each pair has a `danger` score (0–1) measuring geometric similarity across 245 fonts.
+// The shipped dataset uses a 0.5 floor. For higher precision, filter at danger > 0.7 (574 pairs).
 // Pass to confusableDistance() for measured visual costs
 const result = confusableDistance("paypal", "pa\u0443pal", {
   weights: CONFUSABLE_WEIGHTS,
