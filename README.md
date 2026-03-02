@@ -14,19 +14,19 @@
 
 Existing confusable standards (TR39, IDNA) map non-Latin characters to Latin equivalents. They have zero coverage for confusable pairs *between* two non-Latin scripts.
 
-namespace-guard ships 494 SSIM-measured cross-script pairs from [confusable-vision](https://github.com/paultendo/confusable-vision) (rendered across 230 system fonts, scored by structural similarity). This catches attacks that no other library detects:
+namespace-guard ships 494 cross-script pairs from [confusable-vision](https://github.com/paultendo/confusable-vision) (measured across 245 system fonts using vector-outline raycasting). This catches attacks that no other library detects:
 
 ```typescript
 import { areConfusable, detectCrossScriptRisk } from "namespace-guard";
 import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
 
-// Hangul ᅵ and Han 丨 are visually identical (SSIM 0.999, Arial Unicode MS)
+// Hangul ᅵ and Han 丨 are visually identical (ray distance 0.004, Arial Unicode MS)
 areConfusable("\u1175", "\u4E28", { weights: CONFUSABLE_WEIGHTS }); // true
 
-// Greek Τ and Han 丅 are near-identical (SSIM 0.930, Hiragino Kaku Gothic ProN)
+// Greek Τ and Han 丅 are near-identical (multiple fonts)
 areConfusable("\u03A4", "\u4E05", { weights: CONFUSABLE_WEIGHTS }); // true
 
-// Cyrillic І and Greek Ι are pixel-identical (SSIM 1.0, 61 fonts agree)
+// Cyrillic І and Greek Ι are identical outlines (62 fonts)
 areConfusable("\u0406", "\u0399", { weights: CONFUSABLE_WEIGHTS }); // true
 
 // Without weights, only skeleton-based detection (TR39 coverage)
@@ -37,7 +37,7 @@ const risk = detectCrossScriptRisk("\u1175\u4E28", { weights: CONFUSABLE_WEIGHTS
 // { riskLevel: "high", scripts: ["han", "hangul"], crossScriptPairs: [...] }
 ```
 
-1,397 total SSIM-scored confusable pairs (110 TR39-confirmed, 793 novel Latin-target, 494 cross-script). Cross-script data licensed CC-BY-4.0.
+1,397 total confusable pairs scored by visual measurement (110 TR39-confirmed, 793 novel Latin-target, 494 cross-script). Cross-script data licensed CC-BY-4.0.
 
 ## Installation
 
@@ -88,7 +88,7 @@ if (!result.claimed) {
 
 ## What You Get
 
-- **Cross-script confusable detection** with 494 SSIM-measured pairs between non-Latin scripts
+- **Cross-script confusable detection** with 494 measured pairs between non-Latin scripts
 - Cross-table collision checks (users, orgs, teams, etc.)
 - Reserved-name blocking with category-aware messages
 - Unicode anti-spoofing (NFKC + confusable detection + mixed-script/risk controls)
@@ -136,7 +136,7 @@ areConfusable("paypal", "pa\u0443pal"); // true
 confusableDistance("paypal", "pa\u0443pal"); // graded similarity + chainDepth + explainable steps
 ```
 
-For measured visual scoring, pass the optional weights from confusable-vision (1,397 SSIM-scored pairs across 230 fonts, including 494 cross-script pairs). The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
+For measured visual scoring, pass the optional weights from confusable-vision (1,397 pairs scored across 245 fonts using vector-outline raycasting, including 494 cross-script pairs). The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
 
 ```typescript
 import { confusableDistance } from "namespace-guard";
@@ -153,7 +153,7 @@ const result = confusableDistance("paypal", "pa\u0443pal", {
 
 Two research tracks feed the library:
 
-**Visual measurement.** 1,397 confusable pairs rendered across 230 system fonts, scored by structural similarity (SSIM). 494 of these are novel cross-script pairs between non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic, and more) with zero coverage in any existing standard. Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
+**Visual measurement.** 1,397 confusable pairs measured across 245 system fonts using vector-outline raycasting (RaySpace). 494 of these are novel cross-script pairs between non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic, and more) with zero coverage in any existing standard. Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
 
 **Normalisation composability.** 31 characters where Unicode's confusables.txt and NFKC normalisation disagree. Two production maps (`CONFUSABLE_MAP` for NFKC-first, `CONFUSABLE_MAP_FULL` for raw-input pipelines), a benchmark corpus, and composability vectors wired into CLI drift baselines. Submitted to [Unicode public review (PRI #540)](https://www.unicode.org/review/pri540/) and published in [accumulated feedback](https://www.unicode.org/review/pri540/feedback.html).
 
@@ -243,7 +243,7 @@ Migration guides per adapter: [docs/reference.md#canonical-uniqueness-migration-
 - LLM preprocessing (`canonicalise`, `scan`, `isClean`): [docs/reference.md#llm-pipeline-preprocessing](docs/reference.md#llm-pipeline-preprocessing)
 - Benchmark corpus (`confusable-bench.v1`): [docs/reference.md#confusable-benchmark-corpus-artifact](docs/reference.md#confusable-benchmark-corpus-artifact)
 - Advanced primitives (`skeleton`, `areConfusable`, `confusableDistance`): [docs/reference.md#advanced-security-primitives](docs/reference.md#advanced-security-primitives)
-- Confusable weights (SSIM-scored pairs, including cross-script): [docs/reference.md#confusable-weights-subpath](docs/reference.md#confusable-weights-subpath)
+- Confusable weights (scored pairs, including cross-script): [docs/reference.md#confusable-weights-subpath](docs/reference.md#confusable-weights-subpath)
 - Cross-script detection: [docs/reference.md#cross-script-detection](docs/reference.md#cross-script-detection)
 - CLI reference: [docs/reference.md#cli](docs/reference.md#cli)
 - API reference: [docs/reference.md#api-reference](docs/reference.md#api-reference)
