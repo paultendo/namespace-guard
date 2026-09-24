@@ -261,6 +261,11 @@ export type SkeletonOptions = {
    *  Default: `CONFUSABLE_MAP_FULL` (complete TR39 map, no NFKC filtering).
    *  Pass `CONFUSABLE_MAP` if your pipeline runs NFKC before calling skeleton(). */
   map?: Record<string, string>;
+  /** Also remove diacritics (the combining marks of the Combining Diacritical Marks blocks, such as a dot below,
+   *  an accent or a hook), so `ạ` matches `a` and `ẹ` matches `e`. TR39 keeps them, but a small mark is easy to
+   *  miss, and Chromium removes Latin diacritics when it checks a domain against top domains. Marks that scripts
+   *  use as vowel signs are outside these blocks and are kept. Default: `false`. */
+  ignoreDiacritics?: boolean;
 };
 
 /** Options for `areConfusable()` with optional weight-based matching. */
@@ -277,9 +282,10 @@ export type AreConfusableOptions = SkeletonOptions & {
 
 /** Measured visual weight for a single confusable pair. */
 export type ConfusableWeight = {
-  /** Maximum visual similarity across all font comparisons (attacker perspective). */
+  /** How widely the pair looks alike. In the bundled weights (confusable-vision release 2): the share of text fonts,
+   *  or of font combinations, where the two characters are alike at the same size and baseline. */
   danger: number;
-  /** 95th percentile visual similarity across all font comparisons (defender perspective). */
+  /** The same share in the bundled weights (kept separate for weights from other sources). */
   stableDanger: number;
   /** 1 - stableDanger, clamped [0, 1]. Lower cost = more dangerous. */
   cost: number;
@@ -2549,6 +2555,8 @@ const DEFAULT_IGNORABLE_RE =
 const DEFAULT_IGNORABLE_SINGLE_RE = new RegExp(DEFAULT_IGNORABLE_RE.source, "u");
 const BIDI_CONTROL_RE = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u;
 const COMBINING_MARK_RE = /\p{M}/u;
+/** Combining Diacritical Marks, its Extended and Supplement blocks, marks for symbols, and half marks. */
+const DIACRITIC_RE = /[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/gu;
 const LETTER_RE = /\p{L}/u;
 const LATIN_SCRIPT_RE = /\p{Script=Latin}/u;
 const SCRIPT_DETECTORS: Array<[string, RegExp]> = [
@@ -3176,8 +3184,9 @@ function buildInsertionStep(ch: string, fromIndex: number, toIndex: number): Con
  */
 export function skeleton(input: string, options?: SkeletonOptions): string {
   const map = options?.map ?? CONFUSABLE_MAP_FULL;
+  const dropMarks = (v: string) => (options?.ignoreDiacritics ? v.replace(DIACRITIC_RE, "") : v);
   // Step 1: NFD normalize
-  let s = input.normalize("NFD");
+  let s = dropMarks(input.normalize("NFD"));
   // Step 2: Remove Default_Ignorable_Code_Point characters
   s = s.replace(DEFAULT_IGNORABLE_RE, "");
   // Step 3: Replace each character via confusable map (for...of iterates by code point)
@@ -3186,7 +3195,7 @@ export function skeleton(input: string, options?: SkeletonOptions): string {
     result += map[ch] ?? ch;
   }
   // Step 4: Reapply NFD
-  result = result.normalize("NFD");
+  result = dropMarks(result.normalize("NFD"));
   // Step 5: Lowercase
   return result.toLowerCase();
 }
@@ -3609,8 +3618,9 @@ export function isDomainSpoof(
     const w = lookupWeight(lch, tch, weights, "domain");
 
     if (map[lch] === tch) {
-      // Found via TR39 confusable map — use measured weight or default.
-      similarity = w ? round3(1 - w.cost) : 0.5;
+      // Found via TR39 confusable map: at least the default, raised by a measured weight. A measurement that finds the
+      // pair alike in only some fonts does not undo Unicode's own mapping.
+      similarity = w ? Math.max(0.5, round3(1 - w.cost)) : 0.5;
     } else if (w) {
       // Novel pair found in weights table (not in TR39 map).
       similarity = round3(1 - w.cost);

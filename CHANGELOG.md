@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.21.0] - 2026-09-24
+
+### Changed
+- `CONFUSABLE_WEIGHTS` now comes from confusable-vision release 2026.09.24 (372 pairs). The 0.20.0 weights measured
+  glyphs without their size or baseline, so they flagged pairs readers tell apart (c/o, D/O and case pairs), and they
+  had dropped the earlier same-script pairs (Latin small capitals, dotless ı and others). Each bundled pair was found
+  alike at the size and baseline position the two glyphs have in running text, within one font or across fonts; the
+  weights are now the share of text fonts (or font combinations) where it holds.
+- `isDomainSpoof()`: a pair TR39 maps keeps a similarity of at least 0.5, so a measurement that finds it alike in only
+  some fonts does not undo Unicode's own mapping.
+
+### Added
+- `ignoreDiacritics` option for `skeleton()` and `areConfusable()`: removes combining diacritical marks before
+  comparing, so `ạ` matches `a` and `ẹ` matches `e`. Off by default, as TR39 keeps them.
+
 ## [0.17.0] - 2026-02-26
 
 ### Added

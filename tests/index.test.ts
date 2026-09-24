@@ -3128,6 +3128,26 @@ describe("anti-spoofing integration", () => {
 // skeleton()
 // ---------------------------------------------------------------------------
 describe("skeleton", () => {
+  describe("ignoreDiacritics", () => {
+    it("keeps diacritics by default, as TR39 does", () => {
+      expect(skeleton("\u1ea1pple")).not.toBe(skeleton("apple"));
+    });
+    it("matches dot-below and accented letters to their base letters when asked", () => {
+      const opts = { ignoreDiacritics: true };
+      expect(skeleton("\u1ea1pple", opts)).toBe(skeleton("apple", opts)); // ạpple
+      expect(skeleton("p\u1ea1yp\u1ea1l", opts)).toBe(skeleton("paypal", opts)); // pạypạl
+      expect(skeleton("g\u1ecd\u1ecdgle", opts)).toBe(skeleton("google", opts)); // gọọgle
+      expect(areConfusable("\u1ebdbay", "ebay", opts)).toBe(true); // ẽbay
+    });
+    it("still combines with the confusable map", () => {
+      expect(skeleton("\u0440\u1ea1ypal", { ignoreDiacritics: true })).toBe(skeleton("paypal", { ignoreDiacritics: true })); // р + ạ
+    });
+    it("leaves marks that scripts use as vowel signs", () => {
+      // Devanagari vowel sign AA is not a diacritic here: removing it would change the word
+      expect(skeleton("\u0915\u093e", { ignoreDiacritics: true })).not.toBe(skeleton("\u0915", { ignoreDiacritics: true }));
+    });
+  });
+
   it("lowercases ASCII input", () => {
     expect(skeleton("Hello")).toBe("hello");
   });
