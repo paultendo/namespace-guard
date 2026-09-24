@@ -13,9 +13,12 @@ type Sample = {
 };
 
 function pickNovelSample(): Sample {
+  // A character whose only lookalikes are novel, so the TR39 baseline cannot rewrite it either way; entries are
+  // sorted best first, so the first is the one canonicalise picks
   for (const [char, entries] of Object.entries(LLM_CONFUSABLE_MAP)) {
-    const novel = entries.find((entry) => entry.source === "novel" && entry.visualScore >= 0.7);
-    if (!novel) continue;
+    if (!entries.every((entry) => entry.source === "novel")) continue;
+    const novel = entries[0];
+    if (!novel || novel.visualScore < 0.7) continue;
     return { char, latin: novel.latin, visualScore: novel.visualScore };
   }
   throw new Error("No novel confusable sample found in LLM_CONFUSABLE_MAP.");
@@ -87,12 +90,12 @@ describe("LLM preprocessing: canonicalise", () => {
   });
 
   it("with strategy 'all', rewrites standalone non-Latin confusable words", () => {
-    // Cyrillic п/о/п mimicking "non" -- all-Cyrillic token, no Latin present
-    const input = "поп-refundable";
+    // Cyrillic р/о/р mimicking "pop" -- all-Cyrillic token, no Latin present
+    const input = "рор-up";
     // Default (mixed): standalone Cyrillic is preserved
-    expect(canonicalise(input)).toBe("поп-refundable");
+    expect(canonicalise(input)).toBe("рор-up");
     // Strategy 'all': every confusable is replaced
-    expect(canonicalise(input, { strategy: "all" })).toBe("non-refundable");
+    expect(canonicalise(input, { strategy: "all" })).toBe("pop-up");
   });
 
   it("with strategy 'all', still passes clean ASCII unchanged", () => {

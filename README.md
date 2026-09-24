@@ -14,17 +14,17 @@
 
 Existing confusable standards (TR39, IDNA) map non-Latin characters to Latin equivalents. They have zero coverage for confusable pairs *between* two non-Latin scripts.
 
-namespace-guard ships 3,525 cross-script pairs from [confusable-vision](https://github.com/paultendo/confusable-vision) (measured across 245 system fonts using vector-outline raycasting — [RaySpace](https://paultendo.github.io/posts/rayspace-methodology/)). This catches attacks that no other library detects:
+namespace-guard ships measured lookalike pairs from [confusable-vision](https://github.com/paultendo/confusable-vision) release 2026.09.24 (vector-outline raycasting, [RaySpace](https://paultendo.github.io/posts/rayspace-methodology/), at the size and baseline position glyphs have in running text, across every macOS system font and Roboto). They include pairs between two non-Latin scripts that no standard covers:
 
 ```typescript
 import { areConfusable, detectCrossScriptRisk } from "namespace-guard";
 import { CONFUSABLE_WEIGHTS } from "namespace-guard/confusable-weights";
 
-// Hangul ᅵ and Han 丨 are visually identical (ray distance 0.004, Arial Unicode MS)
+// Hangul ᅵ and Han 丨 are alike in every text font that draws both
 areConfusable("\u1175", "\u4E28", { weights: CONFUSABLE_WEIGHTS }); // true
 
-// Greek Τ and Han 丅 are near-identical (multiple fonts)
-areConfusable("\u03A4", "\u4E05", { weights: CONFUSABLE_WEIGHTS }); // true
+// Cyrillic ј and Greek ϳ are alike in 95% of text fonts
+areConfusable("\u0458", "\u03F3", { weights: CONFUSABLE_WEIGHTS }); // true
 
 // Cyrillic І and Greek Ι are identical outlines (62 fonts)
 areConfusable("\u0406", "\u0399", { weights: CONFUSABLE_WEIGHTS }); // true
@@ -37,7 +37,7 @@ const risk = detectCrossScriptRisk("\u1175\u4E28", { weights: CONFUSABLE_WEIGHTS
 // { riskLevel: "high", scripts: ["han", "hangul"], crossScriptPairs: [...] }
 ```
 
-4,174 total confusable pairs scored by visual measurement (3,111 TR39-confirmed, 1,063 novel). Each pair carries a `danger` score (0–1) representing geometric similarity across fonts; the shipped dataset uses a 0.5 floor. For higher precision, filter at `danger > 0.7` (574 pairs). Cross-script data licensed CC-BY-4.0.
+322 pairs ship, each found alike at running-text size within one font or across fonts. A pair's `danger` (0–1) is the share of text fonts (or font combinations) where it holds; filter at `danger > 0.7` (85 pairs) for the pairs alike almost everywhere. `namespace-guard/font-specific-weights` gives the same pairs per font (106 fonts), for saying which font makes a lookalike most convincing. Data licensed CC-BY-4.0.
 
 ## Installation
 
@@ -88,7 +88,7 @@ if (!result.claimed) {
 
 ## What You Get
 
-- **Cross-script confusable detection** with 3,525 measured pairs between non-Latin scripts
+- **Cross-script confusable detection** with measured pairs, including pairs between two non-Latin scripts
 - Cross-table collision checks (users, orgs, teams, etc.)
 - Reserved-name blocking with category-aware messages
 - Unicode anti-spoofing (NFKC + confusable detection + mixed-script/risk controls)
@@ -136,7 +136,7 @@ areConfusable("paypal", "pa\u0443pal"); // true
 confusableDistance("paypal", "pa\u0443pal"); // graded similarity + chainDepth + explainable steps
 ```
 
-For measured visual scoring, pass the optional weights from confusable-vision (4,174 pairs scored across 245 fonts using vector-outline raycasting, including 3,525 cross-script pairs). Each pair has a `danger` score (0–1); the default 0.5 floor favours recall, use `danger > 0.7` for precision. The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
+For measured visual scoring, pass the optional weights from confusable-vision release 2026.09.24 (322 pairs measured at running-text size by vector-outline raycasting). Each pair has a `danger` score (0–1), the share of text fonts where it holds; use `danger > 0.7` for the pairs alike almost everywhere. The `context` filter restricts to identifier-valid, domain-valid, or all pairs.
 
 ```typescript
 import { confusableDistance } from "namespace-guard";
@@ -179,7 +179,7 @@ The `danger` score (0–1) is always returned when a script match is found, even
 
 Two research tracks feed the library:
 
-**Visual measurement.** 4,174 confusable pairs measured across 245 system fonts using vector-outline raycasting ([RaySpace](https://paultendo.github.io/posts/rayspace-methodology/)). 3,525 of these are cross-script pairs between non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic, and more) with zero coverage in any existing standard. Each pair carries a `danger` score (0–1) representing geometric similarity; the shipped floor is 0.5 (for higher precision, try 0.7). Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
+**Visual measurement.** Lookalike pairs measured by vector-outline raycasting ([RaySpace](https://paultendo.github.io/posts/rayspace-methodology/)) at the size and baseline position glyphs have in running text, across every macOS system font and Roboto, and calibrated against pairs with known answers. Release 2026.09.24 finds 857 pairs alike; the 322 that pass its thresholds ship here, including pairs between two non-Latin scripts (Cyrillic/Greek, Katakana/Hiragana, Han/Hangul) that no standard covers. The March 2026 measurements were blind to size and are superseded. Full dataset published as [confusable-vision](https://github.com/paultendo/confusable-vision) (CC-BY-4.0).
 
 **Normalisation composability.** 31 characters where Unicode's confusables.txt and NFKC normalisation disagree. Two production maps (`CONFUSABLE_MAP` for NFKC-first, `CONFUSABLE_MAP_FULL` for raw-input pipelines), a benchmark corpus, and composability vectors wired into CLI drift baselines. Submitted to [Unicode public review (PRI #540)](https://www.unicode.org/review/pri540/) and published in [accumulated feedback](https://www.unicode.org/review/pri540/feedback.html).
 

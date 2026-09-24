@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.22.0] - 2026-09-24
+
+### Changed
+- `FONT_SPECIFIC_WEIGHTS` now comes from confusable-vision release 2026.09.24: 130 pairs across 106 fonts, each
+  scored by how close it is in that font (1 identical, 0 at the alike threshold). The previous file dated from the
+  February SSIM measurements, which were blind to size.
+- `LLM_CONFUSABLE_MAP` is rebuilt from the release 2 weights (1,425 TR39 + 166 novel entries). Pairs release 2 finds
+  unlike at running-text size, such as Cyrillic п and Latin n, are no longer rewritten.
+
+### Fixed
+- `CONFUSABLE_WEIGHTS` kept the weaker score for the 50 pairs found alike both within one font and across fonts
+  (Tamil zero ௦ and o shipped at 0.41 instead of 1). It now keeps the stronger, and ships 322 distinct pairs; the
+  0.21.0 note's 372 counted both findings.
+
 ## [0.21.0] - 2026-09-24
 
 ### Changed
