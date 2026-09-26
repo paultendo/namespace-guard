@@ -39,10 +39,8 @@ export function createKnexAdapter(knex: KnexInstance): NamespaceAdapter {
     async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const idColumn = source.idColumn ?? "id";
 
-      const columns =
-        source.scopeKey && source.scopeKey !== idColumn
-          ? [idColumn, source.scopeKey]
-          : [idColumn];
+      // The guard only needs the id: it compares the scope's value with it
+      const columns = [idColumn];
 
       let query = knex(source.name).select(columns);
 

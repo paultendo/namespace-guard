@@ -61,13 +61,11 @@ export function createTypeORMAdapter(
         if (!ilike) {
           throw new Error("caseInsensitive requires passing ILike to createTypeORMAdapter");
         }
-        whereValue = ilike(value);
+        whereValue = ilike(escapeLike(value));
       }
 
-      const select: Record<string, boolean> = {
-        [idColumn]: true,
-        ...(source.scopeKey && source.scopeKey !== idColumn ? { [source.scopeKey]: true } : {}),
-      };
+      // The guard only needs the id: it compares the scope's value with it
+      const select: Record<string, boolean> = { [idColumn]: true };
 
       return repository.findOne({
         where: { [source.column]: whereValue },
@@ -75,4 +73,9 @@ export function createTypeORMAdapter(
       });
     },
   };
+}
+
+/** A value for ILIKE, with its wildcards escaped: `_` and `%` in a name mean themselves, not "any character" */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

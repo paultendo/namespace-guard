@@ -48,11 +48,8 @@ export function createRawAdapter(execute: QueryExecutor): NamespaceAdapter {
       assertSafeIdentifier(source.name, "table name");
       assertSafeIdentifier(source.column, "column name");
       assertSafeIdentifier(idColumn, "id column name");
-      if (source.scopeKey) assertSafeIdentifier(source.scopeKey, "scope key");
-
-      const columns = source.scopeKey && source.scopeKey !== idColumn
-        ? `"${idColumn}", "${source.scopeKey}"`
-        : `"${idColumn}"`;
+      // The guard only needs the id: it compares the scope's value with it
+      const columns = `"${idColumn}"`;
 
       const whereClause = options?.caseInsensitive
         ? `LOWER("${source.column}") = LOWER($1)`

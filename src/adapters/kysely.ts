@@ -39,17 +39,15 @@ export function createKyselyAdapter(db: KyselyDb): NamespaceAdapter {
     async findOne(source: NamespaceSource, value: string, options?: FindOneOptions) {
       const idColumn = source.idColumn ?? "id";
 
-      const columns =
-        source.scopeKey && source.scopeKey !== idColumn
-          ? [idColumn, source.scopeKey]
-          : [idColumn];
+      // The guard only needs the id: it compares the scope's value with it
+      const columns = [idColumn];
 
       let query = db
         .selectFrom(source.name)
         .select(columns);
 
       if (options?.caseInsensitive) {
-        query = query.where(source.column, "ilike", value);
+        query = query.where(source.column, "ilike", escapeLike(value));
       } else {
         query = query.where(source.column, "=", value);
       }
@@ -59,4 +57,9 @@ export function createKyselyAdapter(db: KyselyDb): NamespaceAdapter {
       return row ?? null;
     },
   };
+}
+
+/** A value for ILIKE, with its wildcards escaped: `_` and `%` in a name mean themselves, not "any character" */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

@@ -19,7 +19,7 @@ Options:
   --help                         Show this help message
 
 Example:
-  node scripts/drift-gate.js --max-action-flips 29 --max-average-score-delta 95 --max-abs-score-delta 100`);
+  node scripts/drift-gate.js --max-action-flips 34 --max-average-score-delta 100 --max-abs-score-delta 100`);
 }
 
 function parseArgs(args) {

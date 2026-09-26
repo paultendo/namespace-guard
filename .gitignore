@@ -27,3 +27,6 @@ coverage/
 
 # Design reference
 .ref.css
+
+# Downloaded source data for scripts/measure-profanity.mjs
+.cache/

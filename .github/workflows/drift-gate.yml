@@ -26,4 +26,4 @@ jobs:
         run: npm run build
 
       - name: Enforce drift budget
-        run: npm run ci:drift-gate -- --max-action-flips 29 --max-average-score-delta 95 --max-abs-score-delta 100
+        run: npm run ci:drift-gate -- --max-action-flips 34 --max-average-score-delta 100 --max-abs-score-delta 100

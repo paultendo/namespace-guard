@@ -22,6 +22,9 @@ import {
   COMPOSABILITY_VECTORS_COUNT,
   CONFUSABLE_MAP,
   CONFUSABLE_MAP_FULL,
+  CONFUSABLE_MAP_CASED,
+  CONFUSABLES_DATE,
+  MEASURED_CONFUSABLES,
   type NamespaceAdapter,
   type NamespaceSource,
 } from "../src/index";
@@ -197,6 +200,17 @@ describe("validateFormatOnly", () => {
 // Reserved name blocking
 // ---------------------------------------------------------------------------
 describe("reserved names", () => {
+  it("reserves a name written with capitals or spaces in the list", async () => {
+    const guard = createNamespaceGuard(
+      { reserved: { system: ["Admin", " Help "], brand: ["ＡＣＭＥ"] }, sources: defaultSources },
+      createMockAdapter({})
+    );
+
+    expect(await guard.check("admin")).toMatchObject({ available: false, reason: "reserved", category: "system" });
+    expect(await guard.check("help")).toMatchObject({ available: false, reason: "reserved" });
+    expect(await guard.check("acme")).toMatchObject({ available: false, reason: "reserved", category: "brand" });
+  });
+
   it("blocks reserved names (array)", async () => {
     const guard = createNamespaceGuard(
       { reserved: ["admin", "api", "settings"], sources: defaultSources },
@@ -595,9 +609,9 @@ describe("assertClaimable", () => {
       createMockAdapter({})
     );
 
-    // This is typically warn-level against paypal under these thresholds
+    // A typo, not a lookalike: warn-level against paypal under these thresholds (paypa1, a lookalike, blocks)
     await expect(
-      guard.assertClaimable("paypa1", {}, {
+      guard.assertClaimable("paypax", {}, {
         protect: ["paypal"],
         warnThreshold: 70,
         blockThreshold: 95,
@@ -605,7 +619,7 @@ describe("assertClaimable", () => {
     ).resolves.toBeUndefined();
 
     await expect(
-      guard.assertClaimable("paypa1", {}, {
+      guard.assertClaimable("paypax", {}, {
         protect: ["paypal"],
         warnThreshold: 70,
         blockThreshold: 95,
@@ -766,6 +780,10 @@ describe("isLikelyUniqueViolationError", () => {
 
   it("returns false for unrelated errors", () => {
     expect(isLikelyUniqueViolationError(new Error("timeout"))).toBe(false);
+    // SQLite reports NOT NULL and CHECK failures with the same generic code: they aren't a taken name
+    expect(isLikelyUniqueViolationError({ code: "SQLITE_CONSTRAINT", message: "NOT NULL constraint failed: users.handle" })).toBe(false);
+    expect(isLikelyUniqueViolationError({ code: "SQLITE_CONSTRAINT", message: "UNIQUE constraint failed: users.handle" })).toBe(true);
+    expect(isLikelyUniqueViolationError(new Error("CHECK constraint failed: handle_length"))).toBe(false);
     expect(isLikelyUniqueViolationError({ code: "ECONNRESET" })).toBe(false);
   });
 });
@@ -996,7 +1014,7 @@ describe("validators", () => {
     );
 
     await guard.check("  @Sarah  ");
-    expect(validator).toHaveBeenCalledWith("sarah");
+    expect(validator).toHaveBeenCalledWith("sarah", { identifier: "  @Sarah  " });
   });
 
   it("runs before DB checks", async () => {
@@ -1265,6 +1283,27 @@ describe("cache", () => {
 
     // Should only call adapter once per source for the same value
     // First check: 2 calls (user + organization), second check: 0 (cached)
+    expect(adapter.findOne).toHaveBeenCalledTimes(2);
+  });
+
+  it("doesn't keep a lookup that failed", async () => {
+    let calls = 0;
+    const adapter = {
+      findOne: vi.fn(async () => {
+        calls++;
+        if (calls === 1) throw new Error("connection reset");
+        return null;
+      }),
+    };
+    const guard = createNamespaceGuard(
+      { sources: [{ name: "user", column: "handle" }], cache: { ttl: 60_000 } },
+      adapter
+    );
+
+    await expect(guard.check("sarah")).rejects.toThrow("connection reset");
+    expect((await guard.check("sarah")).available).toBe(true);
+    expect(adapter.findOne).toHaveBeenCalledTimes(2);
+    expect((await guard.check("sarah")).available).toBe(true);
     expect(adapter.findOne).toHaveBeenCalledTimes(2);
   });
 
@@ -1609,6 +1648,137 @@ describe("createProfanityValidator", () => {
       expect(result.reason).toBe("invalid");
       expect(result.message).toBe("That name is not allowed.");
     }
+  });
+
+  it("matches short entries as whole words: the name, or a part between separators or digits", async () => {
+    const validator = createProfanityValidator(["ass"]);
+    for (const name of ["ass", "my-ass", "ass_hat", "ass4life", "a-s-s", "a.s.s", "a55"]) {
+      expect(await validator(name), name).not.toBeNull();
+    }
+    for (const name of ["class", "assistant", "bass", "grass-cutter"]) {
+      expect(await validator(name), name).toBeNull();
+    }
+  });
+
+  it("counts letters, not spaces, towards minSubstringLength", async () => {
+    // "a s s" has three letters, so it is a whole word; "h e l l", written as several words, is one too.
+    const validator = createProfanityValidator(["a s s", "h e l l"]);
+    expect(await validator("class")).toBeNull();
+    expect(await validator("hello")).toBeNull();
+    expect(await validator("my-ass")).not.toBeNull();
+    expect(await validator("h-e-l-l")).not.toBeNull();
+  });
+
+  it("matches entries written as several words as whole words, with or without separators", async () => {
+    const validator = createProfanityValidator(["blow job"]);
+    expect(await validator("blowjob")).not.toBeNull();
+    expect(await validator("blow-job")).not.toBeNull();
+    expect(await validator("blow_job_fan")).not.toBeNull();
+    expect(await validator("xblowjobx")).toBeNull();
+  });
+
+  it("reads symbols in an entry as the letters they stand for", async () => {
+    // Dropping them made "sh!+" look for "sh" in every name.
+    const validator = createProfanityValidator(["sh!+"]);
+    expect(await validator("shit")).not.toBeNull();
+    expect(await validator("xshitx")).not.toBeNull();
+    expect(await validator("fish")).toBeNull();
+    expect(await validator("shoe")).toBeNull();
+  });
+
+  it("matches entries common inside English words only as whole words", async () => {
+    const validator = createProfanityValidator(["anal", "rape", "cock"]);
+    for (const name of ["analyst", "grape", "cocktail", "peacock"]) {
+      expect(await validator(name), name).toBeNull();
+    }
+    for (const name of ["anal", "anal-x", "my_rape", "c0ck"]) {
+      expect(await validator(name), name).not.toBeNull();
+    }
+  });
+
+  it("lets through listed words inside words on the allowlist", async () => {
+    const validator = createProfanityValidator(["cunt", "hell"], { allowlist: ["scunthorpe", "hello"] });
+    for (const name of ["scunthorpe", "scunthorpe-fc", "visit-scunthorpe", "ѕcunthorpe", "hello-kitty"]) {
+      expect(await validator(name), name).toBeNull();
+    }
+    // A listed word outside the allowed word still counts
+    for (const name of ["xcuntx", "scunthorpecunt", "cuntscunthorpe", "scunth0rpe", "hell"]) {
+      expect(await validator(name), name).not.toBeNull();
+    }
+  });
+
+  it("lets an allowed word be split by separators, unless a part is a listed word on its own", async () => {
+    const validator = createProfanityValidator(["cunt", "shit", "dago"], { allowlist: ["scunthorpe", "shitterton", "dagostino"] });
+    // The listed word crosses a separator, so no part shows it
+    for (const name of ["scun-thorpe", "sc-unt-horpe", "d-agostino", "d-ago-stino", "visit-scun-thorpe"]) {
+      expect(await validator(name), name).toBeNull();
+    }
+    // A part is the listed word, or holds it whole
+    for (const name of ["s-cunt-horpe", "scunt-horpe", "shit-terton", "s-cunth-orpe", "dago-stino", "cunt-scunthorpe"]) {
+      expect(await validator(name), name).not.toBeNull();
+    }
+  });
+
+  it("lets a listed word through when the allowlist has it", async () => {
+    const validator = createProfanityValidator(["wang", "shit"], { allowlist: ["wang"] });
+    expect(await validator("wang")).toBeNull();
+    expect(await validator("wang-li")).toBeNull();
+    expect(await validator("shit")).not.toBeNull();
+  });
+
+  it("lets through an allowed entry written with separators only when the name is exactly it", async () => {
+    const validator = createProfanityValidator(["cum"], { allowlist: ["chorlton-cum-hardy"] });
+    expect(await validator("chorlton-cum-hardy")).toBeNull();
+    for (const name of ["chorlton-cum-hardy-fc", "cum-hardy", "my-chorlton-cum-hardy", "chorlton-c-u-m-hardy", "cum"]) {
+      expect(await validator(name), name).not.toBeNull();
+    }
+    const basic = createProfanityValidator(["cum"], { mode: "basic", allowlist: ["chorlton-cum-hardy"] });
+    expect(await basic("chorlton-cum-hardy")).toBeNull();
+    expect(await basic("cum-hardy")).not.toBeNull();
+  });
+
+  it("applies the allowlist in basic mode and with checkSubstrings off", async () => {
+    const basic = createProfanityValidator(["cunt"], { mode: "basic", allowlist: ["scunthorpe"] });
+    expect(await basic("scunthorpe")).toBeNull();
+    expect(await basic("xcuntx")).not.toBeNull();
+    const whole = createProfanityValidator(["wang"], { checkSubstrings: false, allowlist: ["wang"] });
+    expect(await whole("wang")).toBeNull();
+  });
+
+  it("reads a letter written three or more times as a repeat", async () => {
+    const validator = createProfanityValidator(["shit"]);
+    expect(await validator("shiiit")).not.toBeNull();
+    expect(await validator("shhhiiittt")).not.toBeNull();
+    expect(await validator("shiit")).toBeNull(); // a double letter is ordinary spelling
+  });
+
+  it("keeps the all-letters reading of a long leetspeak name", async () => {
+    const validator = createProfanityValidator(["asspirate"]);
+    expect(await validator("455p1r473")).not.toBeNull();
+  });
+
+  it("raises minSubstringLength to match more entries as whole words", async () => {
+    const validator = createProfanityValidator(["evil"], { minSubstringLength: 5 });
+    expect(await validator("devilish")).toBeNull();
+    expect(await validator("evil-twin")).not.toBeNull();
+  });
+
+  it("matches the name as it is in basic mode, short entries as whole words", async () => {
+    const validator = createProfanityValidator(["ass", "shit"], { mode: "basic" });
+    expect(await validator("my-ass")).not.toBeNull();
+    expect(await validator("ass2")).not.toBeNull();
+    expect(await validator("class")).toBeNull();
+    expect(await validator("xshitx")).not.toBeNull();
+    expect(await validator("s-h-i-t")).toBeNull();
+  });
+
+  it("refuses only whole names, disguised or not, when checkSubstrings is false", async () => {
+    const validator = createProfanityValidator(["shit"], { checkSubstrings: false });
+    for (const name of ["shit", "5h1t", "s-h-i-t", "shiiit"]) {
+      expect(await validator(name), name).not.toBeNull();
+    }
+    expect(await validator("shitposter")).toBeNull();
+    expect(await validator("my-shit")).toBeNull();
   });
 });
 
@@ -2724,8 +2894,8 @@ describe("createHomoglyphValidator", () => {
 
   it("allows non-confusable non-Latin chars when rejectMixedScript is false", async () => {
     const validator = createHomoglyphValidator({ rejectMixedScript: false });
-    // Hebrew Alef (U+05D0) is not in confusable map - should pass
-    expect(await validator("\u05D0")).toBeNull();
+    // Hebrew Bet (U+05D1) is not in confusable map - should pass (Alef, measured as alike to x, is)
+    expect(await validator("\u05D1")).toBeNull();
     // Arabic Ba (U+0628) is not in confusable map - should pass
     expect(await validator("\u0628")).toBeNull();
     // Devanagari Ka (U+0915) is not in confusable map - should pass
@@ -2977,15 +3147,98 @@ describe("CONFUSABLE_MAP_FULL", () => {
     expect(CONFUSABLE_MAP_FULL["\u1d07"]).toBe("e");
     expect(CONFUSABLE_MAP_FULL["\u1d0a"]).toBe("j");
     expect(CONFUSABLE_MAP_FULL["\u1d0b"]).toBe("k");
-    expect(CONFUSABLE_MAP_FULL["\u1d0d"]).toBe("m");
+    // Small capital M: m's prototype is rn (Unicode maps m to rn), so it is rn too
+    expect(CONFUSABLE_MAP_FULL["\u1d0d"]).toBe("rn");
     expect(CONFUSABLE_MAP_FULL["\u1d18"]).toBe("p");
     expect(CONFUSABLE_MAP_FULL["\u1d1b"]).toBe("t");
   });
 
   it("all values are lowercase Latin letters or digits", () => {
     for (const value of Object.values(CONFUSABLE_MAP_FULL)) {
-      expect(value).toMatch(/^[a-z0-9]$/);
+      expect(value).toMatch(/^[a-z0-9]+$/);
     }
+  });
+
+  it("uses Unicode's ASCII entries, lowercase-safe", () => {
+    expect(CONFUSABLE_MAP_FULL["1"]).toBe("l");
+    expect(CONFUSABLE_MAP_FULL["0"]).toBe("o");
+    expect(CONFUSABLE_MAP_FULL["|"]).toBe("l");
+    expect(CONFUSABLE_MAP_FULL["m"]).toBe("rn");
+    expect(CONFUSABLE_MAP_FULL["M"]).toBe("rn");
+    // Capital I is only in the cased map: names compare without case
+    expect(CONFUSABLE_MAP_FULL["I"]).toBeUndefined();
+    expect(CONFUSABLE_MAP_CASED["I"]).toBe("l");
+  });
+
+  it("does not map ASCII into the per-character map", () => {
+    for (const key of Object.keys(CONFUSABLE_MAP)) {
+      expect(key.codePointAt(0)!).toBeGreaterThanOrEqual(0x80);
+    }
+  });
+
+  it("records the confusables.txt version", () => {
+    expect(CONFUSABLES_DATE).toMatch(/^\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe("Unicode's full list and measured lookalikes", () => {
+  it("catches multi-letter lookalikes both ways", () => {
+    expect(skeleton("microsoft")).toBe(skeleton("rnicrosoft"));
+    expect(areConfusable("rnicrosoft", "microsoft")).toBe(true);
+    expect(areConfusable("\u01c1", "ll")).toBe(true); // ǁ
+  });
+
+  it("catches digit swaps Unicode lists", () => {
+    expect(areConfusable("paypa1", "paypal")).toBe(true);
+    expect(areConfusable("g00gle", "google")).toBe(true);
+    expect(areConfusable("paypax", "paypal")).toBe(false);
+  });
+
+  it("compares without case, and catches capital I where names are shown as typed", () => {
+    expect(skeleton("ADMIN")).toBe(skeleton("admin"));
+    expect(skeleton("Microsoft")).toBe(skeleton("microsoft"));
+    expect(areConfusable("ADMIN", "admin")).toBe(true);
+    expect(skeleton("paypaI")).not.toBe(skeleton("paypal"));
+    expect(skeleton("paypaI", { preserveCase: true })).toBe(skeleton("paypal", { preserveCase: true }));
+    expect(areConfusable("paypaI", "paypal")).toBe(true);
+  });
+
+  it("looks characters up as typed: a capital's lookalike is not its lowercase form's", () => {
+    // Greek capital eta looks like H, small eta does not look like h; capital beta looks like B, small beta not b
+    expect(areConfusable("\u0397ello", "hello")).toBe(true);
+    expect(areConfusable("\u03b7ello", "hello")).toBe(false);
+    expect(areConfusable("\u0392ob", "bob")).toBe(true);
+    expect(areConfusable("\u03b2ob", "bob")).toBe(false);
+  });
+
+  it("catches a lookalike capital that lowercases to something else", async () => {
+    const guard = createNamespaceGuard(
+      { sources: defaultSources, pattern: /^[\p{L}\p{N}-]+$/u, risk: { protect: ["root"] } },
+      createMockAdapter({})
+    );
+    // Cherokee Ꭱ looks like R; lowercased it is ꭱ, which Unicode maps elsewhere
+    const risk = guard.checkRisk("\u13a1oot");
+    expect(risk.matches[0]?.skeletonEqual).toBe(true);
+    const validator = createHomoglyphValidator();
+    expect(await validator("\uab71oot", { identifier: "\u13a1oot" })).not.toBeNull();
+  });
+
+  it("scores a lookalike above a typo", () => {
+    const guard = createNamespaceGuard({ sources: defaultSources }, createMockAdapter({}));
+    const lookalike = guard.checkRisk("paypa1", { protect: ["paypal"] });
+    const typo = guard.checkRisk("paypax", { protect: ["paypal"] });
+    expect(lookalike.score).toBeGreaterThan(typo.score);
+    const rn = confusableDistance("rnicrosoft", "microsoft");
+    expect(rn.steps.some((st) => st.op === "confusable-substitution" && st.prototype === "rn")).toBe(true);
+  });
+
+  it("ships confusable-vision's measurements with where each holds", () => {
+    expect(MEASURED_CONFUSABLES["1"]?.letter).toBe("l");
+    expect(MEASURED_CONFUSABLES["1"]?.contexts).toContain("Times New Roman 16");
+    // Hebrew alef: not in confusables.txt, measured as alike to x
+    expect(MEASURED_CONFUSABLES["\u05d0"]?.letter).toBe("x");
+    expect(MEASURED_CONFUSABLES["\u05d0"]?.tier).toBe("strict");
+    expect(CONFUSABLE_MAP_FULL["\u05d0"]).toBe("x");
   });
 });
 
@@ -3451,8 +3704,8 @@ describe("cross-script confusable detection", () => {
 
   describe("areConfusable with weights", () => {
     it("detects Hangul-Han cross-script pair with weights", () => {
-      // U+1175 (Hangul) vs U+4E28 (Han), visual score ~0.999
-      expect(areConfusable("\u1175", "\u4E28", { weights })).toBe(true);
+      // U+3163 (Hangul compatibility jamo I) vs U+4E28 (Han), alike in every text font drawing both
+      expect(areConfusable("\u3163", "\u4E28", { weights })).toBe(true);
     });
 
     it("detects Thai-Devanagari cross-script pair with weights", () => {
@@ -3472,20 +3725,78 @@ describe("cross-script confusable detection", () => {
 
     it("returns false for cross-script pair without weights option", () => {
       // Hangul vs Han: no skeleton match, and no weights provided
-      expect(areConfusable("\u1175", "\u4E28")).toBe(false);
+      expect(areConfusable("\u3163", "\u4E28")).toBe(false);
     });
 
     it("respects context filtering", () => {
-      // Hangul U+1175 and Han U+4E28 are both XID_Continue (Letter, other),
+      // Hangul U+3163 and Han U+4E28 are both XID_Continue (Letter, other),
       // so they appear in identifier context as well as "all"
-      expect(areConfusable("\u1175", "\u4E28", { weights, context: "identifier" })).toBe(true);
-      expect(areConfusable("\u1175", "\u4E28", { weights, context: "all" })).toBe(true);
+      expect(areConfusable("\u3163", "\u4E28", { weights, context: "identifier" })).toBe(true);
+      expect(areConfusable("\u3163", "\u4E28", { weights, context: "all" })).toBe(true);
+    });
+
+    it("lines the characters up, so one measured pair doesn't make two names alike", () => {
+      // Capital I and l are a measured pair, but o and i are not, nor w and m
+      expect(areConfusable("Iowa", "lima", { weights })).toBe(false);
+      expect(areConfusable("lima", "Iowa", { weights })).toBe(false);
+      expect(areConfusable("Iowa", "paypal", { weights })).toBe(false);
+      // A pair in the wrong place doesn't count: \u3163 matches \u4E28, but x has nothing to match
+      expect(areConfusable("x\u3163", "\u4E28", { weights })).toBe(false);
+      expect(areConfusable("\u3163x", "x\u4E28", { weights })).toBe(false);
+    });
+
+    it("counts a measured pair at the same position inside a name", () => {
+      // Hangul \u3163 is measured alike to l; Unicode doesn't list it
+      expect(areConfusable("he\u3163\u3163o", "hello")).toBe(false);
+      expect(areConfusable("he\u3163\u3163o", "hello", { weights })).toBe(true);
+      expect(areConfusable("pay\u3163al", "pay\u4E28al", { weights })).toBe(true);
+      expect(areConfusable("\u3163\u4E28", "\u4E28\u3163", { weights })).toBe(true);
+      // Listed lookalikes and measured pairs mix, and case pairs count as the same letter
+      expect(areConfusable("P\u0430ypa\u3163", "paypal", { weights })).toBe(true); // Cyrillic \u0430, Hangul \u3163
+      expect(areConfusable("P\u0430ypa\u3163", "paypa", { weights })).toBe(false);
+      // Zero-width characters are left out, as the skeleton leaves them out
+      expect(areConfusable("\u3163\u200B", "\u4E28", { weights })).toBe(true);
+    });
+
+    it("lets one character stand for several, as confusableDistance() does", () => {
+      expect(areConfusable("\u3163rn", "\u4E28m", { weights })).toBe(true);
+      expect(areConfusable("\u4E28m", "\u3163rn", { weights })).toBe(true);
+      expect(areConfusable("\u3163r", "\u4E28m", { weights })).toBe(false);
+    });
+
+    it("keeps the README's examples", () => {
+      expect(areConfusable("\u3163", "\u4E28", { weights })).toBe(true); // Hangul \u3163, Han \u4E28
+      expect(areConfusable("\u0458", "\u03F3")).toBe(true); // Cyrillic \u0458, Greek \u03F3
+      expect(areConfusable("\u0458", "\u03F3", { weights })).toBe(true);
+      expect(areConfusable("\u0406", "\u0399")).toBe(true); // Cyrillic \u0406, Greek \u0399
+      expect(areConfusable("\u0406", "\u0399", { weights })).toBe(true);
+    });
+
+    it("counts a pair in a context only when both characters are allowed there", () => {
+      // The table lists \u4E28 \u2192 \u3163 with the flags of \u4E28, which may appear in a domain name; \u3163 may not
+      expect(weights["\u4E28"]["\u3163"].idnaPvalid).toBe(true);
+      expect(weights["\u3163"]["l"].idnaPvalid).toBeUndefined();
+      expect(areConfusable("\u3163", "\u4E28", { weights, context: "domain" })).toBe(false);
+      expect(areConfusable("\u4E28", "\u3163", { weights, context: "domain" })).toBe(false);
+      expect(areConfusable("\u3163", "\u4E28", { weights, context: "identifier" })).toBe(true);
+      expect(areConfusable("\u3163", "l", { weights, context: "domain" })).toBe(false);
+      expect(areConfusable("\u3163", "l", { weights, context: "identifier" })).toBe(true);
+      // Thai \u0E50 and Devanagari \u0966 may both appear in domain names
+      expect(areConfusable("\u0E50", "\u0966", { weights, context: "domain" })).toBe(true);
+    });
+
+    it("works out the context of a character the table doesn't list first", () => {
+      // Han \u4E28 \u2192 capital I: I is XID_Continue, but not PVALID (a domain name is lowercase)
+      expect(weights["I"]).toBeUndefined();
+      expect(confusableDistance("\u4E28", "I", { weights, context: "identifier" }).steps[0].reason).toBe("visual-weight");
+      expect(confusableDistance("\u4E28", "I", { weights, context: "domain" }).steps[0].cost).toBe(1);
+      expect(confusableDistance("\u4E28", "l", { weights, context: "domain" }).steps[0].reason).toBe("visual-weight");
     });
   });
 
   describe("confusableDistance with cross-script weights", () => {
     it("produces visual-weight step for cross-script pair", () => {
-      const result = confusableDistance("\u1175", "\u4E28", { weights });
+      const result = confusableDistance("\u3163", "\u4E28", { weights });
       expect(result.distance).toBeLessThan(1);
       const weightStep = result.steps.find(s => s.reason === "visual-weight");
       expect(weightStep).toBeDefined();
@@ -3507,7 +3818,7 @@ describe("cross-script confusable detection", () => {
     });
 
     it("detects high risk for Hangul-Han pair with high visual score", () => {
-      const result = detectCrossScriptRisk("\u1175\u4E28", { weights });
+      const result = detectCrossScriptRisk("\u3163\u4E28", { weights });
       expect(result.riskLevel).toBe("high");
       expect(result.scripts).toContain("hangul");
       expect(result.scripts).toContain("han");
@@ -3517,7 +3828,7 @@ describe("cross-script confusable detection", () => {
 
     it("returns none for multi-script without weights", () => {
       // Multi-script but no weights provided, so no pairs found
-      const result = detectCrossScriptRisk("\u1175\u4E28");
+      const result = detectCrossScriptRisk("\u3163\u4E28");
       expect(result.riskLevel).toBe("none");
       expect(result.scripts.length).toBe(2);
       expect(result.crossScriptPairs).toHaveLength(0);
@@ -3760,7 +4071,7 @@ describe("NFKC/TR39 divergence vectors", () => {
   });
 
   it("exports the named composability suite aliases", () => {
-    expect(COMPOSABILITY_VECTOR_SUITE).toBe("nfkc-tr39-divergence-v1");
+    expect(COMPOSABILITY_VECTOR_SUITE).toBe("nfkc-tr39-divergence-v2");
     expect(COMPOSABILITY_VECTORS_COUNT).toBe(COMPOSABILITY_VECTORS.length);
     expect(COMPOSABILITY_VECTORS).toEqual(NFKC_TR39_DIVERGENCE_VECTORS);
   });
@@ -3815,12 +4126,12 @@ describe("checkRisk", () => {
   });
 
   it("respects custom policy thresholds", () => {
-    const strict = guard.checkRisk("paypa1", {
+    const strict = guard.checkRisk("paypax", {
       protect: ["paypal"],
       warnThreshold: 30,
       blockThreshold: 60,
     });
-    const lenient = guard.checkRisk("paypa1", {
+    const lenient = guard.checkRisk("paypax", {
       protect: ["paypal"],
       warnThreshold: 90,
       blockThreshold: 98,
@@ -3828,6 +4139,255 @@ describe("checkRisk", () => {
 
     expect(strict.action === "warn" || strict.action === "block").toBe(true);
     expect(lenient.action).toBe("allow");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkRisk(): only a lookalike can block
+// ---------------------------------------------------------------------------
+describe("checkRisk blocks only on visual evidence", () => {
+  const guard = createNamespaceGuard(
+    {
+      reserved: {
+        system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
+        brand: ["namespace-guard"],
+      },
+      sources: defaultSources,
+      risk: { protect: ["paypal", "microsoft", "github", "vercel", "namespace-guard", "support", "admin"] },
+    },
+    createMockAdapter({})
+  );
+
+  // Before: the 0.23.0 working tree before this change (0.22.0 scored the same). Only the after columns are checked.
+  it.each([
+    // name, before score, before action, after score, after action, closest target after
+    ["helper", 80, "block", 0, "allow", undefined],
+    ["setting", 88, "block", 0, "allow", undefined],
+    ["gitlab", 80, "block", 0, "allow", undefined],
+    ["supply", 75, "block", 0, "allow", undefined],
+    ["signal", 80, "block", 0, "allow", undefined],
+    ["hello", 73, "block", 0, "allow", undefined],
+    ["apis", 75, "block", 0, "allow", undefined],
+    ["admins", 83, "block", 0, "allow", undefined],
+    ["helping", 75, "block", 0, "allow", undefined],
+    ["settle", 73, "block", 0, "allow", undefined],
+    ["acme", 58, "warn", 0, "allow", undefined],
+    ["adam", 58, "warn", 0, "allow", undefined],
+    ["pay", 68, "warn", 0, "allow", undefined],
+    ["sarah", 56, "warn", 0, "allow", undefined],
+    ["logger", 68, "warn", 0, "allow", undefined],
+    ["g1thub", 83, "block", 69, "warn", "github"],
+    ["githuh", 83, "block", 69, "warn", "github"],
+    ["vercal", 83, "block", 69, "warn", "vercel"],
+    ["rnicrosoft", 100, "block", 100, "block", "microsoft"],
+    ["paypa1", 100, "block", 100, "block", "paypal"],
+    ["paypaI", 94, "block", 100, "block", "paypal"], // a skeleton collision with case kept counts as one without
+    ["micros0ft", 100, "block", 100, "block", "microsoft"],
+    ["раураl", 100, "block", 100, "block", "paypal"], // Cyrillic р а у р а, Latin l
+  ] as const)("%s: %i %s before, %i %s after", (name, _beforeScore, _beforeAction, score, action, target) => {
+    const risk = guard.checkRisk(name);
+    expect(risk.score).toBe(score);
+    expect(risk.action).toBe(action);
+    expect(risk.matches[0]?.target).toBe(target);
+  });
+
+  it("does not block ordinary words near reserved or protected names, or warn on a reserved word extended", () => {
+    for (const name of ["helper", "setting", "gitlab", "supply", "signal", "hello", "apis", "admins", "helping", "settle"]) {
+      expect(guard.checkRisk(name).action).not.toBe("block");
+      expect(guard.enforceRisk(name).allowed).toBe(true);
+    }
+    for (const name of ["helper", "hello", "admins", "apis", "settle", "setting"]) {
+      expect(guard.checkRisk(name).action).toBe("allow");
+    }
+  });
+
+  it("still blocks names that differ from a protected name only by lookalikes", () => {
+    for (const name of ["rnicrosoft", "paypa1", "paypaI", "micros0ft", "раураl", "verce1", "admіn"]) {
+      const risk = guard.checkRisk(name);
+      expect(risk.action).toBe("block");
+      expect(guard.enforceRisk(name).allowed).toBe(false);
+    }
+  });
+
+  it("blocks paypaI on the default path, though the skeletons compared without case differ", () => {
+    expect(skeleton("paypaI")).not.toBe(skeleton("paypal"));
+    const plain = createNamespaceGuard({ sources: defaultSources }, createMockAdapter({}));
+    for (const map of [undefined, CONFUSABLE_MAP]) {
+      const risk = plain.checkRisk("paypaI", { protect: ["paypal"], map });
+      expect(risk.action).toBe("block");
+      expect(risk.matches[0]?.reasons).toContain("TR39 skeleton collision with case kept");
+    }
+  });
+
+  it("reads a listed character that normalization splits as the lookalike it is", () => {
+    // í (i, measured), ḋ (d, measured) and ŀ (l, which NFKC turns into l and a middle dot)
+    for (const [name, target] of [
+      ["aḋmín", "admin"],
+      ["mícrosoft", "microsoft"],
+      ["paypaŀ", "paypal"],
+    ]) {
+      const risk = guard.checkRisk(name);
+      expect(risk.action).toBe("block");
+      expect(risk.matches[0]?.target).toBe(target);
+    }
+  });
+
+  it("warns, at most, on a single slip that is not a lookalike, whatever the thresholds", () => {
+    for (const name of ["githuh", "vercal", "g1thub", "gihtub", "micro-soft", "namespace-gaurd"]) {
+      const risk = guard.checkRisk(name);
+      expect(risk.action).toBe("warn");
+      expect(risk.score).toBeLessThan(70);
+      const low = guard.checkRisk(name, { warnThreshold: 20, blockThreshold: 50 });
+      expect(low.action).toBe("warn");
+      expect(low.score).toBe(49);
+    }
+  });
+
+  it("warns on a lookalike of the whole name with letters added", () => {
+    for (const name of ["rnicrosoft-support", "paypa1x"]) {
+      const risk = guard.checkRisk(name);
+      expect(risk.action).toBe("warn");
+      expect(risk.matches[0]?.reasons).toContain("lookalike of the whole name, with letters added");
+    }
+  });
+
+  it("does not match a protected name shown whole with letters added or dropped", () => {
+    for (const name of ["paypall", "vercel1", "githubs", "microsoft-support", "admin-team", "pay"]) {
+      expect(guard.checkRisk(name).matches).toEqual([]);
+    }
+  });
+
+  it("still adds signals from the characters themselves", () => {
+    // Cyrillic і in a Latin name, one letter from github: the lookalike character, not the spelling, tips it over
+    expect(guard.checkRisk("githuh").action).toBe("warn");
+    const mixed = guard.checkRisk("gіthuh");
+    expect(mixed.action).toBe("block");
+    expect(mixed.reasons.some((r) => r.code === "mixed-script")).toBe(true);
+    expect(mixed.canBlock).toBe(true);
+  });
+
+  it("says how each match was made", () => {
+    expect(guard.checkRisk("paypal").matches[0]?.evidence).toBe("exact");
+    expect(guard.checkRisk("paypa1").matches[0]?.evidence).toBe("lookalike");
+    expect(guard.checkRisk("githuh").matches[0]?.evidence).toBe("typo");
+    expect(guard.checkRisk("rnicrosoft-support").matches[0]?.evidence).toBe("lookalike-extension");
+    expect(guard.checkRisk("githuh").canBlock).toBe(false);
+    expect(guard.checkRisk("paypa1").canBlock).toBe(true);
+  });
+
+  it("gives a skeleton collision with case kept the same weight as one without", () => {
+    const risk = guard.checkRisk("paypaI");
+    expect(risk.score).toBe(guard.checkRisk("paypa1").score);
+    expect(risk.reasons.some((r) => r.code === "skeleton-collision")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkRisk(): characters NFKC rewrites, reserved-only names, leetspeak
+// ---------------------------------------------------------------------------
+describe("checkRisk signals and options", () => {
+  const config = {
+    reserved: ["help", "api", "login", "admin"],
+    sources: defaultSources,
+    risk: { protect: ["paypal", "microsoft", "admin"] },
+  };
+  const guard = createNamespaceGuard(config, createMockAdapter({}));
+  const leet = createNamespaceGuard(
+    { ...config, risk: { ...config.risk, leetspeak: true } },
+    createMockAdapter({})
+  );
+
+  it("finds a character where NFKC and TR39 differ in the name as typed", () => {
+    // ſ (long s): NFKC stores it as s, Unicode lists it as f
+    const risk = guard.checkRisk("microsoſt");
+    expect(risk.normalized).toBe("microsost");
+    expect(risk.reasons.some((r) => r.code === "divergent-mapping")).toBe(true);
+  });
+
+  it("does not let a character that is not a lookalike take a close spelling to a block", () => {
+    const risk = guard.checkRisk("microsoſt"); // stored as microsost: one letter from microsoft
+    expect(risk.action).toBe("warn");
+    expect(risk.score).toBe(69);
+    expect(risk.canBlock).toBe(false);
+    // ſ in place of s is stored as microsoft itself
+    expect(guard.checkRisk("microſoft").matches[0]?.evidence).toBe("exact");
+    // A real lookalike still can: Cyrillic і, and í (measured as i)
+    expect(guard.checkRisk("mіcrosofx").action).toBe("block");
+    expect(guard.checkRisk("mícrosoſt").action).toBe("block");
+  });
+
+  it("matches a reserved name that is not in protect by lookalikes only", () => {
+    for (const name of ["hell", "yelp", "apt", "logic"]) {
+      expect(guard.checkRisk(name).matches).toEqual([]);
+      expect(guard.checkRisk(name).action).toBe("allow");
+    }
+    expect(guard.checkRisk("hеlp").action).toBe("block"); // Cyrillic е
+    expect(guard.checkRisk("l0gin").action).toBe("block");
+    // A name in protect as well still warns on a typo, as does a typo of a protected brand
+    expect(guard.checkRisk("admit").action).toBe("warn");
+    expect(guard.checkRisk("papal").action).toBe("warn");
+    // Passing it in protect brings typos back
+    expect(guard.checkRisk("hell", { protect: ["help"] }).action).toBe("warn");
+  });
+
+  it("counts leetspeak swaps as lookalikes only when asked", () => {
+    const cases: Array<[string, "allow" | "warn"]> = [
+      ["p4ypal", "warn"],
+      ["adm1n", "warn"],
+      ["4dm1n", "allow"],
+      ["h3lp", "allow"],
+      ["m1cr0s0ft", "warn"],
+    ];
+    for (const [name, offAction] of cases) {
+      expect(guard.checkRisk(name).action).toBe(offAction);
+      expect(leet.checkRisk(name).action).toBe("block");
+      expect(guard.checkRisk(name, { leetspeak: true }).action).toBe("block");
+      expect(guard.enforceRisk(name, { leetspeak: true }).allowed).toBe(false);
+    }
+    expect(leet.checkRisk("adm1n").matches[0]?.reasons).toContain("1 leetspeak swap(s)");
+    expect(leet.checkRisk("p4ypal-support").matches[0]?.evidence).toBe("lookalike-extension");
+    // Letters it does not touch, and names shown whole with letters added, are unchanged
+    for (const name of ["githuh", "admin5", "team1", "h3llo"]) {
+      expect(leet.checkRisk(name).action).toBe(guard.checkRisk(name).action);
+    }
+    expect(NAMESPACE_PROFILES["consumer-handle"].risk.leetspeak).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Characters the map lists that NFD splits
+// ---------------------------------------------------------------------------
+describe("listed characters that NFD splits", () => {
+  it("are read whole by skeleton(), areConfusable() and confusableDistance()", () => {
+    expect(areConfusable("aḋmín", "admin")).toBe(true); // ḋ, í
+    expect(areConfusable("mícrosoft", "microsoft")).toBe(true);
+    expect(areConfusable("mícrosoft", "microsoft")).toBe(true); // the same, decomposed
+    expect(areConfusable("Άdmin", "admin")).toBe(true); // Greek Ά
+    expect(areConfusable("ἰcon", "icon")).toBe(true); // Greek ἰ
+    expect(areConfusable("gוֹthub", "github")).toBe(true); // Hebrew וֹ
+    expect(skeleton("í")).toBe("i");
+    expect(skeleton("mícrosoft")).toBe(skeleton("microsoft"));
+    const distance = confusableDistance("mícrosoft", "microsoft");
+    expect(distance.distance).toBe(0.35);
+    expect(distance.steps.some((s) => s.op === "confusable-substitution" && s.from === "í")).toBe(true);
+  });
+
+  it("leave an accented letter the map does not list as it is", () => {
+    expect(areConfusable("café", "cafe")).toBe(false);
+    expect(skeleton("café")).not.toBe(skeleton("cafe"));
+  });
+
+  it("block in checkRisk(), including ŀ, which NFKC stores as l and a middle dot", () => {
+    const guard = createNamespaceGuard({ sources: defaultSources }, createMockAdapter({}));
+    for (const [name, target] of [
+      ["aḋmín", "admin"],
+      ["paypaŀ", "paypal"],
+      ["gוֹthub", "github"],
+    ]) {
+      const risk = guard.checkRisk(name, { protect: [target] });
+      expect(risk.action).toBe("block");
+      expect(risk.matches[0]?.evidence).toBe("lookalike");
+    }
   });
 });
 
@@ -3857,7 +4417,7 @@ describe("enforceRisk", () => {
   });
 
   it("can fail on warn-level identifiers", () => {
-    const result = guard.enforceRisk("paypa1", {
+    const result = guard.enforceRisk("paypax", {
       protect: ["paypal"],
       warnThreshold: 70,
       blockThreshold: 95,

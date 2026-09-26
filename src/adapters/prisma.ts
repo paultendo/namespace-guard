@@ -45,10 +45,8 @@ export function createPrismaAdapter(prisma: PrismaClient): NamespaceAdapter {
 
       return model.findFirst({
         where: { [source.column]: whereValue },
-        select: {
-          [idColumn]: true,
-          ...(source.scopeKey ? { [source.scopeKey]: true } : {}),
-        },
+        // The guard only needs the id: it compares the scope's value with it
+        select: { [idColumn]: true },
       });
     },
   };

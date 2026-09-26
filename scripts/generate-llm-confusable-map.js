@@ -5,7 +5,7 @@
  *
  * Sources:
  * - CONFUSABLE_MAP_FULL from namespace-guard (TR39 single-char Latin/digit mappings)
- * - confusable-vision confusable-weights-v3.json, from a release (visual similarity + novel pairs)
+ * - confusable-vision confusable-weights-v4.json, from a release (visual similarity + novel pairs)
  *
  * Output:
  * - src/llm-confusable-map.ts
@@ -18,7 +18,7 @@ const ROOT = path.resolve(__dirname, "..");
 const DIST_INDEX_PATH = path.resolve(ROOT, "dist/index.js");
 const DEFAULT_WEIGHTS_JSON = path.resolve(
   __dirname,
-  "../../confusable-vision/data/output/confusable-weights-v3.json"
+  "../../confusable-vision/data/output/confusable-weights-v4.json"
 );
 const DEFAULT_SIZE_RATIO_JSON = path.resolve(
   __dirname,
@@ -181,7 +181,11 @@ function pushEntry(sourceChar, latin, score, source, cpOverride) {
 
 // 1) Include full TR39-compatible map baseline.
 for (const [sourceChar, mappedLatin] of Object.entries(CONFUSABLE_MAP_FULL)) {
-  const latin = String(mappedLatin).toLowerCase();
+  // Canonicalisation rewrites a character as one letter: not ASCII sources (Unicode's 1 as l, m as rn are for
+  // skeletons, not for rewriting text), m for the prototype rn, and no multi-letter targets
+  if ((sourceChar.codePointAt(0) || 0) < 0x80) continue;
+  const latin = String(mappedLatin).toLowerCase() === "rn" ? "m" : String(mappedLatin).toLowerCase();
+  if (latin.length !== 1) continue;
   const scored = scoredEdgeByPair.get(`${sourceChar}::${latin}`);
   const score = scored?.sameMean ?? scored?.stableDanger ?? scored?.danger ?? 1;
   pushEntry(sourceChar, latin, score, "tr39", scored?.sourceCodepoint);
@@ -193,9 +197,12 @@ for (const edge of weightsData.edges) {
 
   const latin = edge.target.toLowerCase();
   if (!/^[a-z0-9]$/.test(latin)) continue;
+  // Not ASCII sources: release 3 also measures ASCII against ASCII (O and 0), which is not for rewriting text
+  if ((edge.source.codePointAt(0) || 0) < 0x80) continue;
 
   // Already in the TR39 baseline above (release files carry no inTr39 flag, so check the map itself)
-  const inTr39 = Boolean(edge.inTr39) || String(CONFUSABLE_MAP_FULL[edge.source] ?? "").toLowerCase() === latin;
+  const mapped = String(CONFUSABLE_MAP_FULL[edge.source] ?? "").toLowerCase();
+  const inTr39 = Boolean(edge.inTr39) || mapped === latin || (mapped === "rn" && latin === "m");
   if (inTr39) continue;
 
   const score = edge.sameMean ?? edge.stableDanger ?? edge.danger ?? 0;
@@ -228,9 +235,12 @@ out += `//\n`;
 out += `// DO NOT EDIT MANUALLY. Regenerate with:\n`;
 out += `//   npm run build && node scripts/generate-llm-confusable-map.js\n`;
 out += `//\n`;
-out += `// Data licensing:\n`;
-out += `// - TR39-derived mappings: Unicode License v3\n`;
-out += `// - confusable-vision-derived weights: CC-BY-4.0\n`;
+out += `/*! Data licensing:\n`;
+out += ` * - TR39-derived mappings: Unicode confusables.txt, copyright 1991-Present Unicode, Inc.,\n`;
+out += ` *   Unicode License v3 (https://www.unicode.org/license.txt)\n`;
+out += ` * - confusable-vision-derived weights: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/).\n`;
+out += ` *   Attribution: Paul Wood FRSA (@paultendo), confusable-vision\n`;
+out += ` *   (https://github.com/paultendo/confusable-vision). */\n`;
 out += `\n`;
 out += `export type LlmConfusableSource = "tr39" | "novel";\n`;
 out += `\n`;

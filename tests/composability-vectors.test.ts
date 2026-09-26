@@ -7,7 +7,7 @@ import {
 
 describe("composability-vectors subpath", () => {
   it("exports a stable named suite with vectors", () => {
-    expect(COMPOSABILITY_VECTOR_SUITE).toBe("nfkc-tr39-divergence-v1");
+    expect(COMPOSABILITY_VECTOR_SUITE).toBe("nfkc-tr39-divergence-v2");
     expect(COMPOSABILITY_VECTORS_COUNT).toBe(COMPOSABILITY_VECTORS.length);
     expect(COMPOSABILITY_VECTORS_COUNT).toBeGreaterThanOrEqual(30);
   });

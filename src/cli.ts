@@ -18,54 +18,86 @@ import type {
 } from "./index";
 import { createRawAdapter } from "./adapters/raw";
 
-function printUsage() {
-  console.log(`Usage:
-  namespace-guard check <slug> [options]
-  namespace-guard risk <slug> [options]
-  namespace-guard attack-gen <target> [options]
-  namespace-guard audit-canonical <dataset.json> [options]
-  namespace-guard calibrate <dataset.json> [options]
-  namespace-guard recommend <dataset.json> [options]
-  namespace-guard drift [dataset.json] [options]
+// The help text, one line per usage, option and example, with the commands each option applies to, so that
+// `namespace-guard <command> --help` prints that command's lines of the same text.
+const HELP_USAGE: Array<[command: string, usage: string]> = [
+  ["check", "namespace-guard check <slug> [options]"],
+  ["risk", "namespace-guard risk <slug> [options]"],
+  ["attack-gen", "namespace-guard attack-gen <target> [options]"],
+  ["audit-canonical", "namespace-guard audit-canonical <dataset.json> [options]"],
+  ["calibrate", "namespace-guard calibrate <dataset.json> [options]"],
+  ["recommend", "namespace-guard recommend <dataset.json> [options]"],
+  ["drift", "namespace-guard drift [dataset.json] [options]"],
+];
 
-Options:
-  --config <path>        Path to config file (default: namespace-guard.config.json)
-  --database-url <url>   PostgreSQL connection URL for full collision checking
-  --protect <slug>       Protected target to compare risk against (repeatable, comma-separated allowed)
-  --no-reserved          Exclude configured reserved names from risk protected targets
-  --warn-threshold <n>   Risk score threshold for warn action (0-100)
-  --block-threshold <n>  Risk score threshold for block action (0-100)
-  --max-matches <n>      Number of top risk matches to return
-  --mode <kind>          For attack-gen: "evasion" (default) or "impersonation"
-  --map <mode>           For attack-gen: "filtered" or "full" (default depends on --mode)
-  --max-candidates <n>   For attack-gen: max candidates shown (default 25)
-  --max-edits <n>        For attack-gen: max substitutions per candidate (1-2, default 2)
-  --max-per-char <n>     For attack-gen: replacements sampled per target char (default 8)
-  --no-ignorables        For attack-gen: skip zero-width insertion candidates
-  --fail-on <mode>       For risk: fail on "block" (default) or "warn"
-  --target-recall <n>    For calibrate: desired recall for warn threshold (0-1, default 0.90)
-  --cost-block-benign <n>   For calibrate: cost when benign input is blocked (default 8)
-  --cost-warn-benign <n>    For calibrate: cost when benign input is warned (default 1)
-  --cost-allow-malicious <n> For calibrate: cost when malicious input is allowed (default 12)
-  --cost-warn-malicious <n>  For calibrate: cost when malicious input is warned (default 3)
-  --malicious-prior <n>      For calibrate: expected malicious base rate (0-1), reweights classes
-  --limit <n>             For drift: max changed examples printed (default 10)
-  --json                 Print machine-readable JSON (risk/attack-gen/audit-canonical/calibrate/recommend/drift commands)
-  --help                 Show this help message
+const SCORING = ["risk", "attack-gen", "calibrate", "recommend", "drift"];
+const CALIBRATION = ["calibrate", "recommend"];
+const HELP_OPTIONS: Array<[line: string, commands: string[]]> = [
+  ["--config <path>        Path to config file (default: namespace-guard.config.json)", ["check", ...SCORING]],
+  ["--database-url <url>   PostgreSQL connection URL for full collision checking", ["check"]],
+  ["--protect <slug>       Protected target to compare risk against (repeatable, comma-separated allowed)", SCORING],
+  ["--no-reserved          Exclude configured reserved names from risk protected targets", SCORING],
+  ["--leetspeak            Count leetspeak swaps (4 for a, 1 for i, 5 for s) as lookalikes (risk, attack-gen, calibrate, recommend)", ["risk", "attack-gen", ...CALIBRATION]],
+  ["--warn-threshold <n>   Risk score threshold for warn action (0-100)", ["risk", "attack-gen", "recommend", "drift"]],
+  ["--block-threshold <n>  Risk score threshold for block action (0-100)", ["risk", "attack-gen", "recommend", "drift"]],
+  ["--max-matches <n>      Number of top risk matches to return", ["risk", "attack-gen", "recommend", "drift"]],
+  ["--mode <kind>          For attack-gen: \"evasion\" (default) or \"impersonation\"", ["attack-gen"]],
+  ["--map <mode>           For attack-gen: \"filtered\" or \"full\" (default depends on --mode)", ["attack-gen"]],
+  ["--max-candidates <n>   For attack-gen: max candidates shown (default 25)", ["attack-gen"]],
+  ["--max-edits <n>        For attack-gen: max substitutions per candidate (1-2, default 2)", ["attack-gen"]],
+  ["--max-per-char <n>     For attack-gen: replacements sampled per target char (default 8)", ["attack-gen"]],
+  ["--no-ignorables        For attack-gen: skip zero-width insertion candidates", ["attack-gen"]],
+  ["--fail-on <mode>       For risk: fail on \"block\" (default) or \"warn\"", ["risk"]],
+  ["--target-recall <n>    For calibrate: desired recall for warn threshold (0-1, default 0.90)", CALIBRATION],
+  ["--cost-block-benign <n>   For calibrate: cost when benign input is blocked (default 8)", CALIBRATION],
+  ["--cost-warn-benign <n>    For calibrate: cost when benign input is warned (default 1)", CALIBRATION],
+  ["--cost-allow-malicious <n> For calibrate: cost when malicious input is allowed (default 12)", CALIBRATION],
+  ["--cost-warn-malicious <n>  For calibrate: cost when malicious input is warned (default 3)", CALIBRATION],
+  ["--malicious-prior <n>      For calibrate: expected malicious base rate (0-1), reweights classes", CALIBRATION],
+  ["--limit <n>             Max examples printed: drift's changed rows, audit-canonical's collision groups (default 10)", ["audit-canonical", "recommend", "drift"]],
+  ["--json                 Print machine-readable JSON (risk/attack-gen/audit-canonical/calibrate/recommend/drift commands)", ["risk", "attack-gen", "audit-canonical", ...CALIBRATION, "drift"]],
+  ["--help                 Show this help message", HELP_USAGE.map(([command]) => command)],
+];
 
-Examples:
-  namespace-guard check acme-corp
-  namespace-guard check sarah --config ./my-config.json
-  namespace-guard check sarah --database-url postgres://localhost/mydb
-  namespace-guard risk paуpal --protect paypal
-  namespace-guard risk paypa1 --protect paypal --fail-on warn --json
-  namespace-guard attack-gen paypal --json
-  namespace-guard attack-gen shit --mode evasion --json
-  namespace-guard audit-canonical ./users-export.json --json
-  namespace-guard calibrate ./risk-dataset.json --protect paypal --json
-  namespace-guard recommend ./risk-dataset.json --protect paypal --json
-  namespace-guard drift
-  namespace-guard drift ./risk-dataset.json --protect paypal --json`);
+const HELP_EXAMPLES = [
+  "namespace-guard check acme-corp",
+  "namespace-guard check sarah --config ./my-config.json",
+  "namespace-guard check sarah --database-url postgres://localhost/mydb",
+  "namespace-guard risk paуpal --protect paypal",
+  "namespace-guard risk paypa1 --protect paypal --fail-on warn --json",
+  "namespace-guard attack-gen paypal --json",
+  "namespace-guard attack-gen shit --mode evasion --json",
+  "namespace-guard audit-canonical ./users-export.json --json",
+  "namespace-guard calibrate ./risk-dataset.json --protect paypal --json",
+  "namespace-guard recommend ./risk-dataset.json --protect paypal --json",
+  "namespace-guard drift",
+  "namespace-guard drift ./risk-dataset.json --protect paypal --json",
+];
+
+function isCommand(name: string | undefined): name is string {
+  return HELP_USAGE.some(([command]) => command === name);
+}
+
+/** The full help, or with a command, that command's usage, options and examples. */
+function printUsage(command?: string) {
+  const usage = HELP_USAGE.filter(([c]) => !command || c === command).map(([, line]) => line);
+  const options = HELP_OPTIONS.filter(([, commands]) => !command || commands.includes(command)).map(([line]) =>
+    // In one command's help, "For calibrate:" and a list of the commands an option applies to say nothing
+    command
+      ? line
+          .replace(/(\s)For [a-z-]+: (.)/, (_, space: string, first: string) => space + first.toUpperCase())
+          .replace(/ \((?:[a-z-]+(?:, |\/))+[a-z-]+(?: commands)?\)$/, "")
+      : line
+  );
+  const examples = HELP_EXAMPLES.filter((line) => !command || line.split(" ")[1] === command);
+  console.log(
+    [
+      `Usage:\n${usage.map((line) => `  ${line}`).join("\n")}`,
+      `Options:\n${options.map((line) => `  ${line}`).join("\n")}`,
+      `Examples:\n${examples.map((line) => `  ${line}`).join("\n")}`,
+      ...(command ? [] : ["Run namespace-guard <command> --help, or namespace-guard help <command>, for one command's options."]),
+    ].join("\n\n")
+  );
 }
 
 function parseArgs(argv: string[]): {
@@ -75,6 +107,7 @@ function parseArgs(argv: string[]): {
   databaseUrl: string | undefined;
   protect: string[];
   includeReserved: boolean;
+  leetspeak: boolean;
   warnThreshold: number | undefined;
   blockThreshold: number | undefined;
   maxMatches: number | undefined;
@@ -102,6 +135,7 @@ function parseArgs(argv: string[]): {
   let databaseUrl: string | undefined;
   const protect: string[] = [];
   let includeReserved = true;
+  let leetspeak = false;
   let warnThreshold: number | undefined;
   let blockThreshold: number | undefined;
   let maxMatches: number | undefined;
@@ -136,6 +170,8 @@ function parseArgs(argv: string[]): {
       protect.push(...values);
     } else if (arg === "--no-reserved") {
       includeReserved = false;
+    } else if (arg === "--leetspeak") {
+      leetspeak = true;
     } else if (arg === "--warn-threshold" && i + 1 < args.length) {
       warnThreshold = Number(args[++i]);
     } else if (arg === "--block-threshold" && i + 1 < args.length) {
@@ -186,6 +222,7 @@ function parseArgs(argv: string[]): {
     databaseUrl,
     protect,
     includeReserved,
+    leetspeak,
     warnThreshold,
     blockThreshold,
     maxMatches,
@@ -287,7 +324,10 @@ type CalibrationDatasetRow = {
 
 type ScoredCalibrationRow = {
   identifier: string;
+  /** Scored with the block threshold at 100, so a score held below the block threshold is held only at 99. */
   score: number;
+  /** From `checkRisk()`: false when nothing in the name is visual, so it warns at most at any block threshold. */
+  canBlock: boolean;
   malicious: boolean;
   weight: number;
 };
@@ -423,6 +463,8 @@ type AttackGenerationOutput = {
     maxEdits: number;
     maxPerChar: number;
     includeIgnorables: boolean;
+    /** Whether leetspeak swaps counted as lookalikes when scoring, so whether they can block. */
+    leetspeak: boolean;
     warnThreshold?: number;
     blockThreshold?: number;
   };
@@ -839,6 +881,13 @@ function printAttackGenerationOutput(output: AttackGenerationOutput): void {
   console.log(
     `Mode: ${output.mode}, map: ${output.map}, protect: [${output.protect.join(", ")}], generated: ${output.generated.total} (confusable ${output.generated.substitution}, ascii-lookalike ${output.generated.asciiLookalike}, ignorable ${output.generated.ignorableInsert})`
   );
+  if (output.generated.asciiLookalike > 0) {
+    console.log(
+      output.settings.leetspeak
+        ? "Leetspeak swaps count as lookalikes (--leetspeak), so they can block."
+        : "Leetspeak swaps are not lookalikes unless --leetspeak is set: they warn at most, so non-blocking ones count as bypasses."
+    );
+  }
   console.log(
     `Outcomes: allow ${output.outcomes.allow}, warn ${output.outcomes.warn}, block ${output.outcomes.block}`
   );
@@ -865,7 +914,8 @@ function printAttackGenerationOutput(output: AttackGenerationOutput): void {
 
 function computeThresholdMetrics(
   scoredRows: ScoredCalibrationRow[],
-  threshold: number
+  threshold: number,
+  asBlock = false
 ): ThresholdMetrics {
   let tp = 0;
   let fp = 0;
@@ -873,7 +923,8 @@ function computeThresholdMetrics(
   let fn = 0;
 
   for (const row of scoredRows) {
-    const predictedMalicious = row.score >= threshold;
+    // As a block threshold, a row that cannot block never reaches it
+    const predictedMalicious = row.score >= threshold && (!asBlock || row.canBlock);
     if (predictedMalicious && row.malicious) tp++;
     else if (predictedMalicious && !row.malicious) fp++;
     else if (!predictedMalicious && row.malicious) fn++;
@@ -956,8 +1007,13 @@ function computePolicyCost(
   let weightedFalseNegativeWarns = 0;
 
   for (const row of rows) {
+    // As checkRisk() would decide at these thresholds: a row that cannot block is held just below blockThreshold
     const action =
-      row.score >= blockThreshold ? "block" : row.score >= warnThreshold ? "warn" : "allow";
+      row.canBlock && row.score >= blockThreshold
+        ? "block"
+        : row.score >= warnThreshold
+          ? "warn"
+          : "allow";
     const w = row.weight;
     totalWeight += w;
 
@@ -991,6 +1047,19 @@ function computePolicyCost(
   };
 }
 
+/** The middle of the longest run of consecutive thresholds (the lower run when two are as long), rounded down. */
+function middleOfLongestRun(thresholds: number[]): number {
+  const sorted = [...new Set(thresholds)].sort((a, b) => a - b);
+  let best = { start: sorted[0], end: sorted[0] };
+  let start = sorted[0];
+  for (let i = 1; i <= sorted.length; i++) {
+    if (i < sorted.length && sorted[i] === sorted[i - 1] + 1) continue;
+    if (sorted[i - 1] - start > best.end - best.start) best = { start, end: sorted[i - 1] };
+    start = sorted[i];
+  }
+  return best.start + Math.floor((best.end - best.start) / 2);
+}
+
 function actionSeverity(action: RiskAction): number {
   if (action === "allow") return 0;
   if (action === "warn") return 1;
@@ -1018,10 +1087,11 @@ function analyzeDrift(
       throw new Error(`Row ${i + 1} is missing a valid "identifier" string.`);
     }
     const identifier = row.identifier;
-    const rowProtect = [
+    // A row may name the same target as both `protect` and `target`, as the built-in rows do: list it once
+    const rowProtect = uniqueStrings([
       ...parseProtectList(row.protect),
       ...parseProtectList(row.target),
-    ];
+    ]);
     const protectTargets = rowProtect.length > 0 ? rowProtect : options.protect;
 
     const optionsBase: CheckRiskOptions = {
@@ -1135,6 +1205,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
     databaseUrl,
     protect,
     includeReserved,
+    leetspeak,
     warnThreshold,
     blockThreshold,
     maxMatches,
@@ -1157,20 +1228,19 @@ export async function run(argv: string[] = process.argv): Promise<number> {
   } =
     parseArgs(argv);
 
-  if (help || !command) {
-    printUsage();
-    return help ? 0 : 1;
+  // `help`, `help <command>`, `--help` and `<command> --help`
+  const helpFor = command === "help" ? slug : help ? command : undefined;
+  if (command === "help" || help || !command) {
+    if (helpFor !== undefined && !isCommand(helpFor)) {
+      console.error(`Unknown command: ${helpFor}`);
+      printUsage();
+      return 1;
+    }
+    printUsage(helpFor);
+    return help || command ? 0 : 1;
   }
 
-  if (
-    command !== "check" &&
-    command !== "risk" &&
-    command !== "attack-gen" &&
-    command !== "audit-canonical" &&
-    command !== "calibrate" &&
-    command !== "recommend" &&
-    command !== "drift"
-  ) {
+  if (!isCommand(command)) {
     console.error(`Unknown command: ${command}`);
     printUsage();
     return 1;
@@ -1369,12 +1439,14 @@ export async function run(argv: string[] = process.argv): Promise<number> {
       const riskOptions: CheckRiskOptions = {
         protect: protect.length > 0 ? protect : undefined,
         includeReserved,
+        leetspeak,
         ...(warnThreshold !== undefined ? { warnThreshold } : {}),
         ...(blockThreshold !== undefined ? { blockThreshold } : {}),
         ...(maxMatches !== undefined ? { maxMatches } : {}),
       };
 
-      const risk = guard.checkRisk(normalized, riskOptions);
+      // As typed: checkRisk normalizes itself, and keeps case where it matters (capital I as l)
+      const risk = guard.checkRisk(slug!, riskOptions);
       const icon =
         risk.action === "block" ? "\u26d4" : risk.action === "warn" ? "\u26a0" : "\u2713";
 
@@ -1429,6 +1501,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
         const risk = guard.checkRisk(seed.identifier, {
           protect: protectTargets,
           includeReserved,
+          leetspeak,
           map: attackMap,
           ...(warnThreshold !== undefined ? { warnThreshold } : {}),
           ...(blockThreshold !== undefined ? { blockThreshold } : {}),
@@ -1479,6 +1552,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
           maxEdits: attackMaxEdits,
           maxPerChar: attackMaxPerChar,
           includeIgnorables,
+          leetspeak,
           ...(warnThreshold !== undefined ? { warnThreshold } : {}),
           ...(blockThreshold !== undefined ? { blockThreshold } : {}),
         },
@@ -1599,28 +1673,37 @@ export async function run(argv: string[] = process.argv): Promise<number> {
           return 1;
         }
 
-        const rowProtect = [
+        const rowProtect = uniqueStrings([
           ...parseProtectList(row.protect),
           ...parseProtectList(row.target),
-        ];
+        ]);
         const protectTargets = rowProtect.length > 0 ? rowProtect : protect;
 
+        // Scored with the block threshold at its top, so a name that cannot block is held at 99, not below whatever
+        // threshold the config sets; the sweep below then holds it below each block threshold it tries, as a real
+        // call at that threshold would
         const risk = guard.checkRisk(row.identifier, {
           protect: protectTargets.length > 0 ? protectTargets : undefined,
           includeReserved,
+          leetspeak,
+          warnThreshold: 0,
+          blockThreshold: 100,
         });
 
         scoredRows.push({
           identifier: row.identifier,
           score: risk.score,
+          canBlock: risk.canBlock,
           malicious: label,
           weight,
         });
       }
 
       const thresholdMetrics: ThresholdMetrics[] = [];
+      const blockThresholdMetrics: ThresholdMetrics[] = [];
       for (let t = 0; t <= 100; t++) {
         thresholdMetrics.push(computeThresholdMetrics(scoredRows, t));
+        blockThresholdMetrics.push(computeThresholdMetrics(scoredRows, t, true));
       }
 
       const desiredRecall = targetRecall ?? 0.9;
@@ -1665,55 +1748,38 @@ export async function run(argv: string[] = process.argv): Promise<number> {
       }
 
       function findBestPolicy(enforceRecall: boolean): ThresholdPairEvaluation | null {
-        let best: ThresholdPairEvaluation | null = null;
+        const candidates: ThresholdPairEvaluation[] = [];
 
-        for (let block = 0; block <= 100; block++) {
-          for (let warn = 0; warn <= block; warn++) {
+        // warn < block: checkRisk() raises a block threshold that is not above the warn threshold
+        for (let block = 1; block <= 100; block++) {
+          for (let warn = 0; warn < block; warn++) {
             if (enforceRecall && !recallEligibleThresholds.has(warn)) continue;
 
             const summary = computePolicyCost(weightedRows, warn, block, costModel);
-            const candidate: ThresholdPairEvaluation = {
+            candidates.push({
               warnThreshold: warn,
               blockThreshold: block,
               ...summary,
-            };
-
-            if (!best) {
-              best = candidate;
-              continue;
-            }
-
-            if (candidate.totalCost < best.totalCost) {
-              best = candidate;
-              continue;
-            }
-            if (candidate.totalCost > best.totalCost) {
-              continue;
-            }
-
-            if (candidate.averageCost < best.averageCost) {
-              best = candidate;
-              continue;
-            }
-            if (candidate.averageCost > best.averageCost) {
-              continue;
-            }
-
-            if (candidate.blockThreshold > best.blockThreshold) {
-              best = candidate;
-              continue;
-            }
-            if (candidate.blockThreshold < best.blockThreshold) {
-              continue;
-            }
-
-            if (candidate.warnThreshold > best.warnThreshold) {
-              best = candidate;
-            }
+            });
           }
         }
+        if (candidates.length === 0) return null;
 
-        return best;
+        const leastTotal = Math.min(...candidates.map((c) => c.totalCost));
+        const cheapest = candidates.filter((c) => c.totalCost === leastTotal);
+        const leastAverage = Math.min(...cheapest.map((c) => c.averageCost));
+        const tied = cheapest.filter((c) => c.averageCost === leastAverage);
+
+        // The cost only changes where a threshold passes a row's score, so a whole range of thresholds costs the same:
+        // on rows scoring 0 (genuine), 83 (close spellings) and 100 (lookalikes), any warn threshold from 1 to 83 does.
+        // Take the middle of the range, the threshold furthest from the scores on either side, so a name scoring a
+        // little differently from the examples is treated as they are. Warn first, then block, in the middle of the
+        // range left above it, so the block threshold is 100 only when nothing lower costs as little.
+        const warnThreshold = middleOfLongestRun(tied.map((c) => c.warnThreshold));
+        const blockThreshold = middleOfLongestRun(
+          tied.filter((c) => c.warnThreshold === warnThreshold).map((c) => c.blockThreshold)
+        );
+        return tied.find((c) => c.warnThreshold === warnThreshold && c.blockThreshold === blockThreshold) ?? null;
       }
 
       const bestPolicy =
@@ -1724,7 +1790,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
       }
 
       const warnMetrics = thresholdMetrics[bestPolicy.warnThreshold];
-      const blockMetrics = thresholdMetrics[bestPolicy.blockThreshold];
+      const blockMetrics = blockThresholdMetrics[bestPolicy.blockThreshold];
 
       const total = scoredRows.length;
       const maliciousCount = scoredRows.filter((r) => r.malicious).length;
@@ -1851,6 +1917,7 @@ export async function run(argv: string[] = process.argv): Promise<number> {
         warnThreshold: bestPolicy.warnThreshold,
         blockThreshold: bestPolicy.blockThreshold,
         ...(protect.length > 0 ? { protect } : {}),
+        ...(leetspeak ? { leetspeak: true } : {}),
       };
       const ciBudgets = {
         maxActionFlips: driftBaseline.actionFlips,
@@ -1987,6 +2054,10 @@ export async function run(argv: string[] = process.argv): Promise<number> {
 
 // Only auto-run when executed directly via CLI, not when imported for testing.
 // Vitest sets process.env.VITEST when running tests.
+// process.exit() would quit before a pipe had read all of stdout (output stopped at 64 KB), so the exit code is set
+// and Node exits once the output is written.
 if (!process.env.VITEST) {
-  run().then((code) => process.exit(code));
+  run().then((code) => {
+    process.exitCode = code;
+  });
 }

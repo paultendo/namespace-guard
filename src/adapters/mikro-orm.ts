@@ -45,13 +45,11 @@ export function createMikroORMAdapter(
 
       const idColumn = source.idColumn ?? "id";
 
-      const fields =
-        source.scopeKey && source.scopeKey !== idColumn
-          ? [idColumn, source.scopeKey]
-          : [idColumn];
+      // The guard only needs the id: it compares the scope's value with it
+      const fields = [idColumn];
 
       const whereValue = options?.caseInsensitive
-        ? { $ilike: value }
+        ? { $ilike: escapeLike(value) }
         : value;
 
       return em.findOne(
@@ -61,4 +59,9 @@ export function createMikroORMAdapter(
       );
     },
   };
+}
+
+/** A value for ILIKE, with its wildcards escaped: `_` and `%` in a name mean themselves, not "any character" */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

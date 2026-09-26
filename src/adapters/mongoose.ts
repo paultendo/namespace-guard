@@ -50,21 +50,24 @@ export function createMongooseAdapter(
 
       const idColumn = source.idColumn ?? "_id";
 
+      // The guard only needs the id: it compares the scope's value with it
       const projection: Record<string, number> = { [idColumn]: 1 };
-      if (source.scopeKey && source.scopeKey !== idColumn) {
-        projection[source.scopeKey] = 1;
-      }
 
       const query = model.findOne(
         { [source.column]: value },
         projection
       );
 
-      if (options?.caseInsensitive) {
-        return query.collation({ locale: "en", strength: 2 }).lean();
-      }
+      const doc = options?.caseInsensitive
+        ? await query.collation({ locale: "en", strength: 2 }).lean()
+        : await query.lean();
 
-      return query.lean();
+      // The guard reads the id from `idColumn`, or "id" when it isn't set. With it unset, this adapter looks up
+      // "_id", so it returns that as "id" too; otherwise nobody could keep their own name.
+      if (doc && source.idColumn === undefined && doc.id === undefined && doc._id !== undefined) {
+        return { ...doc, id: doc._id };
+      }
+      return doc;
     },
   };
 }

@@ -26,6 +26,8 @@ function pickNovelSample(): Sample {
 
 function pickThresholdSample(): Sample {
   for (const [char, entries] of Object.entries(LLM_CONFUSABLE_MAP)) {
+    // A lowercase source, so the expected output needs no case handling (canonicalise keeps a capital's case)
+    if (char.toLowerCase() !== char) continue;
     const candidate = entries.find(
       (entry) => entry.visualScore >= 0.7 && entry.visualScore <= 0.95
     );

@@ -60,10 +60,8 @@ export function createSequelizeAdapter(
 
       const idColumn = source.idColumn ?? "id";
 
-      const attributes =
-        source.scopeKey && source.scopeKey !== idColumn
-          ? [idColumn, source.scopeKey]
-          : [idColumn];
+      // The guard only needs the id: it compares the scope's value with it
+      const attributes = [idColumn];
 
       let where: unknown;
 

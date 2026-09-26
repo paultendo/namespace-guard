@@ -84,12 +84,15 @@ export function createDrizzleAdapter(
       }
 
       return queryHandler.findFirst({
-        where: compareFn(column, value),
-        columns: {
-          [idColumn]: true,
-          ...(source.scopeKey && source.scopeKey !== idColumn ? { [source.scopeKey]: true } : {}),
-        },
+        where: compareFn(column, findOptions?.caseInsensitive ? escapeLike(value) : value),
+        // The guard only needs the id: it compares the scope's value with it
+        columns: { [idColumn]: true },
       });
     },
   };
+}
+
+/** A value for ILIKE, with its wildcards escaped: `_` and `%` in a name mean themselves, not "any character" */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

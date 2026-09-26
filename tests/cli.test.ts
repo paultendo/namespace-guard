@@ -43,6 +43,59 @@ describe("CLI", () => {
     expect(logs.join("\n")).toContain("Usage:");
   });
 
+  it("lists every command in the full help", async () => {
+    for (const args of [["--help"], ["help"]]) {
+      logs.length = 0;
+      expect(await run(argv(...args))).toBe(0);
+      const out = logs.join("\n");
+      for (const command of ["check", "risk", "attack-gen", "audit-canonical", "calibrate", "recommend", "drift"]) {
+        expect(out).toContain(`namespace-guard ${command} `);
+      }
+      expect(out).toContain("--database-url");
+      expect(out).toContain("namespace-guard <command> --help");
+    }
+  });
+
+  it("shows one command's usage and options with <command> --help or help <command>", async () => {
+    for (const args of [["risk", "--help"], ["help", "risk"], ["-h", "risk"]]) {
+      logs.length = 0;
+      expect(await run(argv(...args))).toBe(0);
+      const out = logs.join("\n");
+      expect(out).toContain("namespace-guard risk <slug> [options]");
+      expect(out).toContain("--fail-on <mode>       Fail on \"block\" (default) or \"warn\"");
+      expect(out).toContain("--protect <slug>");
+      expect(out).toContain("namespace-guard risk paypa1 --protect paypal --fail-on warn --json");
+      // Nothing that belongs to another command
+      expect(out).not.toContain("namespace-guard check");
+      expect(out).not.toContain("--database-url");
+      expect(out).not.toContain("--max-edits");
+      expect(out).not.toContain("--cost-block-benign");
+    }
+
+    logs.length = 0;
+    expect(await run(argv("recommend", "--help"))).toBe(0);
+    const recommend = logs.join("\n");
+    expect(recommend).toContain("--cost-block-benign <n>   Cost when benign input is blocked (default 8)");
+    expect(recommend).toContain("--limit <n>");
+    expect(recommend).not.toContain("For calibrate:");
+    expect(recommend).not.toContain("--fail-on");
+
+    logs.length = 0;
+    expect(await run(argv("check", "--help"))).toBe(0);
+    const check = logs.join("\n");
+    expect(check).toContain("--database-url <url>");
+    expect(check).not.toContain("--protect");
+    expect(check).not.toContain("--json");
+  });
+
+  it("errors on help for an unknown command", async () => {
+    expect(await run(argv("help", "nope"))).toBe(1);
+    expect(errors.join("\n")).toContain("Unknown command: nope");
+    errors.length = 0;
+    expect(await run(argv("nope", "--help"))).toBe(1);
+    expect(errors.join("\n")).toContain("Unknown command: nope");
+  });
+
   it("shows help and exits 1 with no arguments", async () => {
     const code = await run(argv());
     expect(code).toBe(1);
@@ -98,7 +151,7 @@ describe("CLI", () => {
     const code = await run(
       argv(
         "risk",
-        "paypa1",
+        "paypax",
         "--protect",
         "paypal",
         "--warn-threshold",
@@ -115,7 +168,7 @@ describe("CLI", () => {
     const code = await run(
       argv(
         "risk",
-        "paypa1",
+        "paypax",
         "--protect",
         "paypal",
         "--warn-threshold",
@@ -240,6 +293,141 @@ describe("CLI", () => {
     );
     expect(code).toBe(1);
     expect(errors.join("\n")).toContain("--database-url is only supported");
+  });
+
+  it("scores leetspeak as lookalikes with --leetspeak", async () => {
+    expect(await run(argv("risk", "adm1n", "--protect", "admin"))).toBe(0);
+    expect(logs[0]).toContain("(warn)");
+    logs.length = 0;
+    expect(await run(argv("risk", "adm1n", "--protect", "admin", "--leetspeak"))).toBe(1);
+    expect(logs[0]).toContain("(block)");
+  });
+
+  it("scores the name as typed, so a capital I reads as l", async () => {
+    expect(await run(argv("risk", "paypaI", "--protect", "paypal"))).toBe(1);
+    expect(logs[0]).toContain("(block)");
+  });
+
+  it("reports attack-gen bypasses as the leetspeak option decides", async () => {
+    const args = ["attack-gen", "admin", "--json", "--mode", "evasion", "--max-candidates", "400"];
+    expect(await run(argv(...args))).toBe(0);
+    const off = JSON.parse(logs[0]);
+    expect(off.settings.leetspeak).toBe(false);
+    expect(off.bypassCount).toBeGreaterThan(0);
+    expect(off.previews.bypass.map((row: { identifier: string }) => row.identifier)).toContain("4dmin");
+    logs.length = 0;
+    expect(await run(argv(...args, "--leetspeak"))).toBe(0);
+    const on = JSON.parse(logs[0]);
+    expect(on.settings.leetspeak).toBe(true);
+    expect(on.bypassCount).toBe(0);
+  });
+
+  it("never counts a close spelling as a block when calibrating", async () => {
+    // paypax is one letter from paypal, not a lookalike: no block threshold blocks it, so the cheapest policy warns
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([{ identifier: "paypax", label: "malicious", target: "paypal" }])
+    );
+    expect(await run(argv("calibrate", calibrationPath, "--json"))).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.expectedCost.weightedFalseNegativeWarns).toBe(1);
+    expect(parsed.expectedCost.totalCost).toBe(3);
+    expect(parsed.metrics.block.tp).toBe(0);
+  });
+
+  it("calibrates to the actions checkRisk takes at the recommended thresholds", async () => {
+    const rows = [
+      { identifier: "paypal", label: "malicious", target: "paypal" },
+      { identifier: "раураl", label: "malicious", target: "paypal" },
+      { identifier: "paypax", label: "malicious", target: "paypal" },
+      { identifier: "githuh", label: "malicious", target: "github" },
+      { identifier: "microsoſt", label: "malicious", target: "microsoft" },
+      { identifier: "teamspace", label: "benign", target: "paypal" },
+      { identifier: "gitlab", label: "benign", target: "github" },
+      { identifier: "papal", label: "benign", target: "paypal" },
+    ];
+    writeFileSync(calibrationPath, JSON.stringify(rows));
+    expect(await run(argv("calibrate", calibrationPath, "--json"))).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    const { warnThreshold, blockThreshold } = parsed.recommendations;
+    expect(warnThreshold).toBeLessThan(blockThreshold);
+
+    const { createNamespaceGuard } = await import("../src/index");
+    const guard = createNamespaceGuard({ sources: [] }, { findOne: async () => null });
+    const cost = { block: { benign: 8, malicious: 0 }, warn: { benign: 1, malicious: 3 }, allow: { benign: 0, malicious: 12 } };
+    let total = 0;
+    for (const row of rows) {
+      const { action } = guard.checkRisk(row.identifier, { protect: [row.target], warnThreshold, blockThreshold });
+      total += cost[action][row.label === "malicious" ? "malicious" : "benign"];
+    }
+    expect(parsed.expectedCost.totalCost).toBe(total);
+  });
+
+  it("takes the middle of a range of thresholds that cost the same, not the top", async () => {
+    // The guide's dataset: genuine names score 0 (papal 83), close spellings 83 and can't block, lookalikes 100. Any warn
+    // threshold from 1 to 83 costs 7, with any block threshold above it; 0.23.0 before this fix said warn 83, block 100
+    const rows = [
+      { identifier: "paypa1", label: "malicious", target: "paypal" },
+      { identifier: "paypaI", label: "malicious", target: "paypal" },
+      { identifier: "раураl", label: "malicious", target: "paypal" },
+      { identifier: "p4ypal", label: "malicious", target: "paypal" },
+      { identifier: "rnicrosoft", label: "malicious", target: "microsoft" },
+      { identifier: "micros0ft", label: "malicious", target: "microsoft" },
+      { identifier: "githuh", label: "malicious", target: "github" },
+      { identifier: "paypal-fan", label: "benign", target: "paypal" },
+      { identifier: "paul", label: "benign", target: "paypal" },
+      { identifier: "gitlab", label: "benign", target: "github" },
+      { identifier: "microscope", label: "benign", target: "microsoft" },
+      { identifier: "sarah", label: "benign", target: "paypal" },
+      { identifier: "papal", label: "benign", target: "paypal" },
+    ];
+    writeFileSync(calibrationPath, JSON.stringify(rows));
+    expect(await run(argv("calibrate", calibrationPath, "--json"))).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    // warn: the middle of 1..83; block: the middle of 43..100
+    expect(parsed.recommendations).toEqual({ warnThreshold: 42, blockThreshold: 71 });
+    expect(parsed.expectedCost.totalCost).toBe(7);
+
+    logs.length = 0;
+    expect(await run(argv("recommend", calibrationPath, "--json"))).toBe(0);
+    const recommended = JSON.parse(logs[0]);
+    expect(recommended.recommendedConfig.risk).toEqual({ warnThreshold: 42, blockThreshold: 71 });
+  });
+
+  it("puts the block threshold between a genuine name that can block and the attacks", async () => {
+    // With --leetspeak, p4ypal can block, at 94: labelled genuine, it is warned (githuh at 83 needs warning), and any
+    // block threshold from 95 to 100 costs the same
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypa1", label: "malicious", target: "paypal" },
+        { identifier: "раураl", label: "malicious", target: "paypal" },
+        { identifier: "githuh", label: "malicious", target: "github" },
+        { identifier: "p4ypal", label: "benign", target: "paypal" },
+        { identifier: "sarah", label: "benign", target: "paypal" },
+      ])
+    );
+    expect(await run(argv("calibrate", calibrationPath, "--leetspeak", "--json"))).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.recommendations).toEqual({ warnThreshold: 42, blockThreshold: 97 });
+    expect(parsed.expectedCost.weightedFalsePositiveBlocks).toBe(0);
+    expect(parsed.metrics.block.recall).toBe(0.667);
+  });
+
+  it("recommends blocking at 100 only when nothing lower costs as little", async () => {
+    // 4dm1n scores 99 and can block with --leetspeak: labelled genuine, only 100 keeps it from blocking
+    writeFileSync(
+      calibrationPath,
+      JSON.stringify([
+        { identifier: "paypa1", label: "malicious", target: "paypal" },
+        { identifier: "раураl", label: "malicious", target: "paypal" },
+        { identifier: "4dm1n", label: "benign", target: "admin" },
+      ])
+    );
+    expect(await run(argv("calibrate", calibrationPath, "--leetspeak", "--json"))).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    expect(parsed.recommendations.blockThreshold).toBe(100);
+    expect(parsed.expectedCost.weightedFalsePositiveBlocks).toBe(0);
   });
 
   it("calibrates thresholds from labeled dataset", async () => {
@@ -390,6 +578,26 @@ describe("CLI", () => {
     expect(parsed.dataset).toContain("builtin:composability-vectors");
     expect(parsed.total).toBeGreaterThan(0);
     expect(typeof parsed.actionFlips).toBe("number");
+  });
+
+  it("lists each built-in row's target once", async () => {
+    // Each vector names its letter as both target and protect; 0.23.0 before this fix printed "targets [o,o]"
+    expect(await run(argv("drift", "--limit", "3"))).toBe(0);
+    const rows = logs.filter((line) => line.includes("targets ["));
+    expect(rows).toHaveLength(3);
+    for (const line of rows) expect(line).toMatch(/targets \[[^,\]]+\]$/);
+    expect(rows[0]).toContain("targets [o]");
+
+    logs.length = 0;
+    expect(await run(argv("drift", "--json"))).toBe(0);
+    const parsed = JSON.parse(logs[0]);
+    for (const row of parsed.changedPreview) expect(row.protect).toHaveLength(1);
+  });
+
+  it("lists a custom row's target once when it is also in protect", async () => {
+    writeFileSync(calibrationPath, JSON.stringify([{ identifier: "rnicrosoft", target: "microsoft", protect: ["microsoft", "github"] }]));
+    expect(await run(argv("drift", calibrationPath, "--json"))).toBe(0);
+    expect(JSON.parse(logs[0]).changedPreview[0].protect).toEqual(["microsoft", "github"]);
   });
 
   it("supports drift on a custom dataset", async () => {

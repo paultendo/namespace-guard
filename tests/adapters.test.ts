@@ -8,6 +8,7 @@ import { createTypeORMAdapter } from "../src/adapters/typeorm";
 import { createMikroORMAdapter } from "../src/adapters/mikro-orm";
 import { createSequelizeAdapter } from "../src/adapters/sequelize";
 import { createMongooseAdapter } from "../src/adapters/mongoose";
+import { createNamespaceGuard } from "../src/index";
 import type { NamespaceSource } from "../src/index";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +35,7 @@ describe("createPrismaAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in select", async () => {
+  it("selects only the id, whatever the scopeKey (the scope's value is compared with the id)", async () => {
     const findFirst = vi.fn().mockResolvedValue({ id: "u1", userId: "u1" });
     const prisma = { user: { findFirst } };
 
@@ -50,7 +51,7 @@ describe("createPrismaAdapter", () => {
 
     expect(findFirst).toHaveBeenCalledWith({
       where: { handle: "sarah" },
-      select: { id: true, userId: true },
+      select: { id: true },
     });
   });
 
@@ -133,7 +134,7 @@ describe("createDrizzleAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in columns when different from idColumn", async () => {
+  it("selects only the id column when scopeKey differs from idColumn", async () => {
     const findFirst = vi.fn().mockResolvedValue({ id: "u1", orgId: "o1" });
     const db = { query: { users: { findFirst } } };
     const tables = { users: { handle: "handle_col_ref" } };
@@ -150,7 +151,7 @@ describe("createDrizzleAdapter", () => {
 
     expect(findFirst).toHaveBeenCalledWith({
       where: { eq: ["handle_col_ref", "sarah"] },
-      columns: { id: true, orgId: true },
+      columns: { id: true },
     });
   });
 
@@ -210,6 +211,20 @@ describe("createDrizzleAdapter", () => {
     );
   });
 
+  it("uses ilike with LIKE wildcards escaped for case-insensitive matching", async () => {
+    const findFirst = vi.fn().mockResolvedValue({ id: "u1" });
+    const db = { query: { users: { findFirst } } };
+    const tables = { users: { handle: "handle_col_ref" } };
+    const eq = vi.fn();
+    const ilike = vi.fn((col, val) => ({ ilike: [col, val] }));
+
+    const adapter = createDrizzleAdapter(db, tables, { eq, ilike });
+    await adapter.findOne(source, "a_b%c", { caseInsensitive: true });
+
+    expect(ilike).toHaveBeenCalledWith("handle_col_ref", "a\\_b\\%c");
+    expect(eq).not.toHaveBeenCalled();
+  });
+
   it("throws when column is not found in table", async () => {
     const findFirst = vi.fn();
     const db = { query: { users: { findFirst } } };
@@ -246,7 +261,7 @@ describe("createRawAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey column when different from idColumn", async () => {
+  it("selects only the id column when scopeKey differs from idColumn", async () => {
     const execute = vi
       .fn()
       .mockResolvedValue({ rows: [{ id: "u1", orgId: "o1" }] });
@@ -261,7 +276,7 @@ describe("createRawAdapter", () => {
     await adapter.findOne(sourceWithScope, "sarah");
 
     expect(execute).toHaveBeenCalledWith(
-      'SELECT "id", "orgId" FROM "users" WHERE "handle" = $1 LIMIT 1',
+      'SELECT "id" FROM "users" WHERE "handle" = $1 LIMIT 1',
       ["sarah"]
     );
   });
@@ -357,7 +372,7 @@ describe("createKyselyAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in select when different from idColumn", async () => {
+  it("selects only the id when scopeKey differs from idColumn", async () => {
     const { db, builder } = createMockKyselyDb({ id: "u1", orgId: "o1" });
 
     const sourceWithScope: NamespaceSource = {
@@ -369,7 +384,7 @@ describe("createKyselyAdapter", () => {
     const adapter = createKyselyAdapter(db);
     await adapter.findOne(sourceWithScope, "sarah");
 
-    expect(builder.select).toHaveBeenCalledWith(["id", "orgId"]);
+    expect(builder.select).toHaveBeenCalledWith(["id"]);
   });
 
   it("does not duplicate scopeKey when same as idColumn", async () => {
@@ -412,6 +427,15 @@ describe("createKyselyAdapter", () => {
 
     expect(builder.where).toHaveBeenCalledWith("handle", "ilike", "sarah");
   });
+
+  it("escapes LIKE wildcards, so _ and % match only themselves", async () => {
+    const { db, builder } = createMockKyselyDb({ id: "u1" });
+    const adapter = createKyselyAdapter(db);
+
+    await adapter.findOne(source, "a_b%c", { caseInsensitive: true });
+
+    expect(builder.where).toHaveBeenCalledWith("handle", "ilike", "a\\_b\\%c");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -447,7 +471,7 @@ describe("createKnexAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in select when different from idColumn", async () => {
+  it("selects only the id when scopeKey differs from idColumn", async () => {
     const { knex, builder } = createMockKnex({ id: "u1", orgId: "o1" });
 
     const sourceWithScope: NamespaceSource = {
@@ -459,7 +483,7 @@ describe("createKnexAdapter", () => {
     const adapter = createKnexAdapter(knex);
     await adapter.findOne(sourceWithScope, "sarah");
 
-    expect(builder.select).toHaveBeenCalledWith(["id", "orgId"]);
+    expect(builder.select).toHaveBeenCalledWith(["id"]);
   });
 
   it("does not duplicate scopeKey when same as idColumn", async () => {
@@ -540,7 +564,7 @@ describe("createTypeORMAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in select when different from idColumn", async () => {
+  it("selects only the id when scopeKey differs from idColumn", async () => {
     const { dataSource, findOne } = createMockDataSource({ id: "u1", orgId: "o1" });
     const sourceWithScope: NamespaceSource = {
       name: "user",
@@ -553,7 +577,7 @@ describe("createTypeORMAdapter", () => {
 
     expect(findOne).toHaveBeenCalledWith({
       where: { handle: "sarah" },
-      select: { id: true, orgId: true },
+      select: { id: true },
     });
   });
 
@@ -586,6 +610,16 @@ describe("createTypeORMAdapter", () => {
       where: { handle: { _type: "ilike", _value: "sarah" } },
       select: { id: true },
     });
+  });
+
+  it("escapes LIKE wildcards for ILike", async () => {
+    const { dataSource } = createMockDataSource({ id: "u1" });
+    const ilike = vi.fn((val: string) => ({ _type: "ilike", _value: val }));
+    const adapter = createTypeORMAdapter(dataSource, { user: class {} }, ilike);
+
+    await adapter.findOne(source, "a_b%c", { caseInsensitive: true });
+
+    expect(ilike).toHaveBeenCalledWith("a\\_b\\%c");
   });
 
   it("throws when caseInsensitive used without ILike", async () => {
@@ -624,7 +658,7 @@ describe("createMikroORMAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in fields when different from idColumn", async () => {
+  it("selects only the id field when scopeKey differs from idColumn", async () => {
     const findOne = vi.fn().mockResolvedValue({ id: "u1", orgId: "o1" });
     const em = { findOne };
     const sourceWithScope: NamespaceSource = {
@@ -639,7 +673,7 @@ describe("createMikroORMAdapter", () => {
     expect(findOne).toHaveBeenCalledWith(
       expect.anything(),
       { handle: "sarah" },
-      { fields: ["id", "orgId"] }
+      { fields: ["id"] }
     );
   });
 
@@ -674,6 +708,15 @@ describe("createMikroORMAdapter", () => {
       { fields: ["id"] }
     );
   });
+
+  it("escapes LIKE wildcards for $ilike", async () => {
+    const findOne = vi.fn().mockResolvedValue({ id: "u1" });
+    const adapter = createMikroORMAdapter({ findOne }, { user: class {} });
+
+    await adapter.findOne(source, "a_b%c", { caseInsensitive: true });
+
+    expect(findOne).toHaveBeenCalledWith(expect.anything(), { handle: { $ilike: "a\\_b\\%c" } }, { fields: ["id"] });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -701,7 +744,7 @@ describe("createSequelizeAdapter", () => {
     expect(result).toEqual({ id: "u1" });
   });
 
-  it("includes scopeKey in attributes when different from idColumn", async () => {
+  it("selects only the id attribute when scopeKey differs from idColumn", async () => {
     const findOne = vi.fn().mockResolvedValue({ id: "u1", orgId: "o1" });
     const sourceWithScope: NamespaceSource = {
       name: "user",
@@ -714,7 +757,7 @@ describe("createSequelizeAdapter", () => {
 
     expect(findOne).toHaveBeenCalledWith({
       where: { handle: "sarah" },
-      attributes: ["id", "orgId"],
+      attributes: ["id"],
       raw: true,
     });
   });
@@ -796,7 +839,7 @@ describe("createMongooseAdapter", () => {
     expect(result).toEqual({ _id: "u1" });
   });
 
-  it("includes scopeKey in projection when different from idColumn", async () => {
+  it("projects only the id when scopeKey differs from idColumn", async () => {
     const model = createMockMongooseModel({ _id: "u1", orgId: "o1" });
     const sourceWithScope: NamespaceSource = {
       name: "user",
@@ -810,8 +853,21 @@ describe("createMongooseAdapter", () => {
 
     expect(model.findOne).toHaveBeenCalledWith(
       { handle: "sarah" },
-      { _id: 1, orgId: 1 }
+      { _id: 1 }
     );
+  });
+
+  it("lets a person keep their own name when idColumn is left at its default", async () => {
+    const model = createMockMongooseModel({ _id: "u1" });
+    const guard = createNamespaceGuard(
+      { sources: [{ name: "user", column: "handle", scopeKey: "_id" }] },
+      createMongooseAdapter({ user: model })
+    );
+
+    expect(model.findOne).not.toHaveBeenCalled();
+    expect((await guard.check("sarah", { _id: "u1" })).available).toBe(true);
+    expect((await guard.check("sarah", { _id: "u2" })).available).toBe(false);
+    expect(model.findOne).toHaveBeenCalledWith({ handle: "sarah" }, { _id: 1 });
   });
 
   it("returns null when no match", async () => {

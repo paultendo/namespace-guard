@@ -3,7 +3,7 @@
 /**
  * generate-confusable-weights-global.js
  *
- * Reads confusable-weights-v2.json (from confusable-vision) and outputs a compact
+ * Reads confusable-weights-v4.json (from confusable-vision) and outputs a compact
  * browser-global JS file for the playground at docs/data/confusable-weights.global.js.
  *
  * Field compression:
@@ -21,7 +21,7 @@ const path = require("node:path");
 
 const DEFAULT_JSON_PATH = path.resolve(
   __dirname,
-  "../../confusable-vision/data/output/confusable-weights-v2.json"
+  "../../confusable-vision/data/output/confusable-weights-v4.json"
 );
 
 const OUTPUT_PATH = path.resolve(__dirname, "../docs/data/confusable-weights.global.js");
@@ -57,12 +57,14 @@ for (const edge of data.edges) {
   if (edge.tr39Allowed) compact.t = 1;
 
   if (!map[src]) map[src] = {};
+  // A pair found alike both within one font and across fonts appears twice: keep the stronger
+  if (map[src][tgt] && map[src][tgt].d >= compact.d) continue;
+  if (!map[src][tgt]) pairCount++;
   map[src][tgt] = compact;
-  pairCount++;
 }
 
 const output = [
-  "// Auto-generated from confusable-vision confusable-weights-v2.json",
+  `// Auto-generated from confusable-vision ${path.basename(jsonPath)}${data.meta?.release ? ` (release ${data.meta.release})` : ""}`,
   `// ${pairCount} RaySpace-scored pairs. Do not edit manually.`,
   `// Regenerate: node scripts/generate-confusable-weights-global.js`,
   `window.__NG_CONFUSABLE_WEIGHTS__ = ${JSON.stringify(map)};`,
