@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>namespace-guard - Cross-Script Confusable Detection &amp; Slug Safety</title>
-  <meta name="description" content="The world's first cross-script confusable detection library. 4,174 confusable pairs measured across 245 fonts using vector-outline raycasting (RaySpace). Slug safety, LLM Denial of Spend defence, and Unicode anti-spoofing in one zero-dependency package.">
-  <meta property="og:title" content="namespace-guard Playground">
-  <meta property="og:description" content="Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Try the interactive playground or browse 9 adapter examples.">
+  <title>namespace-guard: is this name really free?</title>
+  <meta name="description" content="Is this name really free? One call checks users, organisations, reserved routes and lookalikes before a name is claimed, with 2,300 lookalike pairs measured in 322 fonts.">
+  <meta property="og:title" content="namespace-guard">
+  <meta property="og:description" content="Is this name really free? One call checks users, organisations, reserved routes and lookalikes before a name is claimed, with 2,300 lookalike pairs measured in 322 fonts.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://paultendo.github.io/namespace-guard/">
   <meta property="og:image" content="https://paultendo.github.io/namespace-guard/og.svg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="namespace-guard Playground">
-  <meta name="twitter:description" content="Cross-script confusable detection, slug safety, and LLM Denial of Spend defence. Try the interactive playground or browse 9 adapter examples.">
+  <meta name="twitter:title" content="namespace-guard">
+  <meta name="twitter:description" content="Is this name really free? One call checks users, organisations, reserved routes and lookalikes before a name is claimed, with 2,300 lookalike pairs measured in 322 fonts.">
   <meta name="twitter:image" content="https://paultendo.github.io/namespace-guard/og.svg">
   <meta name="theme-color" content="#090e17">
   <link rel="canonical" href="https://paultendo.github.io/namespace-guard/">
@@ -857,220 +857,342 @@
       padding: 0; margin: -1px; overflow: hidden;
       clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
+
+    /* ==== Layout and type after the blog: a serif headline under a mono label, hairline rules, one product
+       window beside the copy ==== */
+    body {
+      background:
+        radial-gradient(1100px 620px at 2% -8%, rgba(30, 215, 96, 0.15), transparent 55%),
+        radial-gradient(900px 620px at 98% -6%, rgba(63, 121, 255, 0.16), transparent 55%),
+        linear-gradient(180deg, #0b0f17 0%, #080b12 100%);
+    }
+    a { color: var(--foreground); text-decoration: underline; text-decoration-color: rgba(188,201,223,0.35);
+      text-underline-offset: 0.18em; transition: color 0.15s, text-decoration-color 0.15s; }
+    a:hover { text-decoration-color: var(--accent); }
+    a:visited { color: var(--foreground); }
+    .btn-primary, .btn-secondary, .footer-links a { text-decoration: none; }
+    .shell { width: min(100%, 76rem); }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1.6rem; }
+    .wordmark { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em;
+      color: var(--foreground); text-decoration: none; }
+    .topnav { display: flex; align-items: center; gap: 1.6rem; font-family: var(--font-mono); font-size: 0.78rem;
+      letter-spacing: 0.1em; text-transform: uppercase; }
+    .topnav a { color: var(--ink-muted); text-decoration: none; }
+    .topnav a:hover { color: var(--foreground); }
+    .version-tag { color: var(--accent); border: 1px solid rgba(30,215,96,0.42); border-radius: 999px;
+      padding: 0.18rem 0.6rem; letter-spacing: 0.06em; text-transform: none; }
+    @media (max-width: 640px) { .topnav a:not(.version-tag) { display: none; } }
+
+    .eyebrow { font-family: var(--font-mono); font-size: 0.85rem; letter-spacing: 0.06em; color: var(--ink-muted);
+      margin-bottom: 1.1rem; }
+    .serif-head { font-family: var(--font-serif); font-weight: 400; font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0; }
+
+    /* Hero */
+    .hero { text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center;
+      gap: clamp(2rem, 5vw, 4.5rem); padding-top: clamp(3.5rem, 11vh, 7rem); padding-bottom: clamp(2.5rem, 6vh, 4rem); }
+    @media (max-width: 920px) { .hero { grid-template-columns: 1fr; } }
+    .hero h1 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(2.9rem, 6.2vw, 5.1rem); line-height: 1.02;
+      letter-spacing: -0.022em; font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0; margin-bottom: 1.4rem; }
+    .hero-lede { font-size: clamp(1.05rem, 1.5vw, 1.22rem); line-height: 1.62; color: var(--ink-muted); max-width: 33rem;
+      margin-bottom: 2rem; }
+    .hero-lede .nm { font-family: var(--font-mono); font-size: 0.9em; color: var(--foreground); }
+    .hero .install-bar { margin-bottom: 1.6rem; }
+    .hero-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; font-family: var(--font-mono); font-size: 0.92rem; }
+    .hero-links a { text-decoration: none; opacity: 0.85; }
+    .hero-links a:hover { opacity: 1; color: var(--accent); }
+
+    /* The hero's window: the library checking names, one after another */
+    .demo-window { border: 1px solid rgba(208,227,255,0.14); border-radius: 1.25rem; overflow: hidden;
+      background: linear-gradient(180deg, rgba(23,33,51,0.8), rgba(10,15,24,0.9));
+      box-shadow: 0 50px 90px -50px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.06); }
+    .demo-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1.15rem;
+      border-bottom: 1px solid var(--line); font-size: 0.84rem; }
+    .demo-head strong { font-weight: 600; }
+    .demo-head .live { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--ink-muted); font-size: 0.78rem; }
+    .demo-head .live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(30,215,96,0.18); }
+    .demo-form { display: flex; align-items: center; margin: 1.15rem 1.15rem 0.9rem; padding: 0.85rem 1rem;
+      border: 1px solid var(--line); border-radius: 0.8rem; background: rgba(0,0,0,0.3); font-family: var(--font-mono);
+      font-size: 1.05rem; transition: border-color 0.2s, box-shadow 0.2s; }
+    .demo-form:focus-within { border-color: rgba(30,215,96,0.5); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .demo-form span { color: var(--ink-muted); white-space: nowrap; }
+    .demo-form input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--foreground);
+      font: inherit; caret-color: var(--accent); }
+    .demo-verdict { min-height: 2.6rem; margin: 0 1.15rem 1.15rem; display: flex; align-items: center; }
+    /* A split pill, as on the blog and d0ma1n: what happened, then why */
+    .verdict { display: inline-flex; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+      font-size: 0.86rem; animation: verdictIn 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+    .verdict > span { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.42rem 0.75rem; min-width: 0; }
+    .verdict > span + span { box-shadow: -1px 0 0 var(--line); color: var(--ink-muted); }
+    .verdict .v-label { font-weight: 600; white-space: nowrap; }
+    .verdict .v-label::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+      box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); }
+    .ok .v-label, .v-ok { color: var(--accent); }
+    .warn .v-label, .v-warn { color: var(--amber); }
+    .bad .v-label, .v-bad { color: var(--red); }
+    @keyframes verdictIn { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+    .demo-log { list-style: none; border-top: 1px solid var(--line); }
+    .demo-log li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 1rem;
+      padding: 0.62rem 1.15rem; border-bottom: 1px solid rgba(208,227,255,0.07); font-size: 0.84rem;
+      animation: logIn 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+    .demo-log li:last-child { border-bottom: 0; }
+    .demo-log .nm { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .demo-log .why { color: var(--ink-muted); }
+    .demo-log .why b { font-weight: 600; margin-right: 0.45rem; }
+    @keyframes logIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .demo-foot { padding: 0.75rem 1.15rem; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--ink-muted); }
+    .demo-foot a { color: var(--ink-muted); }
+    @media (prefers-reduced-motion: reduce) { .verdict, .demo-log li { animation: none; } }
+
+    /* Numbers under the hero */
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-block: 1px solid var(--line);
+      margin-bottom: clamp(3.5rem, 9vh, 6rem); }
+    .stat { padding: 1.15rem 1.25rem 1.3rem; }
+    .stat + .stat { border-left: 1px solid var(--line); }
+    .stat dt { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-muted); margin-bottom: 0.55rem; }
+    .stat dd { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+      letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    @media (max-width: 760px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat + .stat { border-left: 0; }
+      .stat:nth-child(even) { border-left: 1px solid var(--line); }
+      .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+      .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    }
+
+    /* Used by, under the numbers */
+    .stats { margin-bottom: 2.5rem; }
+    .used-by { margin-bottom: clamp(3.5rem, 9vh, 6rem); }
+    .used-by h2.eyebrow { font-weight: 400; margin-bottom: 1rem; }
+    .used-list { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 3rem; }
+    @media (max-width: 760px) { .used-list { grid-template-columns: 1fr; } }
+    .used-list li { display: grid; gap: 0.3rem; align-content: start; }
+    .used-list a.pn { font-size: 1.05rem; justify-self: start; text-decoration: none; }
+    .used-list a.pn:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+    .used-list p { color: var(--ink-muted); font-size: 0.95rem; line-height: 1.55; max-width: 34rem; }
+    .used-note { margin-top: 1.6rem; color: var(--ink-muted); font-size: 0.9rem; line-height: 1.6; max-width: 60rem; }
+    .used-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 25rem); gap: 1.5rem 3.5rem; align-items: start; }
+    .used-grid .used-list { grid-template-columns: 1fr; }
+    @media (max-width: 900px) { .used-grid { grid-template-columns: 1fr; } .proof { max-width: 32rem; } }
+    /* Mozilla's credit, as it appears in their source */
+    .proof { margin: 0; }
+    .proof-file { display: block; color: inherit; text-decoration: none; border: 1px solid var(--line); border-radius: 14px;
+      background: color-mix(in srgb, var(--foreground) 2.5%, transparent); overflow: hidden; transition: border-color 0.2s ease-out, transform 0.2s ease-out; }
+    .proof-file:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); transform: translateY(-2px); }
+    .proof-path { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--line);
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-muted); }
+    .proof-repo { color: var(--foreground); }
+    .proof-code { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.35rem 0.75rem; padding: 0.8rem 0.85rem 0.9rem;
+      font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.55; color: var(--ink-muted); overflow-wrap: anywhere; }
+    .proof-ln { color: color-mix(in srgb, var(--ink-muted) 50%, transparent); user-select: none; }
+    .proof-code mark { color: var(--foreground); border-radius: 3px; padding: 0 0.1em;
+      background: linear-gradient(var(--accent-soft), var(--accent-soft)) no-repeat 0 0 / 100% 100%; transition: background-size 0.7s cubic-bezier(0.3, 0.7, 0.2, 1); }
+    .proof-code span:nth-of-type(4) mark { transition-delay: 0.45s; }
+    .proof.wait .proof-code mark { background-size: 0% 100%; }
+    .proof.wait.marked .proof-code mark { background-size: 100% 100%; }
+    @media (prefers-reduced-motion: reduce) { .proof-code mark { transition: none; } }
+    .proof figcaption { margin: 0.85rem 0.2rem 0; color: var(--ink-muted); font-size: 0.9rem; line-height: 1.6; }
+    .proof figcaption a:not(.pn) { color: var(--foreground); }
+
+    /* Sections: left-aligned, a mono label over a serif heading */
+    .how-section, .pipeline-section, .code-section, .playground { text-align: left; scroll-margin-top: 1.5rem; }
+    .how-section h2, .pipeline-section h2, .code-section h2, .playground h2 {
+      font-family: var(--font-serif); font-weight: 400; font-size: clamp(2rem, 3.6vw, 2.9rem); line-height: 1.08;
+      letter-spacing: -0.02em; font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0; margin-bottom: 0.8rem; }
+    .pipeline-section .subtitle, .section-intro { font-size: 1.05rem; line-height: 1.62; color: var(--ink-muted);
+      max-width: 46rem; margin-bottom: 2rem; }
+    .pipeline-flow { justify-content: flex-start; }
+    .divider { background: none; margin: clamp(4rem, 11vh, 7rem) 0 0; }
+    .glass-card { background: linear-gradient(180deg, rgba(20,29,44,0.55), rgba(10,15,24,0.35));
+      border-color: rgba(208,227,255,0.11); border-radius: 1rem; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+    /* What a name goes through: numbered rows */
+    .checks { list-style: none; border-top: 1px solid var(--line); }
+    .check { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) minmax(0, 18rem);
+      gap: 0.5rem 1.5rem; align-items: baseline; padding: 1.35rem 0.75rem; border-bottom: 1px solid var(--line);
+      transition: background 0.3s; }
+    .check:hover { background: linear-gradient(90deg, rgba(30,215,96,0.05), transparent 70%); }
+    .check h3 { font-size: 1.05rem; font-weight: 600; }
+    .check p { color: var(--ink-muted); font-size: 0.95rem; line-height: 1.6; }
+    .check .ex { display: grid; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.84rem; }
+    .ex .in { color: var(--foreground); }
+    .ex .to { color: rgba(188,201,223,0.45); margin: 0 0.35rem; }
+    @media (max-width: 900px) {
+      .check { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    /* Research */
+    .figure { margin: 0 0 2.5rem; }
+    .figure img { display: block; width: 100%; height: auto; border-radius: 1rem; border: 1px solid var(--line); }
+    .figure figcaption { margin-top: 0.85rem; font-size: 0.9rem; line-height: 1.55; color: var(--ink-muted); max-width: 52rem; }
+    .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 3rem; }
+    @media (max-width: 860px) { .facts { grid-template-columns: 1fr; } }
+    .facts h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.6rem; }
+    .facts ul { list-style: none; border-top: 1px solid var(--line); }
+    .facts li { padding: 0.8rem 0; border-bottom: 1px solid var(--line); color: var(--ink-muted); font-size: 0.92rem; line-height: 1.55; }
+    .research-section .research-links { margin-top: 1.5rem; }
+    /* Project names in running text: the body face, semibold, full white */
+    .pn { font-weight: 600; color: var(--foreground); white-space: nowrap; }
+    .advanced-apis-section .insight-cards { justify-content: start; max-width: none; margin-inline: 0; }
+    @media (min-width: 900px) { .advanced-apis-section .insight-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    footer { text-align: left; border-top: 1px solid var(--line); padding-top: 2.5rem; }
+    .footer-links { justify-content: flex-start; flex-wrap: wrap; }
   </style>
 </head>
 <body>
   <a href="#playground" class="skip-link">Skip to playground</a>
 
+  <div class="shell topbar">
+    <a class="wordmark" href="./">namespace-guard</a>
+    <nav class="topnav" aria-label="Page">
+      <a href="#how">How it works</a>
+      <a href="#playground">Playground</a>
+      <a href="./docs/">Docs</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="https://github.com/paultendo/namespace-guard/blob/main/CHANGELOG.md">v0.23.0</a>
+    </nav>
+  </div>
+
   <header class="shell hero">
-    <h1 class="display-type">namespace-guard</h1>
-    <p class="hero-tagline">Cross-script confusable detection, slug safety, and LLM Denial of Spend defence in one zero-dependency package.</p>
-    <div class="hero-phonetic phonetic-serif">
-      <span class="pron">/neym-speys gahrd/</span>
-      <span class="pos">noun</span>
-      <span class="def">A zero-dependency utility that prevents slug collisions across users, organisations, and reserved routes. The world's first library to detect confusable characters across non-Latin scripts, backed by 4,174 character pairs measured across 245 fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>).</span>
+    <div>
+      <p class="eyebrow">An npm package, zero dependencies</p>
+      <h1>Is this name really free?</h1>
+      <p class="hero-lede">When <span class="nm">yourapp.com/:slug</span> could be a user, an organisation or a reserved route, <span class="pn">namespace-guard</span> checks all of them in one call. It also stops names made to pass for one you protect: <span class="nm">rnicrosoft</span>, <span class="nm">paypaI</span> with a capital I, or <span class="nm">admin</span> spelt with a Cyrillic &#x430;.</p>
+      <div class="install-bar">
+        <code><span class="prefix">$</span> npm install namespace-guard</code>
+        <button class="copy-btn" id="copy-btn" aria-label="Copy install command">Copy</button>
+      </div>
+      <div class="hero-links">
+        <a href="./docs/getting-started/">Get started</a>
+        <a href="#playground">Playground</a>
+        <a href="./docs/">Docs</a>
+        <a href="#llm-preprocessing">LLM pipelines</a>
+        <a href="https://paultendo.github.io/posts/namespace-guard-launch/">Blog post</a>
+      </div>
     </div>
-    <div class="hero-actions">
-      <a href="#playground" class="btn-primary">Try it out</a>
-      <a href="https://github.com/paultendo/namespace-guard" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
-      <a href="https://paultendo.github.io/posts/namespace-guard-launch/" class="btn-secondary" target="_blank" rel="noopener">Read the blog post</a>
-      <a href="#llm-preprocessing" class="btn-secondary">Protecting LLM pipelines? Start here</a>
+
+    <div class="demo-window" aria-label="Live example">
+      <div class="demo-head"><strong>Claim check</strong><span class="live">running in this page</span></div>
+      <form class="demo-form" id="demo-form" role="search" aria-label="Check a name">
+        <span aria-hidden="true">yourapp.com/</span>
+        <input id="demo-input" type="text" autocomplete="off" spellcheck="false" aria-label="Name to check" placeholder="type a name">
+      </form>
+      <div class="demo-verdict" id="demo-verdict" aria-live="polite"></div>
+      <ul class="demo-log" id="demo-log" aria-label="Names checked"></ul>
+      <div class="demo-foot">Taken names come from a pretend database: <span class="mono">sarah</span> is a user, <span class="mono">acme-corp</span> an organisation.</div>
     </div>
   </header>
 
+  <div class="shell">
+    <dl class="stats">
+      <div class="stat"><dt>Characters measured</dt><dd>64,751</dd></div>
+      <div class="stat"><dt>Fonts measured</dt><dd>322</dd></div>
+      <div class="stat"><dt>Measured pairs shipped</dt><dd id="stat-pairs">2,300</dd></div>
+      <div class="stat"><dt>Database adapters</dt><dd>9</dd></div>
+      <div class="stat"><dt>Dependencies</dt><dd>0</dd></div>
+    </dl>
+
+    <section class="used-by" aria-labelledby="used-by-heading">
+      <h2 id="used-by-heading" class="eyebrow">Used by</h2>
+      <div class="used-grid">
+        <ul class="used-list">
+          <li>
+            <a class="pn" href="https://github.com/AlexanderMattTurner/agent-sanitizer">agent-sanitizer</a>
+            <p>Cleans untrusted text before an AI agent reads it, with <span class="pn">namespace-guard</span> as its default engine for folding lookalike characters in tool-call input to ASCII.</p>
+          </li>
+          <li>
+            <a class="pn" href="https://d0ma1n.app">d0ma1n</a>
+            <p>Finds the lookalikes of a domain that are already registered, scored with <span class="pn">namespace-guard</span>&rsquo;s measured weights.</p>
+          </li>
+        </ul>
+        <!-- The proof, not a logo: the lines in Mozilla's source that credit the data -->
+        <figure class="proof">
+          <a class="proof-file" href="https://github.com/mozilla/addons-server/blob/master/src/olympia/amo/confusables.py#L4-L6">
+            <span class="proof-path"><span class="proof-repo">mozilla/addons-server</span><span>confusables.py</span></span>
+            <span class="proof-code">
+              <span class="proof-ln">5</span><span># are taken from https://github.com/<mark>paultendo/confusable-vision</mark> output files</span>
+              <span class="proof-ln">6</span><span># by <mark>Paul Wood FRSA (@paultendo)</mark>, licensed under CC-BY-4.0.</span>
+            </span>
+          </a>
+          <script>
+            // The highlighter passes over the credit once, when it scrolls into view
+            (() => {
+              const fig = document.currentScript.closest(".proof");
+              if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+              fig.classList.add("wait");
+              const io = new IntersectionObserver((entries) => {
+                if (!entries.some((e) => e.isIntersecting)) return;
+                setTimeout(() => fig.classList.add("marked"), 250);
+                io.disconnect();
+              }, { threshold: 0.6 });
+              io.observe(fig);
+            })();
+          </script>
+          <figcaption>The measured pairs come from <a class="pn" href="https://github.com/paultendo/confusable-vision#used-by">confusable-vision</a>, which <a href="https://addons.mozilla.org/">addons.mozilla.org</a> uses to check add-on names for lookalikes. <a href="https://disarm.dev/">disarm</a> and <a href="https://acmcmc.github.io/silverspeak/">SilverSpeak</a> use it too.</figcaption>
+        </figure>
+      </div>
+      <p class="used-note">Other projects that depend on the package are listed on <a href="https://deps.dev/npm/namespace-guard/0.20.0/dependents">deps.dev</a>.</p>
+    </section>
+  </div>
+
   <main class="shell">
     <!-- How it works -->
-    <section class="how-section" aria-labelledby="how-heading">
-      <h2 id="how-heading" class="display-type">How it works</h2>
-      <div class="how-grid">
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            Format Validation
-          </h3>
-          <p>Validates identifiers against a configurable regex pattern. Default: 2&ndash;30 lowercase alphanumeric characters and hyphens.</p>
-          <div class="example"><span class="err">"a"</span> &rarr; invalid</div>
-        </div>
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Reserved Names
-          </h3>
-          <p>Blocks system routes, brand names, and other reserved identifiers. Supports categorised lists with custom error messages.</p>
-          <div class="example"><span class="warn">"admin"</span> &rarr; reserved <small>(system)</small></div>
-        </div>
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            Collision Detection
-          </h3>
-          <p>Checks multiple database tables in parallel. Users, organisations, teams - one call covers them all, with alternative suggestions.</p>
-          <div class="example"><span class="err">"sarah"</span> &rarr; taken by <small>user</small></div>
-        </div>
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            Anti-Spoofing
-          </h3>
-          <p>Detects visually deceptive Unicode across 22+ scripts, including cross-script confusable pairs between non-Latin scripts that no existing standard covers.</p>
-          <div class="example"><span class="err">"&#x430;dmin"</span> &rarr; Cyrillic "&#x430;" looks like "a"<br><span class="err cross-script-font">"&#x1175;&#x4E28;"</span> &rarr; Hangul/Han cross-script (ray distance 0.004)</div>
-        </div>
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Profanity &amp; Evasion
-          </h3>
-          <p>Blocks common profanity obfuscation (Unicode confusables + substitutions) with conservative defaults, and supports external moderation libraries via validators.</p>
-          <div class="example"><span class="err">"5h1t"</span> &rarr; blocked</div>
-        </div>
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
-            Invisible Character Guard
-          </h3>
-          <p>Catches zero-width joiners, direction overrides, and other invisible Unicode characters that make identifiers look clean while hiding extra bytes.</p>
-          <div class="example"><span class="err">"a&#x200D;dmin"</span> &rarr; contains a zero-width joiner</div>
-        </div>
-        <div class="glass-card how-card">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Domain Spoof Detection
-          </h3>
-          <p>Detects realistic IDN homograph attacks. Only flags single-script spoofs that could actually be registered as domains &mdash; mixed-script labels are excluded because ICANN registrars reject them.</p>
-          <div class="example"><span class="err cross-script-font">"&#x0440;&#x0430;&#x0443;&#x0440;&#x0430;&#x04CF;"</span> spoofs "paypal" <small>(all-Cyrillic)</small></div>
-        </div>
-      </div>
-    </section>
-
-    <div class="divider" aria-hidden="true"></div>
-
-    <!-- Research -->
-    <section class="pipeline-section research-section" aria-labelledby="research-heading">
-      <h2 id="research-heading" class="display-type">Research Behind The Pipeline</h2>
-      <p class="subtitle">We measured 4,174 character pairs across 245 system fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>) and discovered 3,525 cross-script confusables that no standard covers.</p>
-
-      <div class="insight-cards">
-        <div class="glass-card insight-card">
-          <h3>Visual measurement pipeline</h3>
-          <ul class="checklist">
-            <li>4,174 confusable pairs scored across 245 system fonts via vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>)</li>
-            <li>Each pair carries a <code class="inline-chip">danger</code> score (0&ndash;1) representing geometric similarity across fonts. The shipped dataset uses a 0.5 floor; for higher precision, filter at 0.7 (574 pairs)</li>
-            <li>3,525 novel cross-script pairs between non-Latin scripts: Hangul/Han, Cyrillic/Greek, Greek/Han, Cyrillic/Arabic, and more</li>
-            <li>Glyph-reuse detection to distinguish font fallback from true visual similarity</li>
-            <li>Full dataset published as <a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0)</li>
-          </ul>
-        </div>
-        <div class="glass-card insight-card">
-          <h3>Normalization composability</h3>
-          <ul class="checklist">
-            <li>31 documented NFKC vs TR39 divergence vectors, shipped as <code class="inline-chip">nfkc-tr39-divergence-v1</code></li>
-            <li>Two production map modes: <code class="inline-chip">CONFUSABLE_MAP</code> (NFKC-first) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (TR39/raw-input)</li>
-            <li>Published artifacts: composability vectors + benchmark corpus (<code class="inline-chip">confusable-bench.v1</code>)</li>
-            <li>Accepted into Unicode public review (<a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">PRI #540</a>)</li>
-          </ul>
-        </div>
-      </div>
-      <p class="research-links">
-        <a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace methodology</a>
-        <span class="sep">&middot;</span>
-        <a href="https://paultendo.github.io/posts/namespace-guard-launch/" target="_blank" rel="noopener">Launch write-up</a>
-        <span class="sep">&middot;</span>
-        <a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#how-the-anti-spoofing-pipeline-works" target="_blank" rel="noopener">Technical details</a>
-        <span class="sep">&middot;</span>
-        <a href="./data/confusable-bench.v1.json" target="_blank" rel="noopener">Benchmark corpus</a>
-        <span class="sep">&middot;</span>
-        <a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a>
-        <span class="sep">&middot;</span>
-        <a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">Unicode PRI #540</a>
-      </p>
-    </section>
-
-    <div class="divider" aria-hidden="true"></div>
-
-    <!-- Profiles -->
-    <section class="pipeline-section" aria-labelledby="profiles-heading">
-      <h2 id="profiles-heading" class="display-type">Built-in Profiles</h2>
-      <p class="subtitle">Pick a profile, override what you need. Profiles are defaults, not lock-in.</p>
-
-      <div class="profiles-cards">
-        <div class="glass-card insight-card">
-          <h3>consumer-handle</h3>
-          <p>For public usernames and handles. Strict anti-impersonation defaults.</p>
-          <ul class="checklist">
-            <li>2-30 chars</li>
-            <li>lowercase letters, numbers, hyphens</li>
-            <li>purely numeric names blocked</li>
-          </ul>
-          <span class="label">Best for: social/community handles</span>
-        </div>
-        <div class="glass-card insight-card">
-          <h3>org-slug</h3>
-          <p>For teams, workspaces, and company slugs. Slightly longer and conservative by default.</p>
-          <ul class="checklist">
-            <li>2-40 chars</li>
-            <li>lowercase letters, numbers, hyphens</li>
-            <li>purely numeric names blocked</li>
-          </ul>
-          <span class="label">Best for: org/workspace URLs</span>
-        </div>
-        <div class="glass-card insight-card">
-          <h3>developer-id</h3>
-          <p>For technical IDs and package-style names. Allows more length and numeric-only IDs.</p>
-          <ul class="checklist">
-            <li>2-50 chars</li>
-            <li>lowercase letters, numbers, hyphens</li>
-            <li>purely numeric names allowed</li>
-          </ul>
-          <span class="label">Best for: internal/dev tooling identifiers</span>
-        </div>
-      </div>
-      <div class="glass-card insight-card profile-override">
-        <h3>Override example</h3>
-        <p>Most setups only need one or two overrides.</p>
-        <div class="example">
-          <span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span><span class="br">(</span><span class="str">"org-slug"</span>, <span class="br">{</span><br>
-          &nbsp;&nbsp;<span class="var">allowPurelyNumeric</span>: <span class="kw">true</span>,<br>
-          <span class="br">}</span>, adapter<span class="br">)</span>;
-        </div>
-      </div>
-    </section>
-
-    <div class="divider" aria-hidden="true"></div>
-
-    <!-- Scope -->
-    <section class="pipeline-section" aria-labelledby="scope-heading">
-      <h2 id="scope-heading" class="display-type">Scope</h2>
-      <p class="subtitle">What you get and where the boundary is.</p>
-
-      <div class="insight-cards">
-        <div class="glass-card insight-card">
-          <h3>What it does</h3>
-          <ul class="checklist">
-            <li>Normalizes and validates slug format</li>
-            <li>Checks collisions across multiple data sources</li>
-            <li>Blocks reserved names</li>
-            <li>Scores and enforces Unicode confusable risk</li>
-            <li>Prevents confusable-driven token inflation in LLM pipelines (<code class="inline-chip">isClean</code>/<code class="inline-chip">canonicalise</code>/<code class="inline-chip">scan</code>)</li>
-            <li>Flags invisible and direction-control characters</li>
-            <li>Lets you plug in moderation or policy validators</li>
-          </ul>
-        </div>
-        <div class="glass-card insight-card">
-          <h3>Out of scope</h3>
-          <ul class="checklist">
-            <li>No bundled third-party moderation datasets (bring your own or use the built-in list)</li>
-            <li>Not a replacement for account security (2FA, verification, abuse ops)</li>
-            <li>No guarantee of perfect abuse detection</li>
-          </ul>
-        </div>
-      </div>
+    <section id="how" class="how-section" aria-labelledby="how-heading">
+      <p class="eyebrow">How it works</p>
+      <h2 id="how-heading">What a name goes through</h2>
+      <p class="section-intro"><code class="inline-chip">guard.check()</code> works down this list and stops at the first check a name fails. Invisible characters, lookalikes and profanity are validators you choose to add, and domain names have a check of their own. Names that come close to one you protect, like <span class="mono">rnicrosoft</span>, are scored by <code class="inline-chip">checkRisk()</code>.</p>
+      <ol class="checks">
+        <li class="check">
+          <h3>Format</h3>
+          <p>A pattern you set. By default, 2 to 30 lowercase letters, digits and hyphens.</p>
+          <div class="ex"><span><span class="in">a</span><span class="to">&rarr;</span><span class="v-bad">too short</span></span></div>
+        </li>
+        <li class="check">
+          <h3>Reserved names</h3>
+          <p>System routes, brand names and anything else you hold back, in categories with their own messages.</p>
+          <div class="ex"><span><span class="in">admin</span><span class="to">&rarr;</span><span class="v-warn">reserved (system)</span></span></div>
+        </li>
+        <li class="check">
+          <h3>Invisible characters</h3>
+          <p>Zero-width joiners, direction overrides and other characters that add bytes without adding ink.</p>
+          <div class="ex"><span><span class="in">a&#x200D;dmin</span><span class="to">&rarr;</span><span class="v-bad">zero-width joiner</span></span></div>
+        </li>
+        <li class="check">
+          <h3>Lookalikes</h3>
+          <p>Characters that pass for Latin letters, from Unicode&rsquo;s confusables list, which covers more than 100 scripts, and 2,300 measured pairs. <code class="inline-chip">checkRisk()</code> also reads rn as m, and 1 or a capital I as l, and with <code class="inline-chip">leetspeak</code> on, 4 as a.</p>
+          <div class="ex">
+            <span><span class="in cross-script-font">&#x430;dmin</span><span class="to">&rarr;</span><span class="v-bad">Cyrillic &#x430;</span></span>
+            <span><span class="in">rnicrosoft</span><span class="to">&rarr;</span><span class="v-bad">reads as microsoft</span></span>
+          </div>
+        </li>
+        <li class="check">
+          <h3>Profanity</h3>
+          <p>A built-in English list, matched through the same substitutions people use to get past filters. Bring your own list or moderation service if you prefer.</p>
+          <div class="ex"><span><span class="in">5h1t</span><span class="to">&rarr;</span><span class="v-bad">blocked</span></span></div>
+        </li>
+        <li class="check">
+          <h3>Already taken</h3>
+          <p>Every table that shares the namespace, checked in parallel: users, organisations, teams. Suggestions come back when a name is taken.</p>
+          <div class="ex"><span><span class="in">sarah</span><span class="to">&rarr;</span><span class="v-bad">taken by a user</span></span></div>
+        </li>
+        <li class="check">
+          <h3>Domain spoofs</h3>
+          <p>A separate check, <code class="inline-chip">isDomainSpoof()</code>, flags lookalike domains a registry would accept: a whole label in one other script. Labels that mix scripts are left out, since registries refuse them.</p>
+          <div class="ex"><span><span class="in cross-script-font">&#x0440;&#x0430;&#x0443;&#x0440;&#x0430;&#x04CF;</span><span class="to">&rarr;</span><span class="v-bad">spoofs paypal</span></span></div>
+        </li>
+      </ol>
     </section>
 
     <div class="divider" aria-hidden="true"></div>
 
     <!-- Playground -->
     <section id="playground" class="playground" aria-labelledby="playground-heading">
-      <h2 id="playground-heading" class="display-type">Try it out</h2>
+      <p class="eyebrow">Playground</p>
+      <h2 id="playground-heading">Try every option</h2>
+      <p class="section-intro">The library itself, running in this page against a pretend database. Pick a profile, switch checks on and off, and see what each one catches.</p>
       <div class="glass-card playground-card">
         <form id="check-form" role="search" aria-label="Check slug claimability">
           <div class="input-group">
@@ -1084,7 +1206,6 @@
               spellcheck="false"
               aria-describedby="playground-desc"
               aria-label="Slug to check"
-              autofocus
             >
             <button type="submit" class="btn-primary check-btn">Claim check</button>
           </div>
@@ -1160,6 +1281,8 @@
             <button class="example-pill" data-slug="acme-corp">acme-corp</button>
             <button class="example-pill" data-slug="my-new-app">my-new-app</button>
             <button class="example-pill" data-slug="paypa1">paypa1</button>
+            <button class="example-pill" data-slug="paypaI" title="Capital I, which reads as l where names are shown as typed">paypaI</button>
+            <button class="example-pill" data-slug="rnicrosoft" title="r and n read as m">rnicrosoft</button>
             <button class="example-pill" data-slug="a">a</button>
             <button class="example-pill" data-slug="hello!">hello!</button>
             <button class="example-pill" data-slug="@Bob">@Bob</button>
@@ -1172,9 +1295,9 @@
             <button class="example-pill" data-slug="a&#x200D;dmin" title="Contains zero-width joiner">a[ZWJ]dmin</button>
             <button class="example-pill" data-slug="&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;" title="Full-width NFKC test">&#xFF48;&#xFF45;&#xFF4C;&#xFF4C;&#xFF4F;</button>
             <button class="example-pill" data-slug="123456">123456</button>
-            <button class="example-pill cross-script-font" data-slug="&#x1175;&#x4E28;" title="Hangul &#x1175; / Han &#x4E28; (ray distance 0.004, Arial Unicode MS)">&#x1175;&#x4E28; Hangul/Han</button>
-            <button class="example-pill cross-script-font" data-slug="&#x041D;&#x0397;" title="Cyrillic Н (U+041D) / Greek Η (U+0397) — identical outlines, 121 fonts">&#x041D;&#x0397; Cyrillic Н / Greek Η</button>
-            <button class="example-pill cross-script-font" data-slug="&#x0406;&#x0399;" title="Cyrillic І (U+0406) / Greek Ι (U+0399) — identical outlines, 62 fonts">&#x0406;&#x0399; Cyrillic І / Greek Ι</button>
+            <button class="example-pill cross-script-font" data-slug="&#x3163;&#x4E28;" title="Hangul &#x3163; (U+3163) / Han &#x4E28; (U+4E28): alike in every text font that draws both">&#x3163;&#x4E28; Hangul/Han</button>
+            <button class="example-pill cross-script-font" data-slug="&#x041D;&#x0397;" title="Cyrillic Н (U+041D) / Greek Η (U+0397): alike in 92% of text fonts">&#x041D;&#x0397; Cyrillic Н / Greek Η</button>
+            <button class="example-pill cross-script-font" data-slug="&#x0406;&#x0399;" title="Cyrillic І (U+0406) / Greek Ι (U+0399): identical outlines in 51 fonts">&#x0406;&#x0399; Cyrillic І / Greek Ι</button>
           </div>
         </div>
 
@@ -1222,6 +1345,18 @@
                 </div>
               </div>
               <div class="mock-group">
+                <h4>Protected (risk scoring)</h4>
+                <div class="tags">
+                  <span class="mock-tag">paypal</span>
+                  <span class="mock-tag">microsoft</span>
+                  <span class="mock-tag">github</span>
+                  <span class="mock-tag">vercel</span>
+                  <span class="mock-tag">namespace-guard</span>
+                  <span class="mock-tag">support</span>
+                  <span class="mock-tag">admin</span>
+                </div>
+              </div>
+              <div class="mock-group">
                 <h4>Moderation list (demo)</h4>
                 <div class="tags">
                   <span class="mock-tag">English list (~2.7k terms)</span>
@@ -1236,9 +1371,144 @@
 
     <div class="divider" aria-hidden="true"></div>
 
+    <!-- Research -->
+    <section id="research" class="pipeline-section research-section" aria-labelledby="research-heading">
+      <p class="eyebrow">Research</p>
+      <h2 id="research-heading">Measured, not guessed</h2>
+      <p class="subtitle">Unicode&rsquo;s confusables list says which characters can be mistaken for which, but not how alike they look, or in which fonts. <a class="pn" href="https://github.com/paultendo/confusable-vision">confusable-vision</a> measures it. Its current release compares 64,751 characters in 322 fonts, at the size and position each has in running text, by firing rays through the outlines. It finds 11,517 pairs alike in at least one font or combination of fonts, and 5,975 pass its thresholds. <span class="pn">namespace-guard</span> ships the 2,300 of those where one character is an ASCII letter or digit, or the two are in different scripts, including pairs between two non-Latin scripts that no standard covers.</p>
+      <figure class="figure">
+        <img src="./images/rays.png" width="2400" height="1460" loading="lazy" alt="The same rays through the Latin capital O and Ol Chiki letter at (U+1C5B). Where each ray enters and leaves the ink, and its path through the ink, match.">
+        <figcaption>The Latin capital O and the Ol Chiki letter at (U+1C5B), cut by the same rays. Where each ray enters the ink, where it leaves and how far it travels inside all match, so the Ol Chiki letter passes for O. Unicode&rsquo;s list doesn&rsquo;t include this pair.</figcaption>
+      </figure>
+      <div class="facts">
+        <div>
+          <h3>What was measured</h3>
+          <ul>
+            <li>322 fonts: every macOS font, Roboto, Noto and DejaVu, measured with <a href="https://paultendo.github.io/posts/rayspace-methodology/">RaySpace</a>. Pairs within one script, such as Hangul jamo variants or Arabic positional forms, are left out of <span class="pn">namespace-guard</span>&rsquo;s 2,300.</li>
+            <li>Each pair carries a <code class="inline-chip">danger</code> score from 0 to 1: the share of text fonts, or font combinations, where it holds. At 0.7 or above, 1,079 pairs are alike almost everywhere.</li>
+            <li>Pairs between two non-Latin scripts: Cyrillic and Greek, Cyrillic and Arabic, Hangul and Han, and more.</li>
+            <li>Lookalikes of ASCII letters were also checked in place, between other letters in five common fonts at text size. 394 that Unicode doesn&rsquo;t list are in the maps, such as Hebrew &#x5D0;, alike to x in Arial at 16&nbsp;px.</li>
+            <li>The full dataset is published as <a class="pn" href="https://github.com/paultendo/confusable-vision">confusable-vision</a> (CC-BY-4.0).</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Where Unicode&rsquo;s own data disagrees</h3>
+          <ul>
+            <li>With the 2026-08-06 confusables.txt, 34 characters map one way under NFKC normalisation and another in the confusables list, up from 31. They ship as the 34 <code class="inline-chip">nfkc-tr39-divergence-v2</code> vectors. Three are Unicode 16 characters, so a runtime whose NFKC is older finds 31.</li>
+            <li>Two maps: <code class="inline-chip">CONFUSABLE_MAP</code> for pipelines that normalise first (1,018 entries) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> for raw input (2,216 entries).</li>
+            <li>The vectors and a benchmark corpus (<code class="inline-chip">confusable-bench.v1</code>) are published as data files.</li>
+            <li>Submitted to Unicode public review (<a href="https://www.unicode.org/review/pri540/">PRI #540</a>) and published in its <a href="https://www.unicode.org/review/pri540/feedback.html">accumulated feedback</a>.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="research-links">
+        <a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace methodology</a>
+        <span class="sep">&middot;</span>
+        <a href="https://paultendo.github.io/posts/namespace-guard-launch/" target="_blank" rel="noopener">Launch write-up</a>
+        <span class="sep">&middot;</span>
+        <a href="./docs/how-it-works/">How a name is checked</a>
+        <span class="sep">&middot;</span>
+        <a href="./data/confusable-bench.v1.json" target="_blank" rel="noopener">Benchmark corpus</a>
+        <span class="sep">&middot;</span>
+        <a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a>
+        <span class="sep">&middot;</span>
+        <a href="https://www.unicode.org/review/pri540/" target="_blank" rel="noopener">Unicode PRI #540</a>
+      </p>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Profiles -->
+    <section class="pipeline-section" aria-labelledby="profiles-heading">
+      <p class="eyebrow">Profiles</p>
+      <h2 id="profiles-heading">Three starting points</h2>
+      <p class="subtitle">Pick a profile, override what you need. Profiles are defaults, not lock-in.</p>
+
+      <div class="profiles-cards">
+        <div class="glass-card insight-card">
+          <h3>consumer-handle</h3>
+          <p>For public usernames and handles. Strict anti-impersonation defaults.</p>
+          <ul class="checklist">
+            <li>2-30 chars</li>
+            <li>lowercase letters, numbers, hyphens</li>
+            <li>purely numeric names blocked</li>
+          </ul>
+          <span class="label">Best for: social/community handles</span>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>org-slug</h3>
+          <p>For teams, workspaces, and company slugs. Slightly longer and conservative by default.</p>
+          <ul class="checklist">
+            <li>2-40 chars</li>
+            <li>lowercase letters, numbers, hyphens</li>
+            <li>purely numeric names blocked</li>
+          </ul>
+          <span class="label">Best for: org/workspace URLs</span>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>developer-id</h3>
+          <p>For technical IDs and package-style names. Allows more length and numeric-only IDs.</p>
+          <ul class="checklist">
+            <li>2-50 chars</li>
+            <li>lowercase letters, numbers, hyphens</li>
+            <li>purely numeric names allowed</li>
+          </ul>
+          <span class="label">Best for: internal/dev tooling identifiers</span>
+        </div>
+      </div>
+      <div class="glass-card insight-card profile-override">
+        <h3>Override example</h3>
+        <p>Most setups only need one or two overrides.</p>
+        <div class="example">
+          <span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span><span class="br">(</span><span class="str">"org-slug"</span>, <span class="br">{</span><br>
+          &nbsp;&nbsp;<span class="var">allowPurelyNumeric</span>: <span class="kw">true</span>,<br>
+          <span class="br">}</span>, adapter<span class="br">)</span>;
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <!-- Scope -->
+    <section class="pipeline-section" aria-labelledby="scope-heading">
+      <p class="eyebrow">Scope</p>
+      <h2 id="scope-heading">What it does, and what it doesn&rsquo;t</h2>
+      
+      <div class="insight-cards">
+        <div class="glass-card insight-card">
+          <h3>What it does</h3>
+          <ul class="checklist">
+            <li>Normalizes and validates slug format</li>
+            <li>Checks collisions across multiple data sources</li>
+            <li>Blocks reserved names</li>
+            <li>Scores and enforces Unicode confusable risk</li>
+            <li>Catches ASCII lookalikes of protected names (rnicrosoft, paypa1), and checks names as shown with their case (paypaI, with a capital I)</li>
+            <li>Adds lookalikes Unicode does not list, measured in common fonts at text size</li>
+            <li>Prevents confusable-driven token inflation in LLM pipelines (<code class="inline-chip">isClean</code>/<code class="inline-chip">canonicalise</code>/<code class="inline-chip">scan</code>)</li>
+            <li>Flags invisible and direction-control characters</li>
+            <li>Lets you plug in moderation or policy validators</li>
+          </ul>
+        </div>
+        <div class="glass-card insight-card">
+          <h3>Out of scope</h3>
+          <ul class="checklist">
+            <li>No bundled third-party moderation datasets (bring your own or use the built-in list)</li>
+            <li>Not a replacement for account security (2FA, verification, abuse ops)</li>
+            <li>No guarantee of perfect abuse detection</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"></div>
+
+
+    <div class="divider" aria-hidden="true"></div>
+
     <!-- Code example -->
     <section class="code-section" aria-labelledby="code-heading">
-      <h2 id="code-heading" class="display-type">Integration (9 adapters)</h2>
+      <p class="eyebrow">Integration</p>
+      <h2 id="code-heading">Nine database adapters</h2>
       <div role="tablist" class="adapter-tabs" aria-label="Choose your database adapter">
         <button role="tab" class="adapter-tab" aria-selected="true" aria-controls="panel-prisma" id="tab-prisma">Prisma</button>
         <button role="tab" class="adapter-tab" aria-selected="false" aria-controls="panel-drizzle" id="tab-drizzle">Drizzle</button>
@@ -1453,12 +1723,13 @@
 
     <!-- CLI workflow -->
     <section class="pipeline-section" aria-labelledby="workflow-heading">
-      <h2 id="workflow-heading" class="display-type">CLI workflow</h2>
+      <p class="eyebrow">Command line</p>
+      <h2 id="workflow-heading">From red-team to CI</h2>
       <p class="subtitle">From red-team attacks to production CI gates in a few commands.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
-          <h3>1. Red-team with attack-gen</h3>
+          <h3>Red-team with attack-gen</h3>
           <p>Generate realistic variants to test your policy. Default mode is <code class="inline-chip">evasion</code> (Unicode confusables + substitutions). Use <code class="inline-chip">--mode impersonation</code> when you only want Unicode spoofing analysis.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">attack-gen</span> <span class="str">paypal</span> <span class="var">--json</span><br>
@@ -1466,7 +1737,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>2. Recommend in one command</h3>
+          <h3>Recommend in one command</h3>
           <p>Get recommended warn/block thresholds and a suggested CI command from your dataset.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">recommend</span> <span class="str">./risk-dataset.json</span><br>
@@ -1474,7 +1745,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>3. Tune thresholds for your domain</h3>
+          <h3>Tune thresholds for your domain</h3>
           <p>Set the relative cost of blocking a legitimate user vs letting a bad actor through. The calibrator picks optimal warn/block thresholds from your data.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">calibrate</span> <span class="str">./risk-dataset.json</span> <span class="br">\</span><br>
@@ -1482,7 +1753,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>4. Audit canonical data before migration</h3>
+          <h3>Audit canonical data before migration</h3>
           <p>Detect canonical collisions in exported records before adding database unique constraints on canonical columns.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">audit-canonical</span> <span class="str">./users-export.json</span> <span class="var">--json</span><br>
@@ -1490,20 +1761,20 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>5. Compare map behaviour</h3>
-          <p>See how results differ between the NFKC-filtered and full confusable maps, with a built-in 31-vector regression baseline.</p>
+          <h3>Compare map behaviour</h3>
+          <p>See how results differ between the NFKC-filtered and full confusable maps, with a built-in 34-vector regression baseline.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npx</span> <span class="fn">namespace-guard</span> <span class="fn">drift</span> <span class="var">--json</span><br>
-            <span class="cm">// dataset: builtin:composability-vectors (31 vectors)</span><br>
+            <span class="cm">// dataset: builtin:composability-vectors (34 vectors)</span><br>
             <span class="cm">// includes actionFlips, averageScoreDelta, maxAbsScoreDelta</span>
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>6. Enforce in CI</h3>
+          <h3>Enforce in CI</h3>
           <p>Fail pull requests when changes exceed the limits you set.</p>
           <div class="example">
             <span class="dim">$</span> <span class="kw">npm</span> <span class="fn">run</span> <span class="fn">ci:drift-gate</span> <span class="var">--</span> <span class="br">\</span><br>
-            &nbsp;&nbsp;<span class="var">--max-action-flips</span> <span class="type">29</span> <span class="var">--max-average-score-delta</span> <span class="type">95</span> <span class="var">--max-abs-score-delta</span> <span class="type">100</span>
+            &nbsp;&nbsp;<span class="var">--max-action-flips</span> <span class="type">34</span> <span class="var">--max-average-score-delta</span> <span class="type">100</span> <span class="var">--max-abs-score-delta</span> <span class="type">100</span>
           </div>
         </div>
       </div>
@@ -1513,7 +1784,8 @@
 
     <!-- Advanced API primitives -->
     <section class="pipeline-section advanced-apis-section" aria-labelledby="advanced-apis-heading">
-      <h2 id="advanced-apis-heading" class="display-type">Advanced API primitives</h2>
+      <p class="eyebrow">Lower-level API</p>
+      <h2 id="advanced-apis-heading">Build your own checks</h2>
       <p class="subtitle">Low-level helpers for custom scoring, pairwise checks, and cross-script risk analysis.</p>
 
       <div class="insight-cards">
@@ -1527,17 +1799,17 @@
             <span class="fn">confusableDistance</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span><span class="br">)</span>; <span class="cm">// similarity + chainDepth + steps</span><br>
             <span class="fn">confusableDistance</span><span class="br">(</span><span class="str">"paypal"</span>, <span class="str">"pa\u0443pal"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// measured visual costs</span>
           </div>
-          <p class="research-links"><a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#advanced-security-primitives" target="_blank" rel="noopener">Reference: Advanced Security Primitives</a></p>
+          <p class="research-links"><a href="./docs/comparing-names/">Docs: comparing names</a></p>
         </div>
 
         <div class="glass-card insight-card">
           <h3>Measured visual weights + cross-script detection</h3>
-          <p>4,174 confusable pairs measured across 245 system fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>), including 3,525 cross-script pairs between non-Latin scripts (Hangul/Han, Thai/Devanagari, Cyrillic/Greek, and more). The world's first cross-script confusable dataset.</p>
+          <p>2,300 confusable pairs from <span class="pn">confusable-vision</span> release 2026.09.26, measured in 322 fonts using vector-outline raycasting (<a href="https://paultendo.github.io/posts/rayspace-methodology/" target="_blank" rel="noopener">RaySpace</a>), including pairs between two non-Latin scripts (Hangul/Han, Cyrillic/Greek, Cyrillic/Arabic and more), many of which Unicode&rsquo;s list doesn&rsquo;t pair. It&rsquo;s the world&rsquo;s first font-by-font confusables dataset.</p>
           <div class="example">
             <span class="kw">import</span> <span class="br">{</span> <span class="fn">areConfusable</span>, <span class="fn">detectCrossScriptRisk</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
             <span class="kw">import</span> <span class="br">{</span> <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard/confusable-weights"</span>;<br>
-            <span class="fn">areConfusable</span><span class="br">(</span><span class="str">"&#x1175;"</span>, <span class="str">"&#x4E28;"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// true</span><br>
-            <span class="fn">detectCrossScriptRisk</span><span class="br">(</span><span class="str">"&#x1175;&#x4E28;"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// high risk</span>
+            <span class="fn">areConfusable</span><span class="br">(</span><span class="str">"&#x3163;"</span>, <span class="str">"&#x4E28;"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// true</span><br>
+            <span class="fn">detectCrossScriptRisk</span><span class="br">(</span><span class="str">"&#x3163;&#x4E28;"</span>, <span class="br">{</span> <span class="var">weights</span>: <span class="type">CONFUSABLE_WEIGHTS</span> <span class="br">}</span><span class="br">)</span>; <span class="cm">// high risk</span>
           </div>
           <p class="research-links"><a href="https://github.com/paultendo/confusable-vision" target="_blank" rel="noopener">confusable-vision</a> (CC-BY-4.0 data)</p>
         </div>
@@ -1549,27 +1821,28 @@
 
     <!-- LLM preprocessing -->
     <section id="llm-preprocessing" class="pipeline-section advanced-apis-section" aria-labelledby="llm-heading">
-      <h2 id="llm-heading" class="display-type">LLM Pipeline Preprocessing</h2>
-      <p class="subtitle">Confusable characters fragment into multi-byte BPE tokens, inflating API costs up to 5.2x per document. The model reads them correctly. The invoice does not care. We tested this across 4 models and 130+ API calls, and we call the result <span class="coined-term">Denial of Spend</span>.</p>
+      <p class="eyebrow">LLM pipelines</p>
+      <h2 id="llm-heading">Denial of Spend</h2>
+      <p class="subtitle">Lookalike letters can&rsquo;t fool an LLM. They can make it cost up to 5.7x as much to read. I flooded a contract with them and gave it to seven GPT and Claude models: every one still read every negation correctly, but the contract grew from about a thousand tokens to more than four thousand. I call it <span class="coined-term">Denial of Spend</span>.</p>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3><span class="coined-term">Denial of Spend</span>: the attack vector</h3>
-          <p>Confusable characters are pixel-identical to Latin letters but encode as multi-byte BPE tokens. A 95-line contract that costs 881 tokens in clean ASCII costs 4,567 tokens when flooded with confusables: <strong>5.2x the API bill</strong>. The model reads it correctly. The invoice does not care.</p>
-          <p>Unlike volumetric DDoS, there is no traffic spike. The requests are normal-sized HTTP payloads, one document each, from legitimate accounts. The inflation is invisible until the invoice arrives. A contract review SaaS processing thousands of documents per day could see its costs quintupled.</p>
+          <p>Characters that pass for Latin letters take several tokens each. A 95-line contract that is 881 tokens in clean ASCII is 4,567 tokens when flooded with them: <strong>5.2x the contract&rsquo;s tokens</strong>. The model reads it correctly. Reading is only part of the bill: the answer isn&rsquo;t flooded, and output tokens cost more, so in the September rerun the bill for each question rose by up to 3.9x. For work that is all reading, such as embedding documents for search, the bill rises by the full 4x to 5.7x.</p>
+          <p>Unlike volumetric DDoS, there is no traffic spike. The requests are normal-sized HTTP payloads, one document each, from legitimate accounts. The inflation is invisible until the invoice arrives. For a contract review service reading thousands of long documents a day, the documents are most of what it pays for.</p>
           <p class="research-links"><a href="https://paultendo.github.io/posts/confusable-vision-llm-attack-tests/" target="_blank" rel="noopener">Full research: 130+ API calls, 8 attack types, 4 models</a></p>
         </div>
         <div class="glass-card insight-card">
           <h3>Tested against frontier models</h3>
-          <p>GPT-5.2, Claude Sonnet 4.6, GPT-5.2-instant, and Claude Haiku 4.5. Eight attack types: single-character substitution, novel confusables absent from any standard, meaning-flip attacks that reverse legal clauses, a 57% character flood, and medical text with 28 safety-critical negations.</p>
-          <p><strong>Zero meaning flips across all variants.</strong> Every substituted clause was correctly interpreted in every run. But token costs inflated 1.1x to 5.2x depending on density, and the billing attack scales with document length.</p>
+          <p>First in February 2026, on GPT-5.2, Claude Sonnet 4.6, GPT-5.2-instant and Claude Haiku 4.5. Eight attack types: single-character substitution, novel confusables absent from any standard, meaning-flip attacks that reverse legal clauses, a 57% character flood, and medical text with 28 safety-critical negations.</p>
+          <p><strong>Zero meaning flips across all variants.</strong> Every substituted clause was correctly interpreted in every run. But the documents&rsquo; tokens grew 1.1x to 5.2x depending on density, and the cost grows with document length.</p>
           <table style="width: 100%; margin: 1rem 0; font-size: 0.85rem; border-collapse: collapse;">
             <thead>
               <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.15);">
                 <th style="text-align: left; padding: 0.4rem 0.6rem;">Variant</th>
                 <th style="text-align: right; padding: 0.4rem 0.6rem;">GPT-5.2</th>
                 <th style="text-align: right; padding: 0.4rem 0.6rem;">Sonnet</th>
-                <th style="text-align: right; padding: 0.4rem 0.6rem;">Cost</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">vs clean</th>
               </tr>
             </thead>
             <tbody>
@@ -1593,11 +1866,47 @@
               </tr>
             </tbody>
           </table>
+          <p><strong>Rerun in September 2026</strong> on GPT-6 Astra, Sol and Luna, and Claude Fable 5.1, Opus 5.5, Sonnet 5 and Haiku 4.5, with a rebuilt contract. Every model still answered all 12 questions that turn on a negation correctly, on the flipped and the flooded versions. Flooding 60% of the lowercase letters multiplied the contract&rsquo;s tokens by 5.7x on GPT-6 and Haiku 4.5, and by 4.0x on Claude&rsquo;s newer models, which spend more tokens on plain English to begin with.</p>
+          <table style="width: 100%; margin: 1rem 0; font-size: 0.85rem; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.15);">
+                <th style="text-align: left; padding: 0.4rem 0.6rem;">Contract tokens</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">Clean</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">Flip</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">Flood</th>
+                <th style="text-align: right; padding: 0.4rem 0.6rem;">vs clean</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.08);">
+                <td style="padding: 0.4rem 0.6rem;">GPT-6 Astra, Sol, Luna</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">763</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">857</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">4,336</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;"><strong>5.7x</strong></td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(188, 201, 223, 0.08);">
+                <td style="padding: 0.4rem 0.6rem;">Claude Fable 5.1, Opus 5.5, Sonnet 5</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">1,260</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">1,360</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">5,059</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;"><strong>4.0x</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 0.4rem 0.6rem;">Claude Haiku 4.5</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">861</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">970</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;">4,949</td>
+                <td style="text-align: right; padding: 0.4rem 0.6rem;"><strong>5.7x</strong></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div class="glass-card insight-card">
           <h3>The <span class="coined-term">Denial of Spend</span> defence</h3>
-          <p><code class="inline-chip">canonicalise()</code> recovered every substituted term across all 12 attack variants. Zero confusable findings remained after canonicalisation. The 5.2x billing multiplier drops to 1.0x because multi-byte confusable tokens map back to single-byte ASCII. Processing a 10,000-character document takes under 1ms.</p>
-          <p><code class="inline-chip">isClean()</code> gates in microseconds: fast boolean, short-circuits on the first confusable found. <code class="inline-chip">scan()</code> returns per-character detail with codepoints, scripts, and risk level for audit. Use <code class="inline-chip">strategy:&nbsp;"all"</code> for known-Latin documents (English contracts, medical text).</p>
+          <p><code class="inline-chip">canonicalise()</code> rewrites any word that shows a sign of tampering: one that mixes Latin with another script, has a letter no modern language uses, or has a capital swapped into a lowercase word. Every lookalike in such a word goes back to its Latin letter. Ordinary Turkish, Russian or Sámi words are left alone.</p>
+          <p>On the September contracts, <code class="inline-chip">strategy:&nbsp;"all"</code> turns the flooded contract back into the clean one, byte for byte, so it takes as many tokens as the clean contract: 1.0x instead of 4.0x to 5.7x. The default leaves 9 short words, at 1.02x to 1.03x. The flooded contract takes under 2&nbsp;ms.</p>
+          <p><code class="inline-chip">isClean()</code> is the quick yes or no: true exactly when <code class="inline-chip">canonicalise()</code> would leave the text as it is, and it stops at the first word it would change. <code class="inline-chip">scan()</code> returns per-character detail with codepoints, scripts, and risk level for audit. Use <code class="inline-chip">strategy:&nbsp;"all"</code> for known-Latin documents (English contracts, medical text).</p>
           <div class="example">
             <span class="kw">import</span> <span class="br">{</span> <span class="fn">canonicalise</span>, <span class="fn">scan</span>, <span class="fn">isClean</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">"namespace-guard"</span>;<br>
             <br>
@@ -1609,7 +1918,7 @@
             <span class="cm">// Fix: rewrite confusables to Latin (5.2x tokens -> 1.0x)</span><br>
             <span class="kw">const</span> clean = <span class="fn">canonicalise</span><span class="br">(</span>document, <span class="br">{</span> <span class="var">strategy</span>: <span class="str">"all"</span> <span class="br">}</span><span class="br">)</span>;
           </div>
-          <p class="research-links"><a href="https://github.com/paultendo/namespace-guard/blob/main/docs/reference.md#llm-pipeline-preprocessing" target="_blank" rel="noopener">Reference: LLM Pipeline Preprocessing</a></p>
+          <p class="research-links"><a href="./docs/llm-text/">Docs: text for LLMs</a></p>
         </div>
       </div>
     </section>
@@ -1618,7 +1927,8 @@
 
     <!-- Profanity and evasion -->
     <section class="pipeline-section" aria-labelledby="profanity-heading">
-      <h2 id="profanity-heading" class="display-type">Profanity &amp; Evasion</h2>
+      <p class="eyebrow">Moderation</p>
+      <h2 id="profanity-heading">Profanity and evasion</h2>
       <p class="subtitle">Zero-dependency by default. Plug in any external moderation library when you need it.</p>
 
       <div class="insight-cards">
@@ -1658,33 +1968,31 @@
 
     <!-- Anti-spoofing pipeline -->
     <section class="pipeline-section" aria-labelledby="pipeline-heading">
-      <h2 id="pipeline-heading" class="display-type">Anti-spoofing pipeline</h2>
-      <p class="subtitle">Three clear steps for Unicode spoof detection.</p>
+      <p class="eyebrow">Anti-spoofing</p>
+      <h2 id="pipeline-heading">Three steps for Unicode names</h2>
+      <p class="subtitle">For apps that allow Unicode names, in this order.</p>
 
       <div class="pipeline-flow">
         <div class="pipeline-stage">
-          <span class="stage-num">Stage 1</span>
           <span class="stage-name">NFKC normalize</span>
           <span class="stage-desc">Collapses compatibility forms</span>
         </div>
         <span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
         <div class="pipeline-stage">
-          <span class="stage-num">Stage 2</span>
           <span class="stage-name">Confusable map</span>
-          <span class="stage-desc">4,174 scored character pairs</span>
+          <span class="stage-desc">1,018 lookalike characters</span>
         </div>
         <span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
         <div class="pipeline-stage">
-          <span class="stage-num">Stage 3</span>
           <span class="stage-name">Mixed-script reject</span>
-          <span class="stage-desc">22+ script families</span>
+          <span class="stage-desc">more than 100 scripts</span>
         </div>
       </div>
 
       <div class="insight-cards">
         <div class="glass-card insight-card">
           <h3>NFKC-aware confusable map</h3>
-          <p>Unicode's confusables.txt and NFKC normalisation disagree on 31 characters. namespace-guard ships two maps: <code class="inline-chip">CONFUSABLE_MAP</code> for NFKC-first pipelines (the common case) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (~1,400 entries) for raw-input pipelines that skip normalisation.</p>
+          <p>In the 2026-08-06 confusables.txt, Unicode's list and NFKC normalisation disagree on 34 characters (31 in earlier versions). <span class="pn">namespace-guard</span> ships two maps: <code class="inline-chip">CONFUSABLE_MAP</code> (1,018 entries) for NFKC-first pipelines (the common case) and <code class="inline-chip">CONFUSABLE_MAP_FULL</code> (2,216 entries) for raw-input pipelines that skip normalisation.</p>
           <div class="example">
             <span class="dim">// TR39 says Long S (&lsaquo;&#x17F;&rsaquo;) &rarr; &ldquo;f&rdquo;</span><br>
             <span class="dim">// NFKC says Long S &rarr; &ldquo;s&rdquo;</span> <span class="val">&larr; correct</span><br>
@@ -1693,7 +2001,7 @@
           </div>
         </div>
         <div class="glass-card insight-card">
-          <h3>22+ script families</h3>
+          <h3>More than 100 scripts</h3>
           <p>Latin, Cyrillic, Greek, Armenian, Hebrew, Arabic, Devanagari, Thai, Georgian, Ethiopic, Hangul, Han, and more. Mixed-script detection blocks identifiers that combine characters from different scripts.</p>
           <div class="example">
             <span class="err">&#x430;dmin</span> <span class="dim">Cyrillic &ldquo;a&rdquo; + Latin</span><br>
@@ -1704,11 +2012,11 @@
         </div>
         <div class="glass-card insight-card">
           <h3>Reproducible from source</h3>
-          <p>Generated from Unicode's official <code class="inline-chip">confusables.txt</code>, not hand-curated. Regenerate for new Unicode versions with a single command. NFKC conflicts are excluded automatically.</p>
+          <p>Generated from Unicode's official <code class="inline-chip">confusables.txt</code> and <span class="pn">confusable-vision</span>&rsquo;s measurements, not hand-curated. Regenerate for new Unicode versions with a single command. NFKC conflicts are excluded automatically.</p>
         </div>
         <div class="glass-card insight-card">
           <h3>Defence in depth</h3>
-          <p>The default slug pattern already blocks non-ASCII. The confusable map and mixed-script detection add a second layer for apps that allow Unicode identifiers, or as a safety net if a format regex is misconfigured.</p>
+          <p>The default slug pattern already blocks non-ASCII. The confusable map and mixed-script detection add a second layer for apps that allow Unicode identifiers, or as a safety net if a format regex is misconfigured. Risk scoring still applies to ASCII names: rnicrosoft reads as microsoft, and paypa1 as paypal.</p>
         </div>
       </div>
     </section>
@@ -1717,7 +2025,7 @@
   <footer class="shell">
     <div class="install-bar">
       <code><span class="prefix">$</span> npm install namespace-guard</code>
-      <button class="copy-btn" id="copy-btn" aria-label="Copy install command">Copy</button>
+      <button class="copy-btn" id="copy-btn-footer" aria-label="Copy install command">Copy</button>
     </div>
     <div class="footer-links">
       <a href="https://github.com/paultendo/namespace-guard" target="_blank" rel="noopener">GitHub</a>
@@ -1730,114 +2038,40 @@
   </footer>
 
   <script src="./data/profanity-words.global.js"></script>
-  <script src="./data/confusable-weights.global.js"></script>
   <script type="module">
-    // === namespace-guard playground runtime (v0.14.0-aligned subset) ===
-    var DEFAULT_PATTERN = /^[a-z0-9][a-z0-9-]{1,29}$/;
-    var DEFAULT_MESSAGES = {
-      invalid: "Use 2\u201330 lowercase letters, numbers, or hyphens.",
-      reserved: "That name is reserved. Try another one.",
-      taken: (source) => `That name is already in use.`,
-      purelyNumeric: "Identifiers cannot be purely numeric.",
-    };
-    var SUFFIX_WORDS = ["dev", "io", "app", "hq", "pro", "team", "labs", "hub", "go", "one"];
-    const COMPOSABILITY_VECTOR_SUITE = "nfkc-tr39-divergence-v1";
-    const COMPOSABILITY_VECTOR_COUNT = 31;
+    // namespace-guard playground. Every check runs through the library build in ./lib/ (namespace-guard.mjs and
+    // confusable-weights.mjs, bundled from dist/ by `npm run build:docs-lib`; rerun it after changing src/).
+    // This script only sets up the demo (mock database, toggles) and renders the results.
+    import {
+      createNamespaceGuardWithProfile,
+      createHomoglyphValidator,
+      createInvisibleCharacterValidator,
+      createPredicateValidator,
+      createProfanityValidator,
+      areConfusable,
+      confusableDistance,
+      detectCrossScriptRisk,
+      normalize,
+      CONFUSABLE_MAP,
+      COMPOSABILITY_VECTOR_SUITE,
+      COMPOSABILITY_VECTORS_COUNT,
+      NAMESPACE_PROFILES,
+    } from "./lib/namespace-guard.mjs";
+    import { CONFUSABLE_WEIGHTS } from "./lib/confusable-weights.mjs";
 
-    // Generated from Unicode TR39 confusables.txt + supplemental Latin small capitals
-    // NFKC-conflict entries excluded (NFKC normalisation runs first in the pipeline)
-    var CONFUSABLE_MAP = {
-      "\u00d7":"x","\u00fe":"p","\u0131":"i","\u0184":"b","\u018d":"g","\u0192":"f","\u0196":"l",
-      "\u01a6":"r","\u01a7":"2","\u01b7":"3","\u01bc":"5","\u01bd":"s","\u01bf":"p","\u01c0":"l","\u021c":"3",
-      "\u0222":"8","\u0223":"8","\u0251":"a","\u0261":"g","\u0263":"y","\u0269":"i","\u026a":"i","\u026f":"w",
-      "\u028b":"u","\u028f":"y","\u02db":"i","\u037a":"i","\u037f":"j","\u0391":"a","\u0392":"b","\u0395":"e",
-      "\u0396":"z","\u0397":"h","\u0399":"l","\u039a":"k","\u039c":"m","\u039d":"n","\u039f":"o","\u03a1":"p",
-      "\u03a4":"t","\u03a5":"y","\u03a7":"x","\u03b1":"a","\u03b3":"y","\u03b9":"i","\u03bd":"v","\u03bf":"o",
-      "\u03c1":"p","\u03c3":"o","\u03c5":"u","\u03d2":"y","\u03dc":"f","\u03e8":"2","\u03ec":"6","\u03ed":"o",
-      "\u03f1":"p","\u03f2":"c","\u03f3":"j","\u03f8":"p","\u03f9":"c","\u03fa":"m","\u0405":"s","\u0406":"l",
-      "\u0408":"j","\u0410":"a","\u0412":"b","\u0415":"e","\u0417":"3","\u041a":"k","\u041c":"m","\u041d":"h",
-      "\u041e":"o","\u0420":"p","\u0421":"c","\u0422":"t","\u0423":"y","\u0425":"x","\u042c":"b","\u0430":"a",
-      "\u0431":"6","\u0433":"r","\u0435":"e","\u043e":"o","\u0440":"p","\u0441":"c","\u0443":"y","\u0445":"x",
-      "\u0448":"w","\u0455":"s","\u0456":"i","\u0458":"j","\u0461":"w","\u0474":"v","\u0475":"v","\u04ae":"y",
-      "\u04af":"y","\u04bb":"h","\u04bd":"e","\u04c0":"l","\u04cf":"l","\u04e0":"3","\u0501":"d","\u050c":"g",
-      "\u051b":"q","\u051c":"w","\u051d":"w","\u054d":"u","\u054f":"s","\u0555":"o","\u0561":"w","\u0563":"q",
-      "\u0566":"q","\u0570":"h","\u0578":"n","\u057c":"n","\u057d":"u","\u0581":"g","\u0582":"i","\u0584":"f",
-      "\u0585":"o","\u05c0":"l","\u05d5":"l","\u05d8":"v","\u05df":"l","\u05e1":"o","\u0627":"l","\u0647":"o",
-      "\u0661":"l","\u0665":"o","\u0667":"v","\u06be":"o","\u06c1":"o","\u06d5":"o","\u06f1":"l","\u06f5":"o",
-      "\u06f7":"v","\u07c0":"o","\u07ca":"l","\u0966":"o","\u0969":"3","\u09e6":"o","\u09ea":"8","\u09ed":"9",
-      "\u0a66":"o","\u0a67":"9","\u0a6a":"8","\u0ae6":"o","\u0ae9":"3","\u0b03":"8","\u0b20":"o","\u0b66":"o",
-      "\u0b68":"9","\u0be6":"o","\u0c02":"o","\u0c66":"o","\u0c82":"o","\u0ce6":"o","\u0d02":"o","\u0d1f":"s",
-      "\u0d20":"o","\u0d66":"o","\u0d6d":"9","\u0d82":"o","\u0e50":"o","\u0ed0":"o","\u1004":"c","\u101d":"o",
-      "\u1040":"o","\u105a":"c","\u10e7":"y","\u10ff":"o","\u1200":"u","\u12d0":"o","\u13a0":"d","\u13a1":"r",
-      "\u13a2":"t","\u13a5":"i","\u13a9":"y","\u13aa":"a","\u13ab":"j","\u13ac":"e","\u13b3":"w","\u13b7":"m",
-      "\u13bb":"h","\u13bd":"y","\u13c0":"g","\u13c2":"h","\u13c3":"z","\u13ce":"4","\u13cf":"b","\u13d2":"r",
-      "\u13d4":"w","\u13d5":"s","\u13d9":"v","\u13da":"s","\u13de":"l","\u13df":"c","\u13e2":"p","\u13e6":"k",
-      "\u13e7":"d","\u13ee":"6","\u13f3":"g","\u13f4":"b","\u142f":"v","\u144c":"u","\u146d":"p","\u146f":"d",
-      "\u1472":"b","\u148d":"j","\u14aa":"l","\u14bf":"2","\u1541":"x","\u157c":"h","\u157d":"x","\u1587":"r",
-      "\u15af":"b","\u15b4":"f","\u15c5":"a","\u15de":"d","\u15ea":"d","\u15f0":"m","\u15f7":"b","\u166d":"x",
-      "\u166e":"x","\u16b7":"x","\u16c1":"l","\u16d5":"k","\u16d6":"m","\u17e0":"o","\u1d00":"a","\u1d04":"c",
-      "\u1d05":"d","\u1d07":"e","\u1d0a":"j","\u1d0b":"k","\u1d0d":"m","\u1d0f":"o","\u1d11":"o","\u1d18":"p",
-      "\u1d1b":"t","\u1d1c":"u","\u1d20":"v","\u1d21":"w","\u1d22":"z","\u1d26":"r","\u1d83":"g","\u1d8c":"y",
-      "\u1e9d":"f","\u1eff":"y","\u1fbe":"i","\u212e":"e","\u213d":"y",
-      "\u2223":"l","\u2228":"v","\u222a":"u","\u22a4":"t","\u22c1":"v","\u22c3":"u","\u22ff":"e","\u2373":"i",
-      "\u2374":"p","\u237a":"a","\u23fd":"l","\u2573":"x","\u27d9":"t","\u292b":"x","\u292c":"x","\u2a2f":"x",
-      "\u2c82":"b","\u2c85":"r","\u2c8e":"h","\u2c92":"l","\u2c93":"i","\u2c94":"k","\u2c98":"m","\u2c9a":"n",
-      "\u2c9c":"3","\u2c9e":"o","\u2c9f":"o","\u2ca2":"p","\u2ca3":"p","\u2ca4":"c","\u2ca5":"c","\u2ca6":"t",
-      "\u2ca8":"y","\u2ca9":"y","\u2cac":"x","\u2cbd":"w","\u2cc4":"3","\u2cca":"9","\u2ccb":"9","\u2ccc":"3",
-      "\u2cce":"p","\u2ccf":"p","\u2cd0":"l","\u2cd2":"6","\u2cd3":"6","\u2cdc":"6","\u2d38":"v","\u2d39":"e",
-      "\u2d4f":"l","\u2d54":"o","\u2d55":"q","\u2d5d":"x","\u3007":"o","\ua4d0":"b","\ua4d1":"p","\ua4d2":"d",
-      "\ua4d3":"d","\ua4d4":"t","\ua4d6":"g","\ua4d7":"k","\ua4d9":"j","\ua4da":"c","\ua4dc":"z","\ua4dd":"f",
-      "\ua4df":"m","\ua4e0":"n","\ua4e1":"l","\ua4e2":"s","\ua4e3":"r","\ua4e6":"v","\ua4e7":"h","\ua4ea":"w",
-      "\ua4eb":"x","\ua4ec":"y","\ua4ee":"a","\ua4f0":"e","\ua4f2":"l","\ua4f3":"o","\ua4f4":"u","\ua644":"2",
-      "\ua647":"i","\ua6df":"v","\ua6ef":"2","\ua731":"s","\ua75a":"2","\ua76a":"3","\ua76e":"9","\ua798":"f",
-      "\ua799":"f","\ua79f":"u","\ua7ab":"3","\ua7b2":"j","\ua7b3":"x","\ua7b4":"b","\uab32":"e","\uab35":"f",
-      "\uab3d":"o","\uab47":"r","\uab48":"r","\uab4e":"u","\uab52":"u","\uab5a":"y","\uab75":"i","\uab81":"r",
-      "\uab83":"w","\uab93":"z","\uaba9":"v","\uabaa":"s","\uabaf":"c","\ufba6":"o","\ufba7":"o","\ufba8":"o",
-      "\ufba9":"o","\ufbaa":"o","\ufbab":"o","\ufbac":"o","\ufbad":"o","\ufe8d":"l","\ufe8e":"l","\ufee9":"o",
-      "\ufeea":"o","\ufeeb":"o","\ufeec":"o","\uffe8":"l",
-      "\u{10282}":"b","\u{10286}":"e","\u{10287}":"f","\u{1028a}":"l","\u{10290}":"x","\u{10292}":"o",
-      "\u{10295}":"p","\u{10296}":"s","\u{10297}":"t","\u{102a0}":"a","\u{102a1}":"b","\u{102a2}":"c",
-      "\u{102a5}":"f","\u{102ab}":"o","\u{102b0}":"m","\u{102b1}":"t","\u{102b2}":"y","\u{102b4}":"x",
-      "\u{102cf}":"h","\u{102f5}":"z","\u{10301}":"b","\u{10302}":"c","\u{10309}":"l","\u{10311}":"m",
-      "\u{10315}":"t","\u{10317}":"x","\u{1031a}":"8","\u{10320}":"l","\u{10322}":"x","\u{10404}":"o",
-      "\u{10415}":"c","\u{1041b}":"l","\u{10420}":"s","\u{1042c}":"o","\u{1043d}":"c","\u{10448}":"s",
-      "\u{104b4}":"r","\u{104c2}":"o","\u{104ce}":"u","\u{104d2}":"7","\u{104ea}":"o","\u{104f6}":"u",
-      "\u{10513}":"n","\u{10516}":"o","\u{10518}":"k","\u{1051c}":"c","\u{1051d}":"v","\u{10525}":"f",
-      "\u{10526}":"l","\u{10527}":"x","\u{114d0}":"o","\u{11706}":"v","\u{1170a}":"w","\u{1170e}":"w",
-      "\u{1170f}":"w","\u{118a0}":"v","\u{118a2}":"f","\u{118a3}":"l","\u{118a4}":"y","\u{118a6}":"e",
-      "\u{118a9}":"z","\u{118ac}":"9","\u{118ae}":"e","\u{118af}":"4","\u{118b2}":"l","\u{118b5}":"o",
-      "\u{118b8}":"u","\u{118bb}":"5","\u{118bc}":"t","\u{118c0}":"v","\u{118c1}":"s","\u{118c2}":"f",
-      "\u{118c3}":"i","\u{118c4}":"z","\u{118c6}":"7","\u{118c8}":"o","\u{118ca}":"3","\u{118cc}":"9",
-      "\u{118d5}":"6","\u{118d6}":"9","\u{118d7}":"o","\u{118d8}":"u","\u{118dc}":"y","\u{118e0}":"o",
-      "\u{118e5}":"z","\u{118e6}":"w","\u{118e9}":"c","\u{118ec}":"x","\u{118ef}":"w","\u{118f2}":"c",
-      "\u{11dda}":"l","\u{11de0}":"o","\u{11de1}":"l","\u{16eaa}":"l","\u{16eb6}":"b","\u{16f08}":"v",
-      "\u{16f0a}":"t","\u{16f16}":"l","\u{16f28}":"l","\u{16f35}":"r","\u{16f3a}":"s","\u{16f3b}":"3",
-      "\u{16f40}":"a","\u{16f42}":"u","\u{16f43}":"y","\u{1d206}":"3","\u{1d20d}":"v","\u{1d212}":"7",
-      "\u{1d213}":"f","\u{1d216}":"r","\u{1d22a}":"l","\u{1d6a4}":"i",
-      "\u{1d6a8}":"a","\u{1d6a9}":"b","\u{1d6ac}":"e","\u{1d6ad}":"z","\u{1d6ae}":"h","\u{1d6b0}":"l",
-      "\u{1d6b1}":"k","\u{1d6b3}":"m","\u{1d6b4}":"n","\u{1d6b6}":"o","\u{1d6b8}":"p","\u{1d6bb}":"t",
-      "\u{1d6bc}":"y","\u{1d6be}":"x","\u{1d6c2}":"a","\u{1d6c4}":"y","\u{1d6ca}":"i","\u{1d6ce}":"v",
-      "\u{1d6d0}":"o","\u{1d6d2}":"p","\u{1d6d4}":"o","\u{1d6d6}":"u","\u{1d6e0}":"p","\u{1d6e2}":"a",
-      "\u{1d6e3}":"b","\u{1d6e6}":"e","\u{1d6e7}":"z","\u{1d6e8}":"h","\u{1d6ea}":"l","\u{1d6eb}":"k",
-      "\u{1d6ed}":"m","\u{1d6ee}":"n","\u{1d6f0}":"o","\u{1d6f2}":"p","\u{1d6f5}":"t","\u{1d6f6}":"y",
-      "\u{1d6f8}":"x","\u{1d6fc}":"a","\u{1d6fe}":"y","\u{1d704}":"i","\u{1d708}":"v","\u{1d70a}":"o",
-      "\u{1d70c}":"p","\u{1d70e}":"o","\u{1d710}":"u","\u{1d71a}":"p","\u{1d71c}":"a","\u{1d71d}":"b",
-      "\u{1d720}":"e","\u{1d721}":"z","\u{1d722}":"h","\u{1d724}":"l","\u{1d725}":"k","\u{1d727}":"m",
-      "\u{1d728}":"n","\u{1d72a}":"o","\u{1d72c}":"p","\u{1d72f}":"t","\u{1d730}":"y","\u{1d732}":"x",
-      "\u{1d736}":"a","\u{1d738}":"y","\u{1d73e}":"i","\u{1d742}":"v","\u{1d744}":"o","\u{1d746}":"p",
-      "\u{1d748}":"o","\u{1d74a}":"u","\u{1d754}":"p","\u{1d756}":"a","\u{1d757}":"b","\u{1d75a}":"e",
-      "\u{1d75b}":"z","\u{1d75c}":"h","\u{1d75e}":"l","\u{1d75f}":"k","\u{1d761}":"m","\u{1d762}":"n",
-      "\u{1d764}":"o","\u{1d766}":"p","\u{1d769}":"t","\u{1d76a}":"y","\u{1d76c}":"x","\u{1d770}":"a",
-      "\u{1d772}":"y","\u{1d778}":"i","\u{1d77c}":"v","\u{1d77e}":"o","\u{1d780}":"p","\u{1d782}":"o",
-      "\u{1d784}":"u","\u{1d78e}":"p","\u{1d790}":"a","\u{1d791}":"b","\u{1d794}":"e","\u{1d795}":"z",
-      "\u{1d796}":"h","\u{1d798}":"l","\u{1d799}":"k","\u{1d79b}":"m","\u{1d79c}":"n","\u{1d79e}":"o",
-      "\u{1d7a0}":"p","\u{1d7a3}":"t","\u{1d7a4}":"y","\u{1d7a6}":"x","\u{1d7aa}":"a","\u{1d7ac}":"y",
-      "\u{1d7b2}":"i","\u{1d7b6}":"v","\u{1d7b8}":"o","\u{1d7ba}":"p","\u{1d7bc}":"o","\u{1d7be}":"u",
-      "\u{1d7c8}":"p","\u{1d7ca}":"f","\u{1e8c7}":"l","\u{1e8cb}":"8","\u{1ee00}":"l","\u{1ee24}":"o",
-      "\u{1ee64}":"o","\u{1ee80}":"l","\u{1ee84}":"o","\u{1f74c}":"c","\u{1f768}":"t",
-    };
+    const LOOKALIKE_CHAR_COUNT = Object.keys(CONFUSABLE_MAP).length;
+    const WEIGHT_PAIR_COUNT = Object.values(CONFUSABLE_WEIGHTS)
+      .reduce((sum, targets) => sum + Object.keys(targets).length, 0);
+    const PROTECTED_TARGETS = ["paypal", "microsoft", "github", "vercel", "namespace-guard", "support", "admin"];
 
-    // Script name lookup for rich homoglyph detail
+    function formatCount(n) {
+      return n.toLocaleString("en-GB");
+    }
+
+    // === Display helpers for the detail under a result ===
+    const LETTER_RE = /\p{L}/u;
+    const LATIN_RE = /\p{Script=Latin}/u;
+
     function getScriptName(cp) {
       if (cp >= 0x0370 && cp <= 0x03FF) return "Greek";
       if (cp >= 0x0400 && cp <= 0x052F) return "Cyrillic";
@@ -1875,1003 +2109,80 @@
       if (cp >= 0xA4D0 && cp <= 0xA4FF) return "Lisu";
       if (cp >= 0xA6A0 && cp <= 0xA6FF) return "Bamum";
       if (cp >= 0xAB70 && cp <= 0xABBF) return "Cherokee";
-      return "non-Latin";
+      return LATIN_RE.test(String.fromCodePoint(cp)) ? "Latin" : "non-Latin";
     }
 
-    function createHomoglyphValidator(options) {
-      const map = { ...CONFUSABLE_MAP, ...(options?.additionalMappings ?? {}) };
-      const chars = Object.keys(map);
-      const re = new RegExp("[" + chars.map(c => c.replace(/[\\\]^-]/g, "\\$&")).join("") + "]");
-      const checkConfusables = options?.checkConfusables ?? true;
-      const mixed = options?.rejectMixedScript ?? false;
-      const nonLatinRe = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
-      return async (value) => {
-        // Check confusable map - find the first offending character
-        if (checkConfusables && re.test(value)) {
-          for (const ch of value) {
-            if (map[ch]) {
-              const cp = ch.codePointAt(0);
-              const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
-              const script = getScriptName(cp);
-              return {
-                available: false,
-                message: `Contains ${script} "${ch}" (${hex}) which looks like Latin "${map[ch]}".`,
-                _confusableChar: ch,
-                _confusableTarget: map[ch],
-                _confusableScript: script,
-              };
-            }
-          }
-        }
-        // Check mixed-script
-        if (mixed) {
-          const hasLatin = /[a-zA-Z]/.test(value);
-          const hasNonLatin = nonLatinRe.test(value);
-          if (hasLatin && hasNonLatin) {
-            // Find the first non-Latin char for detail
-            for (const ch of value) {
-              const cp = ch.codePointAt(0);
-              if (nonLatinRe.test(ch)) {
-                const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
-                const script = getScriptName(cp);
-                return {
-                  available: false,
-                  message: `Mixes Latin with ${script} characters - possible spoofing attempt.`,
-                  _mixedScriptChar: ch,
-                  _mixedScript: script,
-                };
-              }
-            }
-            return { available: false, message: "Mixes Latin with non-Latin characters." };
-          }
-        }
-        return null;
-      };
+    function codePointLabel(ch) {
+      return "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
     }
 
-    const PROFANITY_SUBSTITUTE_MAP_BALANCED = {
-      "0": ["o"],
-      "1": ["i"],
-      "3": ["e"],
-      "4": ["a"],
-      "5": ["s"],
-      "7": ["t"],
-      "@": ["a"],
-      "$": ["s"],
-      "+": ["t"],
-      "!": ["i"],
-      "|": ["i"],
-    };
-    const PROFANITY_SUBSTITUTE_MAP_AGGRESSIVE = {
-      ...PROFANITY_SUBSTITUTE_MAP_BALANCED,
-      "1": ["i", "l"],
-      "2": ["z"],
-      "6": ["g"],
-      "8": ["b"],
-      "9": ["g"],
-      "!": ["i", "l"],
-      "|": ["i", "l"],
-    };
-    const ASCII_ALNUM_RE = /^[a-z0-9]$/;
-    const NON_ASCII_ALNUM_RE = /[^a-z0-9]+/g;
-
-    function escapeRegex(value) {
-      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // The name as typed: NFKC with case kept. The library looks characters up in this form, since a capital and
+    // its lowercase form can look like different letters.
+    function typedForm(value) {
+      return value.trim().normalize("NFKC").replace(/^@+/, "");
     }
 
-    function buildProfanityFoldCandidates(value, map, substituteMap, maxVariants) {
-      const skeletonized = skeleton(value, map);
-      let candidates = [""];
-
-      for (const ch of skeletonized) {
-        const options = new Set();
-        if (ASCII_ALNUM_RE.test(ch)) {
-          options.add(ch);
-        } else {
-          options.add("");
-        }
-
-        const substitutes = substituteMap[ch] ?? [];
-        for (const substitute of substitutes) options.add(substitute);
-        if (options.size === 0) options.add("");
-
-        const next = [];
-        const seen = new Set();
-        for (const prefix of candidates) {
-          for (const option of options) {
-            const candidate = prefix + option;
-            if (seen.has(candidate)) continue;
-            seen.add(candidate);
-            next.push(candidate);
-            if (next.length >= maxVariants) break;
-          }
-          if (next.length >= maxVariants) break;
-        }
-        if (next.length > 0) candidates = next;
+    // The first character listed in CONFUSABLE_MAP, the map createHomoglyphValidator() rejects names by
+    function findLookalike(value) {
+      for (const ch of typedForm(value)) {
+        const target = CONFUSABLE_MAP[ch] ?? CONFUSABLE_MAP[ch.toLowerCase()];
+        if (target) return { char: ch, target };
       }
-
-      return Array.from(
-        new Set(
-          candidates
-            .map((candidate) => candidate.replace(NON_ASCII_ALNUM_RE, ""))
-            .filter(Boolean)
-        )
-      );
+      return null;
     }
 
-    function createProfanityValidator(words, options = {}) {
-      const message = options.message ?? "That handle is blocked by moderation policy.";
-      const checkSubstrings = options.checkSubstrings ?? true;
-      const mode = options.mode ?? "evasion";
-      const variantProfile = options.variantProfile === "aggressive" ? "aggressive" : "balanced";
-      const substituteMap =
-        variantProfile === "aggressive"
-          ? PROFANITY_SUBSTITUTE_MAP_AGGRESSIVE
-          : PROFANITY_SUBSTITUTE_MAP_BALANCED;
-      const foldMap = options.map ?? CONFUSABLE_MAP;
-      const minSubstringLength = Math.max(1, Math.floor(options.minSubstringLength ?? 4));
-      const maxFoldVariants = Math.max(1, Math.floor(options.maxFoldVariants ?? 64));
-
-      const rawWords = words.map((w) => normalize(w)).filter(Boolean);
-      const wordSet = new Set(rawWords);
-
-      const substringWords = checkSubstrings
-        ? Array.from(wordSet).filter((w) => w.length >= minSubstringLength)
-        : [];
-      const substringRegex = substringWords.length > 0
-        ? new RegExp(substringWords.map((w) => escapeRegex(w)).join("|"))
-        : null;
-
-      const foldedExactWordSet = mode === "evasion"
-        ? new Set(
-          rawWords.flatMap((word) =>
-            buildProfanityFoldCandidates(
-              word,
-              foldMap,
-              substituteMap,
-              Math.min(16, maxFoldVariants)
-            )
-          )
-        )
-        : null;
-
-      const foldedSubstringWordSet = mode === "evasion" && checkSubstrings
-        ? new Set(
-          rawWords
-            .filter((word) => word.length >= minSubstringLength)
-            .flatMap((word) =>
-              buildProfanityFoldCandidates(
-                word,
-                foldMap,
-                substituteMap,
-                Math.min(16, maxFoldVariants)
-              )
-            )
-        )
-        : null;
-
-      const foldedSubstringRegex = mode === "evasion" &&
-        checkSubstrings &&
-        foldedSubstringWordSet &&
-        foldedSubstringWordSet.size > 0
-        ? new RegExp(Array.from(foldedSubstringWordSet).map((w) => escapeRegex(w)).join("|"))
-        : null;
-
-      return async (value) => {
-        const normalized = normalize(value);
-
-        if (wordSet.has(normalized)) {
-          return { available: false, message };
-        }
-        if (substringRegex && substringRegex.test(normalized)) {
-          return { available: false, message };
-        }
-
-        if (mode === "evasion" && foldedExactWordSet && foldedExactWordSet.size > 0) {
-          const foldedCandidates = buildProfanityFoldCandidates(
-            normalized,
-            foldMap,
-            substituteMap,
-            maxFoldVariants
-          );
-          if (foldedCandidates.some((candidate) => foldedExactWordSet.has(candidate))) {
-            return { available: false, message };
-          }
-          if (
-            foldedSubstringRegex &&
-            foldedCandidates.some((candidate) => foldedSubstringRegex.test(candidate))
-          ) {
-            return { available: false, message };
-          }
-        }
-
-        return null;
-      };
+    // The first letter from another script in a name that also has Latin letters
+    function findMixedScriptChar(value) {
+      let hasLatin = false;
+      let other = null;
+      for (const ch of value) {
+        if (!LETTER_RE.test(ch)) continue;
+        if (LATIN_RE.test(ch)) hasLatin = true;
+        else if (!other) other = ch;
+      }
+      return hasLatin ? other : null;
     }
 
+    // === Profanity list for the demo (docs/data/profanity-words.*) ===
     const DEMO_PROFANITY_WORDS_URL = "./data/profanity-words.json";
     const DEMO_PROFANITY_GLOBAL_KEY = "__NG_PROFANITY_WORDS__";
+    // Names, places and words that contain a listed word (PROFANITY_ALLOWLIST_EN), so Scunthorpe passes
+    const DEMO_PROFANITY_ALLOWLIST_URL = "./data/profanity-allowlist.json";
+    const DEMO_PROFANITY_ALLOWLIST_GLOBAL_KEY = "__NG_PROFANITY_ALLOWLIST__";
     let demoProfanityWords = [];
+    let demoProfanityAllowlist = [];
     let profanityWordCount = 0;
     let profanityListReady = false;
 
-    var DEFAULT_PROTECTED_TOKENS = [
-      "admin", "administrator", "support", "help", "security", "billing", "payments",
-      "staff", "moderator", "root", "system", "api", "www", "mail", "login",
-    ];
-
-    var NAMESPACE_PROFILES = {
-      "consumer-handle": {
-        pattern: /^[a-z0-9][a-z0-9-]{1,29}$/,
-        normalizeUnicode: true,
-        allowPurelyNumeric: false,
-        risk: {
-          includeReserved: true,
-          protect: [],
-          maxMatches: 3,
-          warnThreshold: 45,
-          blockThreshold: 70,
-        },
-      },
-      "org-slug": {
-        pattern: /^[a-z0-9][a-z0-9-]{1,39}$/,
-        normalizeUnicode: true,
-        allowPurelyNumeric: false,
-        risk: {
-          includeReserved: true,
-          protect: [],
-          maxMatches: 5,
-          warnThreshold: 40,
-          blockThreshold: 65,
-        },
-      },
-      "developer-id": {
-        pattern: /^[a-z0-9][a-z0-9-]{1,49}$/,
-        normalizeUnicode: true,
-        allowPurelyNumeric: true,
-        risk: {
-          includeReserved: true,
-          protect: [],
-          maxMatches: 5,
-          warnThreshold: 35,
-          blockThreshold: 60,
-        },
-      },
-    };
-
-    var NON_LATIN_RE = /[\u0370-\u03FF\u0400-\u04FF\u0500-\u052F\u0530-\u058F\u0590-\u05FF\u0600-\u074F\u0900-\u0DFF\u0E00-\u0EFF\u1000-\u109F\u10A0-\u10FF\u1200-\u137F\u13A0-\u13FF\u1400-\u167F\u16A0-\u16FF\u1780-\u17FF\u2C80-\u2CFF\u2D30-\u2D7F\uA4D0-\uA4FF\uA6A0-\uA6FF\uAB70-\uABBF]/;
-    var DEFAULT_IGNORABLE_RE = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF0-\uFFF8]/gu;
-    var BIDI_CONTROL_RE = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
-    var COMBINING_MARK_RE = /\p{M}/gu;
-
-    function normalize(raw, options = {}) {
-      const trimmed = raw.trim();
-      const nfkc = (options.unicode ?? true) ? trimmed.normalize("NFKC") : trimmed;
-      return nfkc.toLowerCase().replace(/^@+/, "");
-    }
-
-    function applyDemoProfanityWords(payload) {
-      demoProfanityWords = uniqueNonEmptyStrings(
-        payload.map((word) => normalize(String(word)))
-      );
+    function applyDemoProfanityWords(payload, allowlist) {
+      demoProfanityWords = [...new Set(payload.map((word) => normalize(String(word))).filter(Boolean))];
+      demoProfanityAllowlist = Array.isArray(allowlist) ? allowlist.map(String) : [];
       profanityWordCount = demoProfanityWords.length;
       profanityListReady = true;
     }
 
     async function loadDemoProfanityWords() {
       const preloaded = globalThis[DEMO_PROFANITY_GLOBAL_KEY];
-      if (Array.isArray(preloaded) && preloaded.length > 0) {
-        applyDemoProfanityWords(preloaded);
+      const preloadedAllowlist = globalThis[DEMO_PROFANITY_ALLOWLIST_GLOBAL_KEY];
+      if (Array.isArray(preloaded) && preloaded.length > 0 && Array.isArray(preloadedAllowlist)) {
+        applyDemoProfanityWords(preloaded, preloadedAllowlist);
         return;
       }
       try {
-        const response = await fetch(DEMO_PROFANITY_WORDS_URL, { cache: "no-store" });
+        const [response, allowlistResponse] = await Promise.all([
+          fetch(DEMO_PROFANITY_WORDS_URL, { cache: "no-store" }),
+          fetch(DEMO_PROFANITY_ALLOWLIST_URL, { cache: "no-store" }),
+        ]);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!Array.isArray(payload)) throw new Error("Expected an array of words.");
-
-        applyDemoProfanityWords(payload);
+        applyDemoProfanityWords(payload, allowlistResponse.ok ? await allowlistResponse.json() : []);
       } catch (error) {
         console.warn("Could not load playground profanity list.", error);
         demoProfanityWords = [];
         profanityWordCount = 0;
         profanityListReady = true;
       }
-    }
-
-    function buildReservedMap(reserved) {
-      const map = new Map();
-      if (!reserved) return map;
-      if (reserved instanceof Set) {
-        for (const name of reserved) map.set(name, "default");
-      } else if (Array.isArray(reserved)) {
-        for (const name of reserved) map.set(name, "default");
-      } else {
-        for (const [category, names] of Object.entries(reserved)) {
-          for (const name of names) map.set(name, category);
-        }
-      }
-      return map;
-    }
-
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    function uniqueNonEmptyStrings(values) {
-      const seen = new Set();
-      const result = [];
-      for (const value of values) {
-        if (!value) continue;
-        if (seen.has(value)) continue;
-        seen.add(value);
-        result.push(value);
-      }
-      return result;
-    }
-
-    function hasMixedScripts(value) {
-      return /[a-z]/i.test(value) && NON_LATIN_RE.test(value);
-    }
-
-    function countDefaultIgnorables(value) {
-      DEFAULT_IGNORABLE_RE.lastIndex = 0;
-      const matches = value.match(DEFAULT_IGNORABLE_RE);
-      return matches ? matches.length : 0;
-    }
-
-    function countBidiControls(value) {
-      BIDI_CONTROL_RE.lastIndex = 0;
-      const matches = value.match(BIDI_CONTROL_RE);
-      return matches ? matches.length : 0;
-    }
-
-    function countCombiningMarks(value) {
-      COMBINING_MARK_RE.lastIndex = 0;
-      const matches = value.match(COMBINING_MARK_RE);
-      return matches ? matches.length : 0;
-    }
-
-    function createInvisibleCharacterValidator(options = {}) {
-      const rejectDefaultIgnorables = options.rejectDefaultIgnorables ?? true;
-      const rejectBidiControls = options.rejectBidiControls ?? true;
-      const rejectCombiningMarks = options.rejectCombiningMarks ?? false;
-      const message =
-        options.message ??
-        "Contains invisible or direction-control Unicode characters.";
-      return async (value) => {
-        const normalized = normalize(value);
-        if (rejectDefaultIgnorables && countDefaultIgnorables(normalized) > 0) {
-          return { available: false, message };
-        }
-        if (rejectBidiControls && countBidiControls(normalized) > 0) {
-          return { available: false, message };
-        }
-        if (rejectCombiningMarks && countCombiningMarks(normalized) > 0) {
-          return { available: false, message };
-        }
-        return null;
-      };
-    }
-
-    function countConfusableChars(value, map) {
-      let confusableCount = 0;
-      let divergenceCount = 0;
-      for (const ch of value) {
-        if (map[ch]) {
-          confusableCount += 1;
-          if (ch.normalize("NFKC").toLowerCase() !== map[ch]) divergenceCount += 1;
-        }
-      }
-      return { confusableCount, divergenceCount };
-    }
-
-    function skeleton(value, map) {
-      let output = "";
-      const normalized = normalize(value);
-      for (const ch of normalized) output += map[ch] ?? ch;
-      return output;
-    }
-
-    function levenshteinDistance(a, b) {
-      if (a === b) return 0;
-      if (!a.length) return b.length;
-      if (!b.length) return a.length;
-      const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-      const curr = new Array(b.length + 1).fill(0);
-      for (let i = 1; i <= a.length; i++) {
-        curr[0] = i;
-        for (let j = 1; j <= b.length; j++) {
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          curr[j] = Math.min(
-            prev[j] + 1,
-            curr[j - 1] + 1,
-            prev[j - 1] + cost
-          );
-        }
-        for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
-      }
-      return prev[b.length];
-    }
-
-    function lookupWeight(from, to, weights, context) {
-      if (!weights) return undefined;
-      const w = weights[from]?.[to] ?? weights[to]?.[from];
-      if (!w) return undefined;
-      if (context === "identifier" && !w.xidContinue) return undefined;
-      if (context === "domain" && !w.idnaPvalid) return undefined;
-      return w;
-    }
-
-    function scoreSimilarityRisk(identifier, target, map) {
-      const idSkeleton = skeleton(identifier, map);
-      const targetSkeleton = skeleton(target, map);
-      const distance = levenshteinDistance(idSkeleton, targetSkeleton);
-      const maxLen = Math.max(idSkeleton.length, targetSkeleton.length, 1);
-      const similarity = 1 - distance / maxLen;
-      let score = Math.round(similarity * 78);
-      const skeletonEqual = idSkeleton === targetSkeleton;
-      if (skeletonEqual) score = Math.max(score, 92);
-      if (distance === 1) score += 12;
-      else if (distance === 2) score += 6;
-      const chainDepth = distance;
-      if (chainDepth >= 2) score += Math.min(8, chainDepth * 2);
-
-      // Apply measured visual weights when enabled
-      let weightedPairs = 0;
-      if (weightsEnabled && CONFUSABLE_WEIGHTS) {
-        const idChars = [...identifier];
-        const tgtChars = [...target];
-        const len = Math.min(idChars.length, tgtChars.length);
-        for (let i = 0; i < len; i++) {
-          if (idChars[i] === tgtChars[i]) continue;
-          const w = lookupWeight(idChars[i], tgtChars[i], CONFUSABLE_WEIGHTS, currentContext);
-          if (w) {
-            weightedPairs++;
-            // Lower cost = more visually similar = higher risk boost
-            const boost = Math.round((1 - w.cost) * 15);
-            score += boost;
-            // Novel pairs (not in TR39 map but found by visual measurement) get extra signal
-            if (!w.tr39Allowed && !map[idChars[i]]) {
-              score += 5;
-            }
-          }
-        }
-      }
-
-      return {
-        score: clamp(score, 0, 100),
-        distance,
-        chainDepth,
-        skeletonEqual,
-        weightedPairs,
-      };
-    }
-
-    function levelForScore(score, warnThreshold, blockThreshold) {
-      if (score >= blockThreshold) return "high";
-      if (score >= warnThreshold) return "medium";
-      return "low";
-    }
-
-    function actionForScore(score, warnThreshold, blockThreshold) {
-      if (score >= blockThreshold) return "block";
-      if (score >= warnThreshold) return "warn";
-      return "allow";
-    }
-
-    // Strategy factories
-    function extractMaxLength(pattern) {
-      const src = pattern.source;
-      const m = src.match(/\{(\d+),(\d+)\}/);
-      if (m) return parseInt(m[2], 10) + 1;
-      return null;
-    }
-
-    function createSequentialStrategy(pattern) {
-      const maxLen = extractMaxLength(pattern);
-      return (identifier) => {
-        const candidates = [];
-        for (let i = 1; i <= 9; i++) {
-          const hyphenated = `${identifier}-${i}`;
-          const compact = `${identifier}${i}`;
-          if (!maxLen || hyphenated.length <= maxLen) candidates.push(hyphenated);
-          if (!maxLen || compact.length <= maxLen) candidates.push(compact);
-        }
-        return candidates;
-      };
-    }
-
-    function createRandomDigitsStrategy(pattern) {
-      const maxLen = extractMaxLength(pattern);
-      return (identifier) => {
-        const candidates = [];
-        for (let i = 0; i < 15; i++) {
-          const digits = String(Math.floor(100 + Math.random() * 9900));
-          const candidate = `${identifier}-${digits}`;
-          if ((!maxLen || candidate.length <= maxLen) && pattern.test(candidate)) {
-            candidates.push(candidate);
-          }
-        }
-        return candidates;
-      };
-    }
-
-    function createSuffixWordsStrategy(pattern) {
-      const maxLen = extractMaxLength(pattern);
-      return (identifier) => {
-        return SUFFIX_WORDS
-          .map(word => `${identifier}-${word}`)
-          .filter(c => (!maxLen || c.length <= maxLen) && pattern.test(c));
-      };
-    }
-
-    function createShortRandomStrategy(pattern) {
-      const maxLen = extractMaxLength(pattern);
-      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-      return (identifier) => {
-        const candidates = [];
-        for (let i = 0; i < 10; i++) {
-          let suffix = "";
-          for (let j = 0; j < 3; j++) suffix += chars[Math.floor(Math.random() * chars.length)];
-          const candidate = `${identifier}-${suffix}`;
-          if ((!maxLen || candidate.length <= maxLen) && pattern.test(candidate)) {
-            candidates.push(candidate);
-          }
-        }
-        return candidates;
-      };
-    }
-
-    function createScrambleStrategy(pattern) {
-      return (identifier) => {
-        const seen = new Set();
-        const candidates = [];
-        const chars = identifier.split("");
-        for (let i = 0; i < chars.length - 1; i++) {
-          if (chars[i] === chars[i + 1]) continue;
-          const swapped = [...chars];
-          [swapped[i], swapped[i + 1]] = [swapped[i + 1], swapped[i]];
-          const candidate = swapped.join("");
-          if (!seen.has(candidate) && candidate !== identifier && pattern.test(candidate)) {
-            seen.add(candidate);
-            candidates.push(candidate);
-          }
-        }
-        return candidates;
-      };
-    }
-
-    function createSimilarStrategy(pattern) {
-      const maxLen = extractMaxLength(pattern) ?? 30;
-      const nearby = {
-        a: "sqwz", b: "vngh", c: "xdfv", d: "sfce", e: "wrd", f: "dgcv",
-        g: "fhtb", h: "gjyn", i: "uko", j: "hknm", k: "jli", l: "kop",
-        m: "njk", n: "bmhj", o: "ipl", p: "ol", q: "wa", r: "eft",
-        s: "adwz", t: "rgy", u: "yij", v: "cfgb", w: "qase", x: "zsdc",
-        y: "tuh", z: "xas",
-        "0": "19", "1": "02", "2": "13", "3": "24", "4": "35",
-        "5": "46", "6": "57", "7": "68", "8": "79", "9": "80",
-      };
-      const prefixes = ["the", "my", "x", "i"];
-      const suffixes = ["x", "o", "i", "z"];
-      return (identifier) => {
-        const seen = new Set();
-        const candidates = [];
-        function add(c) {
-          if (c.length >= 2 && c.length <= maxLen && c !== identifier && pattern.test(c) && !seen.has(c)) {
-            seen.add(c);
-            candidates.push(c);
-          }
-        }
-        for (let i = 0; i < identifier.length; i++) {
-          add(identifier.slice(0, i) + identifier.slice(i + 1));
-        }
-        for (let i = 0; i < identifier.length; i++) {
-          const ch = identifier[i];
-          const neighbours = nearby[ch] ?? "";
-          for (const n of neighbours) {
-            add(identifier.slice(0, i) + n + identifier.slice(i + 1));
-          }
-        }
-        for (const p of prefixes) add(p + identifier);
-        for (const s of suffixes) add(identifier + s);
-        return candidates;
-      };
-    }
-
-    function createStrategy(name, pattern) {
-      switch (name) {
-        case "sequential": return createSequentialStrategy(pattern);
-        case "random-digits": return createRandomDigitsStrategy(pattern);
-        case "suffix-words": return createSuffixWordsStrategy(pattern);
-        case "short-random": return createShortRandomStrategy(pattern);
-        case "scramble": return createScrambleStrategy(pattern);
-        case "similar": return createSimilarStrategy(pattern);
-        default: return createSequentialStrategy(pattern);
-      }
-    }
-
-    function resolveGenerator(suggest, pattern) {
-      if (suggest?.generate) return suggest.generate;
-      const strategyInput = suggest?.strategy ?? ["sequential", "random-digits"];
-      if (typeof strategyInput === "function") return strategyInput;
-      const names = Array.isArray(strategyInput) ? strategyInput : [strategyInput];
-      const generators = names.map(name => createStrategy(name, pattern));
-      return (identifier) => {
-        const lists = generators.map(g => g(identifier));
-        const result = [];
-        const maxLen = Math.max(...lists.map(l => l.length));
-        for (let i = 0; i < maxLen; i++) {
-          for (const list of lists) {
-            if (i < list.length) result.push(list[i]);
-          }
-        }
-        return result;
-      };
-    }
-
-    function createNamespaceGuard(config, adapter) {
-      const pattern = config.pattern ?? DEFAULT_PATTERN;
-      const normalizeUnicode = config.normalizeUnicode ?? true;
-      const normalizeInput = (value) => normalize(value, { unicode: normalizeUnicode });
-      const configMessages = config.messages ?? {};
-      const defaultReservedMsg = DEFAULT_MESSAGES.reserved;
-      const invalidMsg = configMessages.invalid ?? DEFAULT_MESSAGES.invalid;
-      const takenMsg = configMessages.taken ?? DEFAULT_MESSAGES.taken;
-      const validators = config.validators ?? [];
-      const allowPurelyNumeric = config.allowPurelyNumeric ?? true;
-      const purelyNumericMsg = configMessages.purelyNumeric ?? DEFAULT_MESSAGES.purelyNumeric;
-      const riskConfig = {
-        includeReserved: true,
-        protect: [],
-        maxMatches: 3,
-        warnThreshold: 45,
-        blockThreshold: 70,
-        ...(config.risk ?? {}),
-      };
-
-      const rawReservedMap = buildReservedMap(config.reserved);
-      const reservedMap = new Map();
-      for (const [name, category] of rawReservedMap.entries()) {
-        reservedMap.set(normalizeInput(name), category);
-      }
-
-      function getReservedMessage(category) {
-        const rm = configMessages.reserved;
-        if (typeof rm === "string") return rm;
-        if (rm && typeof rm === "object") return rm[category] ?? defaultReservedMsg;
-        return defaultReservedMsg;
-      }
-
-      function validateFormat(identifier) {
-        const normalized = normalizeInput(identifier);
-        if (!pattern.test(normalized)) return invalidMsg;
-        if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) return purelyNumericMsg;
-        if (reservedMap.has(normalized)) return getReservedMessage(reservedMap.get(normalized));
-        return null;
-      }
-
-      async function checkDbOnly(value, scope) {
-        const checks = config.sources.map(async (source) => {
-          const existing = await adapter.findOne(source, value);
-          if (!existing) return null;
-          if (source.scopeKey) {
-            const scopeValue = scope[source.scopeKey];
-            const idColumn = source.idColumn ?? "id";
-            const existingId = existing[idColumn];
-            if (scopeValue && existingId && scopeValue === String(existingId)) return null;
-          }
-          return source.name;
-        });
-        const results = await Promise.all(checks);
-        return !results.some((r) => r !== null);
-      }
-
-      async function check(identifier, scope = {}, options) {
-        const normalized = normalizeInput(identifier);
-        if (!pattern.test(normalized)) {
-          return { available: false, reason: "invalid", message: invalidMsg };
-        }
-        if (!allowPurelyNumeric && /^\d+(-\d+)*$/.test(normalized)) {
-          return { available: false, reason: "invalid", message: purelyNumericMsg };
-        }
-
-        const reservedCategory = reservedMap.get(normalized);
-        if (reservedCategory) {
-          return {
-            available: false,
-            reason: "reserved",
-            message: getReservedMessage(reservedCategory),
-            category: reservedCategory,
-          };
-        }
-
-        for (const validator of validators) {
-          const rejection = await validator(normalized);
-          if (rejection) {
-            return { ...rejection, reason: "invalid", message: rejection.message };
-          }
-        }
-
-        const dbChecks = config.sources.map(async (source) => {
-          const existing = await adapter.findOne(source, normalized);
-          if (!existing) return null;
-          if (source.scopeKey) {
-            const scopeValue = scope[source.scopeKey];
-            const idColumn = source.idColumn ?? "id";
-            const existingId = existing[idColumn];
-            if (scopeValue && existingId && scopeValue === String(existingId)) return null;
-          }
-          return source.name;
-        });
-        const results = await Promise.all(dbChecks);
-        const collision = results.find((r) => r !== null);
-        if (collision) {
-          const result = {
-            available: false,
-            reason: "taken",
-            message: takenMsg(collision),
-            source: collision,
-          };
-          if (config.suggest && !options?.skipSuggestions) {
-            const generate = resolveGenerator(config.suggest, pattern);
-            const max = config.suggest.max ?? 3;
-            const candidates = generate(normalized);
-            const suggestions = [];
-            const passedSync = candidates.filter(
-              (c) =>
-                pattern.test(c) &&
-                !reservedMap.has(c) &&
-                (allowPurelyNumeric || !/^\d+(-\d+)*$/.test(c))
-            );
-            for (const candidate of passedSync) {
-              if (suggestions.length >= max) break;
-              if (await checkDbOnly(candidate, scope)) suggestions.push(candidate);
-            }
-            if (suggestions.length > 0) result.suggestions = suggestions;
-          }
-          return result;
-        }
-
-        return { available: true };
-      }
-
-      async function assertAvailable(identifier, scope = {}) {
-        const result = await check(identifier, scope);
-        if (!result.available) throw new Error(result.message);
-      }
-
-      function checkRisk(identifier, options = {}) {
-        const normalized = normalizeInput(identifier);
-        const map = options.map ?? CONFUSABLE_MAP;
-        const includeReserved = options.includeReserved ?? riskConfig.includeReserved ?? true;
-        const maxMatches = Math.max(1, options.maxMatches ?? riskConfig.maxMatches ?? 3);
-
-        const warnThreshold = clamp(
-          Math.round(options.warnThreshold ?? riskConfig.warnThreshold ?? 45),
-          0,
-          100
-        );
-        const requestedBlock = clamp(
-          Math.round(options.blockThreshold ?? riskConfig.blockThreshold ?? 70),
-          0,
-          100
-        );
-        const blockThreshold =
-          requestedBlock <= warnThreshold ? Math.min(100, warnThreshold + 1) : requestedBlock;
-
-        const reasons = [];
-        let heuristicScore = 0;
-        function addReason(code, message, weight) {
-          const safeWeight = clamp(Math.round(weight), 0, 100);
-          reasons.push({ code, message, weight: safeWeight });
-          heuristicScore += safeWeight;
-        }
-
-        if (hasMixedScripts(normalized)) {
-          addReason("mixed-script", "Identifier mixes Latin and non-Latin scripts.", 24);
-        }
-
-        const ignorableCount = countDefaultIgnorables(normalized);
-        if (ignorableCount > 0) {
-          addReason(
-            "invisible-character",
-            `Identifier contains ${ignorableCount} default-ignorable Unicode character(s).`,
-            Math.min(22, 10 + ignorableCount * 4)
-          );
-        }
-
-        const charStats = countConfusableChars(normalized, map);
-        if (charStats.confusableCount > 0) {
-          addReason(
-            "confusable-character",
-            `Identifier contains ${charStats.confusableCount} confusable character(s).`,
-            Math.min(24, 8 + charStats.confusableCount * 3)
-          );
-        }
-
-        if (charStats.divergenceCount > 0) {
-          addReason(
-            "divergent-mapping",
-            `Identifier includes ${charStats.divergenceCount} mapping(s) where NFKC and TR39 differ.`,
-            Math.min(16, 6 + charStats.divergenceCount * 3)
-          );
-        }
-
-        const configuredProtect = riskConfig.protect ?? [];
-        const explicitProtect = options.protect;
-        const protectInputs = explicitProtect ?? configuredProtect;
-        const normalizedProtect = uniqueNonEmptyStrings(
-          (protectInputs ?? []).map((target) => normalizeInput(target))
-        );
-
-        const protectedTargets = new Set();
-        if (includeReserved) {
-          for (const reservedName of reservedMap.keys()) protectedTargets.add(reservedName);
-        }
-        for (const target of normalizedProtect) protectedTargets.add(target);
-
-        const scoredMatches = [];
-        for (const target of protectedTargets) {
-          if (!target || target === normalized) {
-            if (target === normalized) {
-              scoredMatches.push({
-                target,
-                score: 100,
-                distance: 0,
-                chainDepth: 0,
-                skeletonEqual: true,
-                reasons: ["Exact protected target match"],
-              });
-            }
-            continue;
-          }
-
-          const distance = scoreSimilarityRisk(normalized, target, map);
-          if (distance.score < 35) continue;
-
-          const matchReasons = [];
-          if (distance.skeletonEqual) matchReasons.push("TR39 skeleton collision");
-          if (distance.chainDepth >= 2) matchReasons.push(`chain depth ${distance.chainDepth}`);
-          if (distance.weightedPairs > 0) matchReasons.push(`${distance.weightedPairs} visually-weighted pair${distance.weightedPairs > 1 ? "s" : ""}`);
-
-          scoredMatches.push({
-            target,
-            score: distance.score,
-            distance: distance.distance,
-            chainDepth: distance.chainDepth,
-            skeletonEqual: distance.skeletonEqual,
-            reasons: matchReasons,
-          });
-        }
-
-        scoredMatches.sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
-          if (a.distance !== b.distance) return a.distance - b.distance;
-          return a.target.localeCompare(b.target);
-        });
-
-        const matches = scoredMatches.slice(0, maxMatches);
-        let score = clamp(heuristicScore, 0, 100);
-        if (matches.length > 0) {
-          const top = matches[0];
-          score = Math.max(score, top.score);
-          addReason(
-            "confusable-target",
-            `Identifier is visually close to protected target "${top.target}".`,
-            top.score
-          );
-          if (top.skeletonEqual) {
-            addReason("skeleton-collision", `Identifier skeleton collides with "${top.target}".`, 20);
-          }
-          if (top.chainDepth >= 2) {
-            addReason(
-              "deep-chain",
-              `Confusable transformation chain depth is ${top.chainDepth}.`,
-              Math.min(16, 6 + top.chainDepth * 2)
-            );
-          }
-        }
-
-        score = clamp(Math.max(score, heuristicScore), 0, 100);
-        reasons.sort((a, b) => b.weight - a.weight);
-
-        return {
-          identifier,
-          normalized,
-          score,
-          level: levelForScore(score, warnThreshold, blockThreshold),
-          action: actionForScore(score, warnThreshold, blockThreshold),
-          reasons,
-          matches,
-        };
-      }
-
-      function enforceRisk(identifier, options = {}) {
-        const {
-          failOn,
-          messages,
-          protect,
-          includeReserved,
-          map,
-          maxMatches,
-          warnThreshold,
-          blockThreshold,
-        } = options;
-        const configuredProtect = riskConfig.protect ?? [];
-        const fallbackProtect =
-          configuredProtect.length > 0 ? configuredProtect : DEFAULT_PROTECTED_TOKENS;
-        const effectiveProtect = protect ?? fallbackProtect;
-
-        const risk = checkRisk(identifier, {
-          protect: effectiveProtect,
-          includeReserved,
-          map,
-          maxMatches,
-          warnThreshold,
-          blockThreshold,
-        });
-        const failMode = failOn ?? "block";
-        const deny = failMode === "warn" ? risk.action !== "allow" : risk.action === "block";
-
-        if (!deny) return { allowed: true, action: risk.action, risk };
-
-        const topTarget = risk.matches[0]?.target;
-        const suffix = topTarget ? ` Closest protected target: "${topTarget}".` : "";
-        const defaultWarnMessage =
-          "Identifier is potentially confusable with a protected name." + suffix;
-        const defaultBlockMessage = "Identifier is too confusable with a protected name." + suffix;
-
-        return {
-          allowed: false,
-          action: risk.action,
-          message: risk.action === "block"
-            ? messages?.block ?? defaultBlockMessage
-            : messages?.warn ?? defaultWarnMessage,
-          risk,
-        };
-      }
-
-      async function assertClaimable(identifier, scope = {}, options) {
-        const availability = await check(identifier, scope, { skipSuggestions: true });
-        if (!availability.available) throw new Error(availability.message);
-
-        const decision = enforceRisk(identifier, options);
-        if (!decision.allowed) {
-          throw new Error(
-            decision.message ?? "Identifier is too close to a protected or existing namespace."
-          );
-        }
-      }
-
-      return {
-        normalize: normalizeInput,
-        validateFormat,
-        check,
-        assertAvailable,
-        checkRisk,
-        enforceRisk,
-        assertClaimable,
-      };
-    }
-
-    function createNamespaceGuardWithProfile(profileName, config = {}, adapter) {
-      const profile = NAMESPACE_PROFILES[profileName];
-      if (!profile) throw new Error(`Unknown namespace profile: ${profileName}`);
-      return createNamespaceGuard(
-        {
-          ...config,
-          pattern: config.pattern ?? profile.pattern,
-          normalizeUnicode: config.normalizeUnicode ?? profile.normalizeUnicode,
-          allowPurelyNumeric: config.allowPurelyNumeric ?? profile.allowPurelyNumeric,
-          risk: {
-            ...profile.risk,
-            ...(config.risk ?? {}),
-          },
-        },
-        adapter
-      );
     }
 
     // === Mock adapter ===
@@ -2908,40 +2219,29 @@
     let weightsEnabled = false;
     let currentContext = "all";
 
-    // Parse compact global weights into ConfusableWeight shape
-    const CONFUSABLE_WEIGHTS = (() => {
-      const raw = window.__NG_CONFUSABLE_WEIGHTS__;
-      if (!raw) return null;
-      const out = {};
-      for (const [src, targets] of Object.entries(raw)) {
-        out[src] = {};
-        for (const [tgt, w] of Object.entries(targets)) {
-          out[src][tgt] = {
-            danger: w.d,
-            stableDanger: w.s,
-            cost: w.c,
-            glyphReuse: !!w.g,
-            xidContinue: !!w.x,
-            idnaPvalid: !!w.i,
-            tr39Allowed: !!w.t,
-          };
-        }
-      }
-      return out;
-    })();
+    // The Unicode validators in the current guard. The profiles' patterns reject any non-ASCII name before
+    // validators run, so for such a name the playground runs these as well, to show the second layer.
+    let unicodeChecks = [];
 
     function createGuard(strategy) {
       const validators = [];
+      unicodeChecks = [];
       if (invisibleEnabled) {
-        validators.push(createInvisibleCharacterValidator());
+        const validate = createInvisibleCharacterValidator();
+        validators.push(validate);
+        unicodeChecks.push({ kind: "invisible", validate });
       }
-      if (homoglyphEnabled || mixedScriptEnabled) {
-        validators.push(
-          createHomoglyphValidator({
-            checkConfusables: homoglyphEnabled,
-            rejectMixedScript: mixedScriptEnabled,
-          })
-        );
+      if (homoglyphEnabled) {
+        const validate = createHomoglyphValidator({ rejectMixedScript: mixedScriptEnabled });
+        validators.push(validate);
+        unicodeChecks.push({ kind: "homoglyph", validate });
+      } else if (mixedScriptEnabled) {
+        // createHomoglyphValidator() always rejects lookalikes, so mixed scripts on their own use a predicate
+        const validate = createPredicateValidator((value) => findMixedScriptChar(value) !== null, {
+          message: "That name mixes Latin with another script.",
+        });
+        validators.push(validate);
+        unicodeChecks.push({ kind: "mixed", validate });
       }
       if (profanityEnabled && demoProfanityWords.length > 0) {
         validators.push(
@@ -2949,6 +2249,7 @@
             mode: "evasion",
             variantProfile: "balanced",
             minSubstringLength: 4,
+            allowlist: demoProfanityAllowlist,
             message: "That handle is blocked by moderation policy.",
           })
         );
@@ -2970,8 +2271,8 @@
           ],
           messages: {
             reserved: {
-              system: "That\u2019s a reserved system route.",
-              brand:  "That\u2019s a protected brand name.",
+              system: "That’s a reserved system route.",
+              brand:  "That’s a protected brand name.",
             },
             taken: (source) => `Already taken by a ${source}.`,
           },
@@ -2980,7 +2281,7 @@
             max: 3,
           },
           risk: {
-            protect: ["paypal", "github", "vercel", "namespace-guard", "support", "admin"],
+            protect: PROTECTED_TARGETS,
           },
           validators,
           allowPurelyNumeric,
@@ -2990,6 +2291,31 @@
     }
 
     let guard = createGuard(currentStrategy);
+
+    // For a non-ASCII name the format rule rejects: what the Unicode validators would also catch
+    async function findUnicodeIssues(value) {
+      const normalized = normalize(value);
+      if (/^[\x00-\x7F]*$/.test(normalized)) return [];
+      const findings = [];
+      for (const { kind, validate } of unicodeChecks) {
+        if (!(await validate(normalized, { identifier: value }))) continue;
+        if (kind === "invisible") {
+          let char = null;
+          for (const ch of normalized) {
+            if (await validate(ch)) { char = ch; break; }
+          }
+          findings.push({ kind, char });
+          continue;
+        }
+        const lookalike = kind === "homoglyph" ? findLookalike(value) : null;
+        if (lookalike) {
+          findings.push({ kind: "lookalike", ...lookalike });
+        } else {
+          findings.push({ kind: "mixed", char: findMixedScriptChar(normalized) });
+        }
+      }
+      return findings;
+    }
 
     // === Playground logic ===
     const form = document.getElementById("check-form");
@@ -3009,15 +2335,7 @@
       if (homoglyphEnabled) checks.push("confusable detection");
       if (mixedScriptEnabled) checks.push("mixed-script block");
       if (invisibleEnabled) checks.push("invisible-char block");
-      if (profanityEnabled) {
-        if (!profanityListReady) {
-          checks.push("profanity evasion");
-        } else if (profanityWordCount > 0) {
-          checks.push("profanity evasion");
-        } else {
-          checks.push("profanity evasion");
-        }
-      }
+      if (profanityEnabled) checks.push("profanity evasion");
       if (weightsEnabled) {
         const ctxLabel = currentContext === "all" ? "" : ` (${currentContext})`;
         checks.push(`visual weights${ctxLabel}`);
@@ -3033,10 +2351,17 @@
       if (policyDepthEl) {
         const parts = [];
         if (profanityListReady && profanityWordCount > 0) {
-          parts.push(`${profanityWordCount.toLocaleString()} profanity terms`);
+          parts.push(`${formatCount(profanityWordCount)} profanity terms`);
         }
-        parts.push(`4,174 visually-scored confusable pairs (3,525 cross-script)`);
-        parts.push(`${COMPOSABILITY_VECTOR_COUNT} composability vectors (${COMPOSABILITY_VECTOR_SUITE})`);
+        parts.push(`${formatCount(LOOKALIKE_CHAR_COUNT)} lookalike characters`);
+        parts.push(`${formatCount(WEIGHT_PAIR_COUNT)} measured confusable pairs`);
+        // The library derives the vectors with the runtime's own NFKC. Three are Unicode 16 characters, so a browser
+        // whose Unicode is older finds fewer than the published suite.
+        const shipped = publishedVectorCount ?? COMPOSABILITY_VECTORS_COUNT;
+        const here = shipped !== COMPOSABILITY_VECTORS_COUNT
+          ? `; this browser's Unicode predates 16.0, so it finds ${COMPOSABILITY_VECTORS_COUNT}`
+          : "";
+        parts.push(`${shipped} composability vectors (${COMPOSABILITY_VECTOR_SUITE}${here})`);
         policyDepthEl.textContent = `Data: ${parts.join(" · ")}`;
       }
     }
@@ -3073,27 +2398,85 @@
       return html;
     }
 
+    function charLabel(ch) {
+      return `<span class="char-highlight">${escapeHtml(ch)}</span> <span class="char-meta">(${getScriptName(ch.codePointAt(0))} ${codePointLabel(ch)})</span>`;
+    }
+
+    function renderFindings(findings) {
+      if (!findings || findings.length === 0) return "";
+      return findings.map((finding) => {
+        if (finding.kind === "lookalike") {
+          const latin = /^[a-z]+$/.test(finding.target) ? ` <span class="char-meta">(Latin)</span>` : "";
+          return `<div class="confusable-detail"><span class="char-meta">Homoglyph validator:</span> ${charLabel(finding.char)} looks like <span class="char-latin">${escapeHtml(finding.target)}</span>${latin}</div>`;
+        }
+        if (finding.kind === "mixed") {
+          const found = finding.char ? `found ${charLabel(finding.char)} mixed with Latin characters` : "mixes Latin with another script";
+          return `<div class="confusable-detail"><span class="char-meta">Mixed-script check:</span> ${found}</div>`;
+        }
+        if (finding.kind === "invisible") {
+          const found = finding.char ? ` <span class="char-meta">${codePointLabel(finding.char)}</span>` : "";
+          return `<div class="confusable-detail"><span class="char-meta">Invisible-character validator:</span> contains an invisible or direction-control character${found}</div>`;
+        }
+        return "";
+      }).join("");
+    }
+
     function renderRiskDetail(risk) {
       const top = risk?.matches?.[0];
       if (!top) return "";
       const reasonText = Array.isArray(top.reasons) && top.reasons.length > 0
         ? `<div class="char-meta">${top.reasons.slice(0, 2).map((reason) => escapeHtml(reason)).join(" • ")}</div>`
         : "";
-      return `<div class="confusable-detail">Closest protected target <span class="char-latin">${escapeHtml(top.target)}</span> <span class="char-meta">(risk ${top.score}/100, action ${escapeHtml(risk.action)})</span>${reasonText}</div>`;
+      return `<div class="confusable-detail">Closest protected target <span class="char-latin">${escapeHtml(top.target)}</span> <span class="char-meta">(risk ${risk.score}/100, action ${escapeHtml(risk.action)})</span>${reasonText}</div>`;
+    }
+
+    // With visual weights on: measured pairs inside the name, and the closest target's similarity when the
+    // weights change it. Pairs are looked up before NFKC, which folds some of them (ㅣ into ᅵ).
+    function renderWeightsDetail(value, risk) {
+      const typed = typedForm(value);
+      const raw = value.trim().replace(/^@+/, "");
+      const cross = detectCrossScriptRisk(raw, weightsEnabled ? { weights: CONFUSABLE_WEIGHTS } : undefined);
+      if (!weightsEnabled) {
+        const nonLatin = cross.scripts.length > 1 && !cross.scripts.includes("latin");
+        return nonLatin
+          ? `<div class="result-msg">Turn on visual weights to check the measured pairs between these scripts.</div>`
+          : "";
+      }
+      let html = "";
+      for (const pair of cross.crossScriptPairs.slice(0, 2)) {
+        html += `<div class="confusable-detail"><span class="char-meta">Measured weights:</span> ${charLabel(pair.a.char)} and ${charLabel(pair.b.char)} are alike <span class="char-meta">(visual score ${pair.visualScore}, risk ${escapeHtml(cross.riskLevel)})</span></div>`;
+      }
+      const top = risk?.matches?.[0];
+      if (top && top.distance > 0) {
+        const measured = confusableDistance(typed, top.target, { weights: CONFUSABLE_WEIGHTS, context: currentContext });
+        const plain = confusableDistance(typed, top.target);
+        if (measured.similarity !== plain.similarity) html += `<div class="confusable-detail"><span class="char-meta">Measured weights:</span> similarity to <span class="char-latin">${escapeHtml(top.target)}</span> is ${measured.similarity} <span class="char-meta">(${plain.similarity} without weights, context ${escapeHtml(currentContext)})</span></div>`;
+      }
+      return html;
     }
 
     function renderResult(value, result) {
       if (!value) { resultEl.innerHTML = ""; return; }
-      const normalized = escapeHtml(normalize(value));
+      const normalizedValue = normalize(value);
+      const normalized = escapeHtml(normalizedValue);
+      const typed = typedForm(value);
+      // A name shown as typed can read differently from its stored form: paypaI (capital I) reads as paypal
+      const storedAs = typed !== normalizedValue && typed.toLowerCase() === normalizedValue
+        ? `<span class="result-source">stored as ${normalized}</span>`
+        : "";
+      const plainNameHtml = `<strong><span class="slug-name">${normalized}</span></strong>`;
+      const nameHtml = storedAs && (result.available || result.reason === "risk")
+        ? `<strong><span class="slug-name">${escapeHtml(typed)}</span></strong>${storedAs}`
+        : plainNameHtml;
 
       if (result.available) {
         if (result.risk && result.risk.action === "warn") {
           const message = result.message ?? "Available, but visually close to a protected target.";
-          const riskHtml = renderRiskDetail(result.risk);
-          resultEl.innerHTML = `<div class="result-card result-riskwarn">${iconShield}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong><div class="result-msg">${escapeHtml(message)}</div>${riskHtml}</div></div>`;
+          const riskHtml = renderRiskDetail(result.risk) + renderWeightsDetail(value, result.risk);
+          resultEl.innerHTML = `<div class="result-card result-riskwarn">${iconShield}<div class="result-body">${nameHtml}<div class="result-msg">${escapeHtml(message)}</div>${riskHtml}</div></div>`;
           return;
         }
-        resultEl.innerHTML = `<div class="result-card result-available">${iconCheck}<div class="result-body"><strong><span class="slug-name">${normalized}</span></strong> is claimable.</div></div>`;
+        resultEl.innerHTML = `<div class="result-card result-available">${iconCheck}<div class="result-body">${nameHtml} is claimable.${renderWeightsDetail(value, result.risk)}</div></div>`;
         return;
       }
 
@@ -3119,51 +2502,40 @@
         suggestionsHtml = `<div class="suggestions"><div class="suggestions-label">Try instead:</div><div class="suggestion-pills">${pills}</div></div>`;
       }
 
-      let confusableHtml = "";
-      const spoofChar = result._confusableChar || result._mixedScriptChar || null;
-      if (result._confusableChar) {
-        const ch = result._confusableChar;
-        const target = result._confusableTarget;
-        const script = result._confusableScript;
-        const cp = ch.codePointAt(0);
-        const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
-        confusableHtml = `<div class="confusable-detail"><span class="char-highlight">${escapeHtml(ch)}</span> <span class="char-meta">(${script} ${hex})</span> looks like <span class="char-latin">${escapeHtml(target)}</span> <span class="char-meta">(Latin)</span></div>`;
-      } else if (result._mixedScriptChar) {
-        const ch = result._mixedScriptChar;
-        const script = result._mixedScript;
-        const cp = ch.codePointAt(0);
-        const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
-        confusableHtml = `<div class="confusable-detail">Found <span class="char-highlight">${escapeHtml(ch)}</span> <span class="char-meta">(${script} ${hex})</span> mixed with Latin characters</div>`;
+      let detailHtml = renderFindings(result.findings);
+      if (result.risk && (result.reason === "risk" || result.risk.action !== "allow")) {
+        detailHtml += renderRiskDetail(result.risk);
       }
+      detailHtml += renderWeightsDetail(value, result.risk);
 
-      if (result.reason === "risk" && result.risk) {
-        confusableHtml += renderRiskDetail(result.risk);
-      }
-
+      const spoofChar = result.findings?.find((finding) => finding.kind !== "invisible" && finding.char)?.char ?? null;
       const slugDisplay = spoofChar
-        ? annotateSlug(value, spoofChar)
-        : `<span class="slug-name">${normalized}</span>`;
+        ? `<strong>${annotateSlug(value, spoofChar)}</strong>`
+        : nameHtml;
 
-      resultEl.innerHTML = `<div class="result-card ${cls}">${icon}<div class="result-body"><strong>${slugDisplay}</strong>${extra}<div class="result-msg">${escapeHtml(result.message)}</div>${confusableHtml}${suggestionsHtml}</div></div>`;
+      resultEl.innerHTML = `<div class="result-card ${cls}">${icon}<div class="result-body">${slugDisplay}${extra}<div class="result-msg">${escapeHtml(result.message)}</div>${detailHtml}${suggestionsHtml}</div></div>`;
     }
 
+    // Results depend on the name as typed (case included), so repeat checks are skipped on that form
     let lastRendered = "";
     async function checkSlug(value) {
       if (!value.trim()) { lastRendered = ""; renderResult("", null); return; }
-      const normalized = normalize(value);
-      if (normalized === lastRendered) return;
+      const key = typedForm(value);
+      if (key === lastRendered) return;
 
       const availability = await guard.check(value);
       if (!availability.available) {
-        lastRendered = normalized;
-        renderResult(value, availability);
+        lastRendered = key;
+        const findings = availability.reason === "invalid" ? await findUnicodeIssues(value) : [];
+        const risk = findings.length > 0 ? guard.checkRisk(value) : undefined;
+        renderResult(value, { ...availability, findings, risk });
         return;
       }
 
       const decision = guard.enforceRisk(value, {
         failOn: failOnWarn ? "warn" : "block",
       });
-      lastRendered = normalized;
+      lastRendered = key;
 
       if (!decision.allowed) {
         renderResult(value, {
@@ -3185,7 +2557,7 @@
         return;
       }
 
-      renderResult(value, { available: true });
+      renderResult(value, { available: true, risk: decision.risk });
     }
 
     const debouncedCheck = debounce(checkSlug, 300);
@@ -3345,20 +2717,135 @@
       guard = createGuard(currentStrategy);
     }
 
+    // The published suite, derived in Node with Unicode 17 (docs/data/composability-vectors.json)
+    let publishedVectorCount = null;
+    fetch("./data/composability-vectors.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rows) => { if (Array.isArray(rows)) { publishedVectorCount = rows.length; updatePolicySummary(); } })
+      .catch(() => {});
+
     updatePolicySummary();
     loadDemoProfanityWords().then(() => refreshGuard());
 
-    // Copy button
-    copyBtn.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText("npm install namespace-guard");
-        copyBtn.textContent = "Copied!";
-        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
-      } catch {
-        copyBtn.textContent = "Failed";
-        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+    // Copy buttons
+    for (const btn of [copyBtn, document.getElementById("copy-btn-footer")]) {
+      btn?.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText("npm install namespace-guard");
+          btn.textContent = "Copied!";
+        } catch {
+          btn.textContent = "Failed";
+        }
+        setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+      });
+    }
+
+    // === Numbers under the hero, counted from the library ===
+    document.getElementById("stat-pairs").textContent = formatCount(WEIGHT_PAIR_COUNT);
+
+    // === The hero's window: a fixed guard (not the playground's toggles) checking a few names in turn ===
+    const heroGuard = createNamespaceGuardWithProfile("consumer-handle", {
+      reserved: {
+        system: ["admin", "api", "settings", "dashboard", "login", "signup", "help", "support", "billing"],
+        brand: ["namespace-guard"],
+      },
+      sources: [
+        { name: "user", column: "handle", scopeKey: "id" },
+        { name: "organization", column: "slug", scopeKey: "id" },
+      ],
+      risk: { protect: PROTECTED_TARGETS },
+      validators: [createInvisibleCharacterValidator(), createHomoglyphValidator({ rejectMixedScript: true })],
+    }, playgroundAdapter);
+
+    // What happened, and why, in a few words. "Reads as" only where the library finds the two confusable;
+    // otherwise the name is only close in spelling.
+    async function heroVerdict(value) {
+      const name = value.trim();
+      if (!name) return null;
+      const result = await heroGuard.check(name);
+      if (!result.available) {
+        if (result.reason === "taken") return { tone: "bad", label: "Taken", why: `by ${result.source === "organization" ? "an organisation" : "a " + result.source}` };
+        if (result.reason === "reserved") return { tone: "warn", label: "Reserved", why: `${result.category ?? "reserved"} name` };
+        const invisible = [...name].find((ch) => /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/.test(ch));
+        if (invisible) return { tone: "bad", label: "Blocked", why: `hidden ${codePointLabel(invisible)}` };
+        const look = findLookalike(name);
+        if (look) {
+          const cp = look.char.codePointAt(0);
+          return { tone: "bad", label: "Blocked", why: `${getScriptName(cp)} ${look.char} passes for ${look.target}` };
+        }
+        return { tone: "bad", label: "Invalid", why: result.message };
       }
+      const decision = heroGuard.enforceRisk(name, { failOn: "block" });
+      const top = decision.risk?.matches?.[0];
+      if (!decision.allowed && top) {
+        const reads = areConfusable(typedForm(name), top.target);
+        return { tone: "bad", label: "Blocked", why: `${reads ? "reads as" : "too close to"} ${top.target}` };
+      }
+      if (decision.action === "warn" && top) return { tone: "warn", label: "Free", why: `but close to ${top.target}` };
+      return { tone: "ok", label: "Free", why: "nobody has it" };
+    }
+
+    const demoInput = document.getElementById("demo-input");
+    const demoVerdict = document.getElementById("demo-verdict");
+    const demoLog = document.getElementById("demo-log");
+
+    function showVerdict(v) {
+      demoVerdict.innerHTML = v
+        ? `<span class="verdict ${v.tone}"><span class="v-label">${escapeHtml(v.label)}</span><span>${escapeHtml(v.why)}</span></span>`
+        : "";
+    }
+    function logVerdict(name, v) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="nm">${escapeHtml(name)}</span><span class="why"><b class="v-${v.tone}">${escapeHtml(v.label)}</b>${escapeHtml(v.why)}</span>`;
+      demoLog.prepend(li);
+      while (demoLog.children.length > 3) demoLog.lastElementChild.remove();
+    }
+
+    const HERO_NAMES = ["sarah", "rnicrosoft", "my-new-app", "paypaI", "\u0430dmin", "admin", "paypa1"];
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    let heroTouched = false;
+
+    async function runHero() {
+      if (reduceMotion) {
+        for (const name of HERO_NAMES.slice(0, 3).reverse()) logVerdict(name, await heroVerdict(name));
+        demoInput.value = HERO_NAMES[3];
+        showVerdict(await heroVerdict(HERO_NAMES[3]));
+        return;
+      }
+      await wait(700);
+      for (let i = 0; !heroTouched; i = (i + 1) % HERO_NAMES.length) {
+        const name = HERO_NAMES[i];
+        showVerdict(null);
+        demoInput.value = "";
+        for (const ch of name) {
+          if (heroTouched) return;
+          demoInput.value += ch;
+          await wait(70 + Math.random() * 60);
+        }
+        await wait(260);
+        if (heroTouched) return;
+        const v = await heroVerdict(name);
+        showVerdict(v);
+        await wait(2400);
+        if (heroTouched) return;
+        logVerdict(name, v);
+      }
+    }
+
+    // Once someone types, the window is theirs
+    const demoCheck = debounce(async (value) => showVerdict(await heroVerdict(value)), 200);
+    demoInput.addEventListener("focus", () => {
+      if (heroTouched) return;
+      heroTouched = true;
+      demoInput.select();
     });
+    demoInput.addEventListener("input", (e) => demoCheck(e.target.value));
+    document.getElementById("demo-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showVerdict(await heroVerdict(demoInput.value));
+    });
+    runHero();
   </script>
 </body>
 </html>

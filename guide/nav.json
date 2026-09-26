@@ -1,0 +1,44 @@
+[
+  {
+    "section": "Start",
+    "pages": [
+      { "slug": "index", "navTitle": "Overview" },
+      { "slug": "getting-started" },
+      { "slug": "how-it-works" }
+    ]
+  },
+  {
+    "section": "Guides",
+    "pages": [
+      { "slug": "protect-names" },
+      { "slug": "unicode-names" },
+      { "slug": "claiming" },
+      { "slug": "suggestions" },
+      { "slug": "moderation" },
+      { "slug": "llm-text" },
+      { "slug": "domains" },
+      { "slug": "comparing-names" },
+      { "slug": "cli" },
+      { "slug": "upgrading" }
+    ]
+  },
+  {
+    "section": "Reference",
+    "pages": [
+      { "slug": "configuration" },
+      { "slug": "guard" },
+      { "slug": "functions" },
+      { "slug": "data" },
+      { "slug": "adapters" },
+      { "slug": "frameworks" },
+      { "slug": "typescript" }
+    ]
+  },
+  {
+    "section": "Project",
+    "pages": [
+      { "slug": "changelog", "title": "Changelog" },
+      { "slug": "where-the-data-comes-from" }
+    ]
+  }
+]

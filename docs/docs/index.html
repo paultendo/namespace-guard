@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>namespace-guard docs</title>
+  <meta name="description" content="namespace-guard docs namespace-guard checks a name before someone claims it: that it's in the right format, that it isn't reserved or already taken in any ">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/docs.css">
+</head>
+<body class="home" data-root="./" data-lib="./../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="./../">namespace-guard</a><a class="wordmark-docs" href="./">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="./../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="./changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="./" aria-current="page">Overview</a></li><li><a href="./getting-started/">Getting started</a></li><li><a href="./how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="./protect-names/">Protect names</a></li><li><a href="./unicode-names/">Unicode names</a></li><li><a href="./claiming/">Claiming names</a></li><li><a href="./suggestions/">Suggestions</a></li><li><a href="./moderation/">Moderation</a></li><li><a href="./llm-text/">Text for LLMs</a></li><li><a href="./domains/">Domain names</a></li><li><a href="./comparing-names/">Comparing names</a></li><li><a href="./cli/">The CLI</a></li><li><a href="./upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="./configuration/">Configuration</a></li><li><a href="./guard/">The guard</a></li><li><a href="./functions/">Functions</a></li><li><a href="./data/">Data and maps</a></li><li><a href="./adapters/">Adapters</a></li><li><a href="./frameworks/">Frameworks</a></li><li><a href="./typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="./changelog/">Changelog</a></li><li><a href="./where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        
+        <div class="docs-hero">
+<p class="eyebrow">namespace-guard docs</p>
+</div>
+<h1>Is this name really free?</h1>
+<p>namespace-guard checks a name before someone claims it: that it’s in the right format, that it isn’t reserved or already taken in any of your tables, and that it doesn’t pass for a name you protect. It has no dependencies and works with nine databases.</p>
+<div class="try">
+<div class="try-form"><span>yourapp.com/</span><input type="text" value="rnicrosoft" aria-label="A name to check" autocomplete="off" spellcheck="false"></div>
+<div class="try-out"><span class="hint">Type a name, or pick one below.</span></div>
+<div class="try-chips"><button type="button" data-name="rnicrosoft">rnicrosoft</button><button type="button" data-name="paypaI">paypaI</button><button type="button" data-name="раураl">раураl</button><button type="button" data-name="sarah">sarah</button><button type="button" data-name="admin">admin</button><button type="button" data-name="my-new-app">my-new-app</button></div>
+</div>
+<div class="cards">
+<a class="card" href="getting-started/"><span class="card-label">Start here</span><strong>Getting started</strong><span>Install it, point it at your tables, and check your first name in five minutes.</span></a>
+<a class="card" href="protect-names/"><span class="card-label">Guide</span><strong>Protect names</strong><span>Stop rn for m, a capital I for l, and a Cyrillic paypal from passing for names you care about.</span></a>
+<a class="card" href="guard/"><span class="card-label">Reference</span><strong>The guard</strong><span>Every method, what it returns, and when to use which.</span></a>
+</div>
+<h2 id="find-your-way"><a class="anchor" href="#find-your-way" aria-label="Link to this section">#</a>Find your way</h2>
+<ul class="jumps">
+<li><a href="how-it-works/">How a name is checked</a></li>
+<li><a href="claiming/">Claim a name without a race</a></li>
+<li><a href="unicode-names/">Allow Unicode names safely</a></li>
+<li><a href="suggestions/">Suggest a free name</a></li>
+<li><a href="moderation/">Block offensive names</a></li>
+<li><a href="llm-text/">Clean text before an LLM reads it</a></li>
+<li><a href="domains/">Check lookalike domains</a></li>
+<li><a href="comparing-names/">Compare two names</a></li>
+<li><a href="cli/">Test your rules in CI</a></li>
+<li><a href="upgrading/">Upgrade to 0.23</a></li>
+<li><a href="adapters/">Prisma, Drizzle and seven more</a></li>
+<li><a href="changelog/">What changed</a></li>
+</ul>
+<p>The examples in these docs run against the library in your browser, and the same examples run in the test suite, so what you read is what the code does. Double-click an example to edit it, then run your version.</p>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/index.md">Edit this page on GitHub</a>
+          <div class="pager"><span></span><a class="next" href="./getting-started/"><span>Next</span>Getting started</a></div>
+        </footer>
+      </article>
+      
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  
+  <script type="module" src="./assets/docs.js"></script>
+</body>
+</html>

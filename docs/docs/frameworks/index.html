@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frameworks · namespace-guard docs</title>
+  <meta name="description" content="Every framework uses namespace-guard the same way. Create one guard in a module of its own. While someone types a name, check it and show the answer. When ">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/" aria-current="page">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Reference</p>
+        <h1>Frameworks</h1>
+<p>Every framework uses namespace-guard the same way. Create one guard in a module of its own. While someone types a name, check it and show the answer. When they submit, <code>claim()</code> it, which checks again and runs your write, and send back <code>message</code> if it fails. This page shows that in Next.js, Express and tRPC, and what changes on an edge runtime.</p>
+<h2 id="one-guard-for-the-app"><a class="anchor" href="#one-guard-for-the-app" aria-label="Link to this section">#</a>One guard for the app</h2>
+<p>Create the guard once, at module level, and import it wherever you need it. The examples on this page use Prisma; any <a href="../adapters/">adapter</a> works the same way.</p>
+<figure class="code"><figcaption><span class="code-lang">lib/guard.ts</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createNamespaceGuardWithProfile, <span class="kw">type</span> <span class="type">OwnershipScope</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createPrismaAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/prisma&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> prisma <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./db&quot;</span>;
+
+<span class="kw">export</span> <span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;api&quot;</span>, <span class="str">&quot;settings&quot;</span>, <span class="str">&quot;login&quot;</span>, <span class="str">&quot;signup&quot;</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handleCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">&quot;organization&quot;</span>, column: <span class="str">&quot;slugCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;yourapp&quot;</span><span class="br">]</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span><span class="br">}</span>,
+  cache: <span class="br">{</span> ttl: <span class="num">5000</span> <span class="br">}</span>,
+<span class="br">}</span>, <span class="fn">createPrismaAdapter</span>(prisma<span class="br">)</span><span class="br">)</span>;
+
+<span class="cm">/** For checking while someone types: free, and not passing for a protected name */</span>
+<span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">checkName</span>(name: string, scope: <span class="type">OwnershipScope</span> = <span class="br">{</span><span class="br">}</span><span class="br">)</span> <span class="br">{</span>
+  <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span>(name, scope<span class="br">)</span>;
+  <span class="kw">if</span> (!result.available<span class="br">)</span> <span class="br">{</span>
+    <span class="kw">return</span> <span class="br">{</span> available: <span class="kw">false</span>, message: result.message, suggestions: result.suggestions ?? <span class="br">[</span><span class="br">]</span> <span class="br">}</span>;
+  <span class="br">}</span>
+  <span class="kw">const</span> risk = guard.<span class="fn">enforceRisk</span>(name<span class="br">)</span>;
+  <span class="kw">if</span> (!risk.allowed<span class="br">)</span> <span class="kw">return</span> <span class="br">{</span> available: <span class="kw">false</span>, message: risk.message, suggestions: <span class="br">[</span><span class="br">]</span> <span class="br">}</span>;
+  <span class="kw">return</span> <span class="br">{</span> available: <span class="kw">true</span> <span class="br">}</span>;
+<span class="br">}</span></code></pre></figure>
+<p><code>check()</code> answers whether a name is free, and suggests others when it’s taken. It doesn’t score lookalikes of your protected names, so <code>checkName()</code> adds <code>enforceRisk()</code>, which applies the same rule as <code>claim()</code>. Without it, someone could type <code>rnicrosoft</code>, see that it’s free, and be refused only when they submit.</p>
+<p>The same helper, with a stand-in adapter so it runs on this page:</p>
+<figure class="code runnable" data-example="0"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (source, value<span class="br">)</span> =&gt; <span class="br">(</span>value === <span class="str">&quot;sarah&quot;</span> ? <span class="br">{</span> id: <span class="str">&quot;u1&quot;</span> <span class="br">}</span> : <span class="kw">null</span><span class="br">)</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;settings&quot;</span><span class="br">]</span>,
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handleCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;microsoft&quot;</span><span class="br">]</span> <span class="br">}</span>,
+  suggest: <span class="br">{</span> strategy: <span class="str">&quot;sequential&quot;</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">async</span> <span class="kw">function</span> <span class="fn">checkName</span>(name, scope = <span class="br">{</span><span class="br">}</span><span class="br">)</span> <span class="br">{</span>
+  <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">check</span>(name, scope<span class="br">)</span>;
+  <span class="kw">if</span> (!result.available<span class="br">)</span> <span class="br">{</span>
+    <span class="kw">return</span> <span class="br">{</span> available: <span class="kw">false</span>, message: result.message, suggestions: result.suggestions ?? <span class="br">[</span><span class="br">]</span> <span class="br">}</span>;
+  <span class="br">}</span>
+  <span class="kw">const</span> risk = guard.<span class="fn">enforceRisk</span>(name<span class="br">)</span>;
+  <span class="kw">if</span> (!risk.allowed<span class="br">)</span> <span class="kw">return</span> <span class="br">{</span> available: <span class="kw">false</span>, message: risk.message, suggestions: <span class="br">[</span><span class="br">]</span> <span class="br">}</span>;
+  <span class="kw">return</span> <span class="br">{</span> available: <span class="kw">true</span> <span class="br">}</span>;
+<span class="br">}</span>
+
+<span class="kw">await</span> <span class="fn">checkName</span>(<span class="str">&quot;my-new-app&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: true }</span>
+<span class="kw">await</span> <span class="fn">checkName</span>(<span class="str">&quot;sarah&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: false, message: &quot;That name is already in use.&quot;, suggestions: [&quot;sarah-1&quot;, &quot;sarah1&quot;, &quot;sarah-2&quot;] }</span>
+<span class="kw">await</span> <span class="fn">checkName</span>(<span class="str">&quot;Sarah&quot;</span>, <span class="br">{</span> id: <span class="str">&quot;u1&quot;</span> <span class="br">}</span><span class="br">)</span>;  <span class="cm">// → { available: true }</span>
+<span class="kw">await</span> <span class="fn">checkName</span>(<span class="str">&quot;rnicrosoft&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: false, message: &quot;Identifier is too confusable with a protected name. Closest protected target: \&quot;microsoft\&quot;.&quot; }</span></code></pre><div class="output" hidden></div></figure>
+<p><code>Sarah</code> is free for <code>u1</code> because the record that holds it is theirs: the scope tells the guard who is asking. Pass it whenever someone edits a name they already have.</p>
+<p><code>claim()</code> returns <code>{ claimed: true, normalized, value }</code>, where <code>value</code> is whatever your write returned, or <code>{ claimed: false, reason: &quot;unavailable&quot;, message }</code>. The <code>message</code> covers every reason: the format, a reserved name, a validator, a taken name, a lookalike of a protected name, or someone else’s write winning the race. With a unique index on the canonical column, that last one comes back as “That name is already in use.” rather than as a database error. See <a href="../claiming/">Claiming</a>.</p>
+<h2 id="next-js"><a class="anchor" href="#next-js" aria-label="Link to this section">#</a>Next.js</h2>
+<h3 id="server-actions"><a class="anchor" href="#server-actions" aria-label="Link to this section">#</a>Server actions</h3>
+<figure class="code"><figcaption><span class="code-lang">app/signup/actions.ts</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="str">&quot;use server&quot;</span>;
+
+<span class="kw">import</span> <span class="br">{</span> redirect <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;next/navigation&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> guard, checkName <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@/lib/guard&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> prisma <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@/lib/db&quot;</span>;
+
+<span class="cm">// Called from the form as the person types (debounce it)</span>
+<span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">checkHandle</span>(handle: string<span class="br">)</span> <span class="br">{</span>
+  <span class="kw">return</span> <span class="fn">checkName</span>(handle<span class="br">)</span>;
+<span class="br">}</span>
+
+<span class="cm">// The form's action, for useActionState</span>
+<span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">claimHandle</span>(_state: <span class="br">{</span> error?: string <span class="br">}</span> | <span class="kw">null</span>, formData: <span class="type">FormData</span><span class="br">)</span> <span class="br">{</span>
+  <span class="kw">const</span> handle = <span class="fn">String</span>(formData.<span class="fn">get</span>(<span class="str">&quot;handle&quot;</span><span class="br">)</span> ?? <span class="str">&quot;&quot;</span><span class="br">)</span>;
+
+  <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">claim</span>(handle, <span class="br">(</span>canonical<span class="br">)</span> =&gt;
+    prisma.user.<span class="fn">create</span>(<span class="br">{</span> data: <span class="br">{</span> handle, handleCanonical: canonical <span class="br">}</span> <span class="br">}</span><span class="br">)</span>,
+  <span class="br">)</span>;
+  <span class="kw">if</span> (!result.claimed<span class="br">)</span> <span class="kw">return</span> <span class="br">{</span> error: result.message <span class="br">}</span>;
+
+  <span class="fn">redirect</span>(<span class="str">`/${result.normalized}`</span><span class="br">)</span>;
+<span class="br">}</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">app/signup/form.tsx</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="str">&quot;use client&quot;</span>;
+
+<span class="kw">import</span> <span class="br">{</span> useActionState <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;react&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> claimHandle <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./actions&quot;</span>;
+
+<span class="kw">export</span> <span class="kw">function</span> <span class="fn">SignupForm</span>(<span class="br">)</span> <span class="br">{</span>
+  <span class="kw">const</span> <span class="br">[</span>state, action, pending<span class="br">]</span> = <span class="fn">useActionState</span>(claimHandle, <span class="kw">null</span><span class="br">)</span>;
+  <span class="kw">return</span> (
+    &lt;form action=<span class="br">{</span>action<span class="br">}</span>&gt;
+      &lt;input name=<span class="str">&quot;handle&quot;</span> autoComplete=<span class="str">&quot;username&quot;</span> required /&gt;
+      &lt;button disabled=<span class="br">{</span>pending<span class="br">}</span>&gt;<span class="type">Claim</span>&lt;/button&gt;
+      <span class="br">{</span>state?.error &amp;&amp; &lt;p role=<span class="str">&quot;alert&quot;</span>&gt;<span class="br">{</span>state.error<span class="br">}</span>&lt;/p&gt;<span class="br">}</span>
+    &lt;/form&gt;
+  <span class="br">)</span>;
+<span class="br">}</span></code></pre></figure>
+<h3 id="route-handlers"><a class="anchor" href="#route-handlers" aria-label="Link to this section">#</a>Route handlers</h3>
+<figure class="code"><figcaption><span class="code-lang">app/api/handle/route.ts</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> guard, checkName <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@/lib/guard&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> prisma <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@/lib/db&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> getUser <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@/lib/auth&quot;</span>; <span class="cm">// your session lookup</span>
+
+<span class="cm">// GET /api/handle?name=sarah</span>
+<span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">GET</span>(request: <span class="type">Request</span><span class="br">)</span> <span class="br">{</span>
+  <span class="kw">const</span> user = <span class="kw">await</span> <span class="fn">getUser</span>(request<span class="br">)</span>;
+  <span class="kw">const</span> name = <span class="kw">new</span> <span class="fn">URL</span>(request.url<span class="br">)</span>.searchParams.<span class="fn">get</span>(<span class="str">&quot;name&quot;</span><span class="br">)</span> ?? <span class="str">&quot;&quot;</span>;
+  <span class="kw">return</span> <span class="type">Response</span>.<span class="fn">json</span>(<span class="kw">await</span> <span class="fn">checkName</span>(name, <span class="br">{</span> id: user?.id <span class="br">}</span><span class="br">)</span><span class="br">)</span>;
+<span class="br">}</span>
+
+<span class="cm">// PATCH /api/handle with { &quot;handle&quot;: &quot;sarah&quot; }</span>
+<span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">PATCH</span>(request: <span class="type">Request</span><span class="br">)</span> <span class="br">{</span>
+  <span class="kw">const</span> user = <span class="kw">await</span> <span class="fn">getUser</span>(request<span class="br">)</span>;
+  <span class="kw">if</span> (!user<span class="br">)</span> <span class="kw">return</span> <span class="type">Response</span>.<span class="fn">json</span>(<span class="br">{</span> error: <span class="str">&quot;Sign in first.&quot;</span> <span class="br">}</span>, <span class="br">{</span> status: <span class="num">401</span> <span class="br">}</span><span class="br">)</span>;
+
+  <span class="kw">const</span> body = <span class="kw">await</span> request.<span class="fn">json</span>(<span class="br">)</span>;
+  <span class="kw">const</span> handle = <span class="fn">String</span>(body.handle ?? <span class="str">&quot;&quot;</span><span class="br">)</span>;
+  <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">claim</span>(
+    handle,
+    <span class="br">(</span>canonical<span class="br">)</span> =&gt;
+      prisma.user.<span class="fn">update</span>(<span class="br">{</span> where: <span class="br">{</span> id: user.id <span class="br">}</span>, data: <span class="br">{</span> handle, handleCanonical: canonical <span class="br">}</span> <span class="br">}</span><span class="br">)</span>,
+    <span class="br">{</span> scope: <span class="br">{</span> id: user.id <span class="br">}</span> <span class="br">}</span>,
+  <span class="br">)</span>;
+  <span class="kw">if</span> (!result.claimed<span class="br">)</span> <span class="kw">return</span> <span class="type">Response</span>.<span class="fn">json</span>(<span class="br">{</span> error: result.message <span class="br">}</span>, <span class="br">{</span> status: <span class="num">409</span> <span class="br">}</span><span class="br">)</span>;
+
+  <span class="kw">return</span> <span class="type">Response</span>.<span class="fn">json</span>(<span class="br">{</span> handle: result.normalized <span class="br">}</span><span class="br">)</span>;
+<span class="br">}</span></code></pre></figure>
+<p>The scope lets someone change <code>Sarah</code> to <code>sarah</code> without being told their own name is taken.</p>
+<h2 id="express"><a class="anchor" href="#express" aria-label="Link to this section">#</a>Express</h2>
+<figure class="code"><figcaption><span class="code-lang">server.ts</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> express <span class="kw">from</span> <span class="str">&quot;express&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> guard, checkName <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./lib/guard&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> prisma <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./lib/db&quot;</span>;
+
+<span class="kw">const</span> app = <span class="fn">express</span>(<span class="br">)</span>;
+app.<span class="fn">use</span>(express.<span class="fn">json</span>(<span class="br">)</span><span class="br">)</span>;
+
+<span class="cm">// GET /api/handles/sarah</span>
+app.<span class="fn">get</span>(<span class="str">&quot;/api/handles/:name&quot;</span>, <span class="kw">async</span> (req, res<span class="br">)</span> =&gt; <span class="br">{</span>
+  res.<span class="fn">json</span>(<span class="kw">await</span> <span class="fn">checkName</span>(req.params.name<span class="br">)</span><span class="br">)</span>;
+<span class="br">}</span><span class="br">)</span>;
+
+<span class="cm">// POST /api/handles with { &quot;handle&quot;: &quot;sarah&quot; }</span>
+app.<span class="fn">post</span>(<span class="str">&quot;/api/handles&quot;</span>, <span class="kw">async</span> (req, res<span class="br">)</span> =&gt; <span class="br">{</span>
+  <span class="kw">const</span> handle = <span class="fn">String</span>(req.body?.handle ?? <span class="str">&quot;&quot;</span><span class="br">)</span>;
+  <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">claim</span>(handle, <span class="br">(</span>canonical<span class="br">)</span> =&gt;
+    prisma.user.<span class="fn">create</span>(<span class="br">{</span> data: <span class="br">{</span> handle, handleCanonical: canonical <span class="br">}</span> <span class="br">}</span><span class="br">)</span>,
+  <span class="br">)</span>;
+  <span class="kw">if</span> (!result.claimed<span class="br">)</span> <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">409</span><span class="br">)</span>.<span class="fn">json</span>(<span class="br">{</span> error: result.message <span class="br">}</span><span class="br">)</span>;
+
+  res.<span class="fn">status</span>(<span class="num">201</span><span class="br">)</span>.<span class="fn">json</span>(<span class="br">{</span> handle: result.normalized <span class="br">}</span><span class="br">)</span>;
+<span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<p>Express 5 passes a rejected promise from an async handler to your error handler, so a database error that isn’t a unique violation reaches it. On Express 4, wrap the handler body in <code>try</code>/<code>catch</code> and call <code>next(error)</code>.</p>
+<p>Turn the input into a string before you pass it on: <code>normalize()</code> expects one, and a JSON body can hold anything.</p>
+<h2 id="trpc"><a class="anchor" href="#trpc" aria-label="Link to this section">#</a>tRPC</h2>
+<figure class="code"><figcaption><span class="code-lang">server/routers/handle.ts</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> z <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;zod&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="type">TRPCError</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@trpc/server&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> router, protectedProcedure <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;../trpc&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> guard, checkName <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;../../lib/guard&quot;</span>;
+
+<span class="kw">export</span> <span class="kw">const</span> handleRouter = <span class="fn">router</span>(<span class="br">{</span>
+  check: protectedProcedure
+    .<span class="fn">input</span>(z.<span class="fn">object</span>(<span class="br">{</span> handle: z.<span class="fn">string</span>(<span class="br">)</span> <span class="br">}</span><span class="br">)</span><span class="br">)</span>
+    .<span class="fn">query</span>(<span class="br">(</span><span class="br">{</span> input, ctx <span class="br">}</span><span class="br">)</span> =&gt; <span class="fn">checkName</span>(input.handle, <span class="br">{</span> id: ctx.user.id <span class="br">}</span><span class="br">)</span><span class="br">)</span>,
+
+  claim: protectedProcedure
+    .<span class="fn">input</span>(z.<span class="fn">object</span>(<span class="br">{</span> handle: z.<span class="fn">string</span>(<span class="br">)</span> <span class="br">}</span><span class="br">)</span><span class="br">)</span>
+    .<span class="fn">mutation</span>(<span class="kw">async</span> (<span class="br">{</span> input, ctx <span class="br">}</span><span class="br">)</span> =&gt; <span class="br">{</span>
+      <span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">claim</span>(
+        input.handle,
+        <span class="br">(</span>canonical<span class="br">)</span> =&gt;
+          ctx.db.user.<span class="fn">update</span>(<span class="br">{</span>
+            where: <span class="br">{</span> id: ctx.user.id <span class="br">}</span>,
+            data: <span class="br">{</span> handle: input.handle, handleCanonical: canonical <span class="br">}</span>,
+          <span class="br">}</span><span class="br">)</span>,
+        <span class="br">{</span> scope: <span class="br">{</span> id: ctx.user.id <span class="br">}</span> <span class="br">}</span>,
+      <span class="br">)</span>;
+      <span class="kw">if</span> (!result.claimed<span class="br">)</span> <span class="kw">throw</span> <span class="kw">new</span> <span class="fn">TRPCError</span>(<span class="br">{</span> code: <span class="str">&quot;CONFLICT&quot;</span>, message: result.message <span class="br">}</span><span class="br">)</span>;
+      <span class="kw">return</span> <span class="br">{</span> handle: result.normalized <span class="br">}</span>;
+    <span class="br">}</span><span class="br">)</span>,
+<span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<p>On the client, the refusal arrives as the error’s <code>message</code>. <code>check</code> returns the helper’s result as it is, so the client can show <code>message</code> and <code>suggestions</code> while the person types.</p>
+<h2 id="edge-runtimes"><a class="anchor" href="#edge-runtimes" aria-label="Link to this section">#</a>Edge runtimes</h2>
+<p>The library has no dependencies and uses no Node APIs, so it runs on edge runtimes such as Vercel’s Edge runtime, Cloudflare Workers and Deno Deploy. Three things differ there:</p>
+<ul><li><strong>The database client.</strong> The adapter uses whatever client you give it, and that client has to work in the runtime: usually a driver that talks to the database over HTTP or WebSockets. namespace-guard adds no constraint of its own.</li><li><strong>Size.</strong> The core package carries its character maps: about 470 KB minified, 61 KB gzipped. <code>namespace-guard/confusable-weights</code> adds about 177 KB (18 KB gzipped), and only if you import it. Both fit inside Workers’ limits.</li><li><strong>The cache.</strong> It lives in the guard’s memory, so each isolate has its own, and it goes when the isolate does. Treat it as a way to save repeated queries while someone types, not as shared state.</li></ul>
+<p>NFKC normalisation and Unicode script checks use the runtime’s own Unicode data, so a runtime on an older Unicode version can give a different answer for characters added since. <a href="../data/">Data and maps</a> has an example: the composability suite has 34 vectors on Unicode 16 or later and 31 before.</p>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/frameworks.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../adapters/"><span>Previous</span>Adapters</a><a class="next" href="../typescript/"><span>Next</span>TypeScript</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#one-guard-for-the-app">One guard for the app</a></li><li class="toc-2"><a href="#next-js">Next.js</a></li><li class="toc-3"><a href="#server-actions">Server actions</a></li><li class="toc-3"><a href="#route-handlers">Route handlers</a></li><li class="toc-2"><a href="#express">Express</a></li><li class="toc-2"><a href="#trpc">tRPC</a></li><li class="toc-2"><a href="#edge-runtimes">Edge runtimes</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  <script type="application/json" id="examples">[{"body":"const adapter = { findOne: async (source, value) => (value === \"sarah\" ? { id: \"u1\" } : null) };\nconst guard = createNamespaceGuardWithProfile(\"consumer-handle\", {\n  reserved: [\"admin\", \"settings\"],\n  sources: [{ name: \"user\", column: \"handleCanonical\", scopeKey: \"id\" }],\n  risk: { protect: [\"microsoft\"] },\n  suggest: { strategy: \"sequential\" },\n}, adapter);\n\nasync function checkName(name, scope = {}) {\n  const result = await guard.check(name, scope);\n  if (!result.available) {\n    return { available: false, message: result.message, suggestions: result.suggestions ?? [] };\n  }\n  const risk = guard.enforceRisk(name);\n  if (!risk.allowed) return { available: false, message: risk.message, suggestions: [] };\n  return { available: true };\n}\n\n__show(0, (await checkName(\"my-new-app\")));\n__show(1, (await checkName(\"sarah\")));\n__show(2, (await checkName(\"Sarah\", { id: \"u1\" })));\n__show(3, (await checkName(\"rnicrosoft\")));","checks":["{ available: true }","{ available: false, message: \"That name is already in use.\", suggestions: [\"sarah-1\", \"sarah1\", \"sarah-2\"] }","{ available: true }","{ available: false, message: \"Identifier is too confusable with a protected name. Closest protected target: \\\"microsoft\\\".\" }"],"labels":["checkName(\"my-new-app\")","checkName(\"sarah\")","checkName(\"Sarah\", { id: \"u1\" })","checkName(\"rnicrosoft\")"]}]</script>
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

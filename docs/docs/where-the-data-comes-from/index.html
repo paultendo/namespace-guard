@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Where the data comes from · namespace-guard docs</title>
+  <meta name="description" content="namespace-guard decides what passes for what from two sources: Unicode's own list, and measurements of how alike characters look in real fonts. Unicode's c">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/" aria-current="page">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Project</p>
+        <h1>Where the data comes from</h1>
+<p>namespace-guard decides what passes for what from two sources: Unicode’s own list, and measurements of how alike characters look in real fonts.</p>
+<h2 id="unicode-s-confusables-list"><a class="anchor" href="#unicode-s-confusables-list" aria-label="Link to this section">#</a>Unicode’s confusables list</h2>
+<p>Unicode publishes <a href="https://www.unicode.org/Public/security/latest/confusables.txt" rel="noopener">confusables.txt</a>, a list of characters that can be mistaken for others, as part of its security recommendations (UTS #39). namespace-guard builds its maps from the latest version, dated 2026-08-06: <code>CONFUSABLE_MAP_FULL</code> has 2,216 entries and <code>CONFUSABLE_MAP</code>, which leaves out the ones NFKC normalisation already handles, has 1,018. <code>CONFUSABLES_DATE</code> tells you which version you have.</p>
+<p>The list says which characters can be confused, but not how alike they look, in which fonts, or at what size. Some of its entries hold up only in unusual fonts; others miss characters that pass for a letter in ordinary ones.</p>
+<h2 id="measured-in-322-fonts"><a class="anchor" href="#measured-in-322-fonts" aria-label="Link to this section">#</a>Measured in 322 fonts</h2>
+<p><a href="https://github.com/paultendo/confusable-vision" rel="noopener">confusable-vision</a> measures it. Its current release, 2026.09.26, compares 64,751 characters in 322 fonts: every font that ships with macOS, plus Roboto, Noto and DejaVu. Each glyph is measured from its outline by firing rays through it (<a href="https://paultendo.github.io/posts/rayspace-methodology/" rel="noopener">RaySpace</a>), at the size and baseline position it has in running text, so a character that only matches when enlarged doesn’t count.</p>
+<figure class="figure-wide"><img src="../../images/rays.png" alt="The same rays through the Latin capital O and Ol Chiki letter at (U+1C5B): where each ray enters and leaves the ink, and its path through the ink, match." loading="lazy" width="2400" height="1460"></figure>
+<p>It finds 11,517 pairs alike in at least one font or combination of fonts, and 5,975 pass its thresholds. namespace-guard ships the 2,300 of those where one character is an ASCII letter or digit, or the two are in different scripts. Pairs within one script, such as Hangul jamo variants or Arabic positional forms, are left out: they don’t help anyone impersonate a Latin name.</p>
+<h2 id="checked-in-place"><a class="anchor" href="#checked-in-place" aria-label="Link to this section">#</a>Checked in place</h2>
+<p>Measuring two characters side by side isn’t the same as reading one in a word. So every lookalike of an ASCII letter, digit or two-letter sequence is also checked in place: set between other letters in the system font at 13 px and in Helvetica, Arial, Times New Roman and Georgia at 16 px, at 1x and 2x, and compared with pairs everyone accepts as alike, <code>0</code> and <code>O</code>, <code>1</code> and <code>l</code>, <code>I</code> and <code>l</code>.</p>
+<p>Each gets a tier:</p>
+<div class="table-wrap"><table><thead><tr><th>Tier</th><th>Means</th></tr></thead><tbody><tr><td>strict</td><td>as alike as the median accepted pair in that font</td></tr><tr><td>broad</td><td>as alike as the least alike accepted pair</td></tr><tr><td>design</td><td>alike only because one font draws both the same way</td></tr></tbody></table></div>
+<p>394 lookalikes that Unicode doesn’t list passed, such as Hebrew <code><span class="lk"><span title="U+05D0 Hebrew">א</span></span></code>, alike to <code>x</code> in Arial at 16 px. They’re in <code>CONFUSABLE_MAP_FULL</code> and <code>MEASURED_CONFUSABLES</code>; <code>CONFUSABLE_MAP</code>, which the lookalike validator uses to refuse a name, takes only the strict tier.</p>
+<figure class="code runnable" data-example="0"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="const">MEASURED_CONFUSABLES</span><span class="br">[</span><span class="str">&quot;<span class="lk"><span title="U+05D0 Hebrew">א</span></span>&quot;</span><span class="br">]</span>;  <span class="cm">// → { letter: &quot;x&quot;, tier: &quot;strict&quot;, contexts: [&quot;Arial 16&quot;] }</span>
+<span class="const">CONFUSABLE_MAP_FULL</span><span class="br">[</span><span class="str">&quot;<span class="lk"><span title="U+05D0 Hebrew">א</span></span>&quot;</span><span class="br">]</span>;  <span class="cm">// → &quot;x&quot;</span>
+<span class="type">Object</span>.<span class="fn">keys</span>(<span class="const">MEASURED_CONFUSABLES</span><span class="br">)</span>.length;  <span class="cm">// → 974</span>
+<span class="const">CONFUSABLES_DATE</span>;  <span class="cm">// → &quot;2026-08-06, 01:05:35 GMT&quot;</span></code></pre><div class="output" hidden></div></figure>
+<p><code>MEASURED_CONFUSABLES</code> holds every character the in-place check found alike to an ASCII letter or digit, Unicode’s entries included, with its tier and the fonts and sizes where it holds.</p>
+<p>The same data is used beyond namespace-guard: <a href="https://addons.mozilla.org/" rel="noopener">addons.mozilla.org</a> checks add-on names for lookalikes with characters from it, <a href="https://github.com/mozilla/addons-server/blob/master/src/olympia/amo/confusables.py#L4-L6" rel="noopener">credited in Mozilla’s source</a>, and <a href="https://disarm.dev/" rel="noopener">disarm</a> and <a href="https://acmcmc.github.io/silverspeak/" rel="noopener">SilverSpeak</a> use it too.</p>
+<h2 id="letters-built-on-latin-letters"><a class="anchor" href="#letters-built-on-latin-letters" aria-label="Link to this section">#</a>Letters built on Latin letters</h2>
+<p><code>canonicalise()</code> also folds letters with a stroke, hook or accent to the letter they’re built on, such as <code><span class="lk"><span title="U+0167 Latin">ŧ</span></span></code> to <code>t</code>. That table comes from the Unicode Character Database (17.0.0): each letter’s name and decomposition, and whether it’s in modern use, from <code>IdentifierType.txt</code>.</p>
+<h2 id="licences"><a class="anchor" href="#licences" aria-label="Link to this section">#</a>Licences</h2>
+<p>The measurements are CC BY 4.0, from confusable-vision. Unicode’s data is under the Unicode License v3. namespace-guard’s code is MIT. <code>THIRD-PARTY-NOTICES.md</code> in the package has the details.</p>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/where-the-data-comes-from.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../changelog/"><span>Previous</span>Changelog</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#unicode-s-confusables-list">Unicode’s confusables list</a></li><li class="toc-2"><a href="#measured-in-322-fonts">Measured in 322 fonts</a></li><li class="toc-2"><a href="#checked-in-place">Checked in place</a></li><li class="toc-2"><a href="#letters-built-on-latin-letters">Letters built on Latin letters</a></li><li class="toc-2"><a href="#licences">Licences</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  <script type="application/json" id="examples">[{"body":"__show(0, (MEASURED_CONFUSABLES[\"א\"]));\n__show(1, (CONFUSABLE_MAP_FULL[\"א\"]));\n__show(2, (Object.keys(MEASURED_CONFUSABLES).length));\n__show(3, (CONFUSABLES_DATE));","checks":["{ letter: \"x\", tier: \"strict\", contexts: [\"Arial 16\"] }","\"x\"","974","\"2026-08-06, 01:05:35 GMT\""],"labels":["MEASURED_CONFUSABLES[\"א\"]","CONFUSABLE_MAP_FULL[\"א\"]","Object.keys(MEASURED_CONFUSABLES).length","CONFUSABLES_DATE"]}]</script>
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

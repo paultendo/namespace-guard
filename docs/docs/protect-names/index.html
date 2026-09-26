@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Protect names · namespace-guard docs</title>
+  <meta name="description" content="Some names matter more than others: your brand, your staff, your biggest customers. namespace-guard refuses names made to pass for them, such as rnicrosoft">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/" aria-current="page">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Guides</p>
+        <h1>Protect names</h1>
+<p>Some names matter more than others: your brand, your staff, your biggest customers. namespace-guard refuses names made to pass for them, such as <code>rnicrosoft</code> for <code>microsoft</code>, <code>paypaI</code> with a capital I for <code>paypal</code>, or <code><span class="lk"><span title="U+0440 Cyrillic">р</span><span title="U+0430 Cyrillic">а</span><span title="U+0443 Cyrillic">у</span><span title="U+0440 Cyrillic">р</span><span title="U+0430 Cyrillic">а</span></span>l</code> spelt in Cyrillic.</p>
+<h2 id="say-what-to-protect"><a class="anchor" href="#say-what-to-protect" aria-label="Link to this section">#</a>Say what to protect</h2>
+<p>List the names in <code>risk.protect</code>. Reserved names are protected too, against lookalikes only, so <code><span class="lk"><span title="U+0430 Cyrillic">а</span></span>dmin</code> with a Cyrillic <code><span class="lk"><span title="U+0430 Cyrillic">а</span></span></code> is refused but <code>hell</code> isn’t refused for being close to <code>help</code>. Set <code>includeReserved: false</code> to leave reserved names out.</p>
+<figure class="code runnable" data-example="0"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="kw">null</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;support&quot;</span><span class="br">]</span>,
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;microsoft&quot;</span>, <span class="str">&quot;paypal&quot;</span>, <span class="str">&quot;github&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;rnicrosoft&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;paypa1&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;paypaI&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;<span class="lk"><span title="U+0440 Cyrillic">р</span><span title="U+0430 Cyrillic">а</span><span title="U+0443 Cyrillic">у</span><span title="U+0440 Cyrillic">р</span><span title="U+0430 Cyrillic">а</span></span>l&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;my-new-app&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;allow&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;<span class="lk"><span title="U+0430 Cyrillic">а</span></span>dmin&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;admit&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;allow&quot;</span></code></pre><div class="output" hidden></div></figure>
+<p><code>assertClaimable()</code> and <code>claim()</code> run this for you. <code>checkRisk()</code> is for when you want the score itself, for instance to show a warning while someone types.</p>
+<h2 id="what-counts-as-passing-for-a-name"><a class="anchor" href="#what-counts-as-passing-for-a-name" aria-label="Link to this section">#</a>What counts as passing for a name</h2>
+<p>A name is blocked when it looks like a protected one: its letters are the protected name’s letters or their lookalikes, and nothing else. That covers:</p>
+<ul><li>lookalikes from Unicode’s list and from <a href="../where-the-data-comes-from/">confusable-vision’s measurements</a>: Cyrillic <code><span class="lk"><span title="U+0430 Cyrillic">а</span></span></code> for <code>a</code>, Greek <code><span class="lk"><span title="U+03BF Greek">ο</span></span></code> for <code>o</code>;</li><li>ASCII tricks Unicode lists: <code>rn</code> for <code>m</code>, <code>1</code> and <code>|</code> for <code>l</code>, <code>0</code> for <code>o</code>;</li><li>a capital I for l, which reads the same where names are shown as typed: <code>paypaI</code> is stored as <code>paypai</code> but displayed as <code>paypaI</code>.</li></ul>
+<p>A name that is only close in spelling, one letter changed, added, dropped or swapped where the letters don’t look alike, is a typo, not a lookalike. It warns at most:</p>
+<figure class="code runnable" data-example="1"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="kw">null</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;github&quot;</span>, <span class="str">&quot;paypal&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;githuh&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;warn&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;paypax&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;warn&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;gitlab&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;allow&quot;</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;helper&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;allow&quot;</span></code></pre><div class="output" hidden></div></figure>
+<p><code>gitlab</code> differs from <code>github</code> by two letters that don’t look alike, so a reader sees a different word. A protected word with letters added, such as <code>github-fan</code>, isn’t matched either: the reader sees the whole protected word and the extra letters. If you want names that start with a protected word refused, add them to <code>reserved</code> or write a validator.</p>
+<h2 id="leetspeak"><a class="anchor" href="#leetspeak" aria-label="Link to this section">#</a>Leetspeak</h2>
+<p>Digits and symbols standing for letters, such as <code>p4ypal</code> or <code>adm1n</code>, read as the word to many people, but they don’t look like it, so by default they only warn. Turn on <code>leetspeak</code> to count them as lookalikes:</p>
+<figure class="code runnable" data-example="2"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="kw">null</span> <span class="br">}</span>;
+<span class="kw">const</span> strict = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;paypal&quot;</span><span class="br">]</span>, leetspeak: <span class="kw">true</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+strict.<span class="fn">checkRisk</span>(<span class="str">&quot;p4ypal&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+strict.<span class="fn">checkRisk</span>(<span class="str">&quot;p4yp4l&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span></code></pre><div class="output" hidden></div></figure>
+<h2 id="scores-and-thresholds"><a class="anchor" href="#scores-and-thresholds" aria-label="Link to this section">#</a>Scores and thresholds</h2>
+<p><code>checkRisk()</code> gives a score from 0 to 100. At 45 or more it warns; at 70 or more it blocks. Change them with <code>warnThreshold</code> and <code>blockThreshold</code>:</p>
+<figure class="code runnable" data-example="3"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="kw">null</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;paypal&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> risk = guard.<span class="fn">checkRisk</span>(<span class="str">&quot;paypa1&quot;</span><span class="br">)</span>;
+risk.score;  <span class="cm">// → 100</span>
+risk.action;  <span class="cm">// → &quot;block&quot;</span>
+risk.matches<span class="br">[</span><span class="num">0</span><span class="br">]</span>.target;  <span class="cm">// → &quot;paypal&quot;</span></code></pre><div class="output" hidden></div></figure>
+<p><code>matches</code> lists the closest protected names, with their scores and the reasons: a skeleton collision (both names reduce to the same thing once lookalikes are replaced), the number of lookalike swaps, a change of script.</p>
+<p><code>enforceRisk()</code> turns the score into a yes or no, and can fail on warnings too:</p>
+<figure class="code runnable" data-example="4"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="kw">null</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;github&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+guard.<span class="fn">enforceRisk</span>(<span class="str">&quot;githuh&quot;</span><span class="br">)</span>.allowed;  <span class="cm">// → true</span>
+guard.<span class="fn">enforceRisk</span>(<span class="str">&quot;githuh&quot;</span>, <span class="br">{</span> failOn: <span class="str">&quot;warn&quot;</span> <span class="br">}</span><span class="br">)</span>.allowed;  <span class="cm">// → false</span></code></pre><div class="output" hidden></div></figure>
+<aside class="callout callout-tip"><p class="callout-label"><span class="seg"><span class="kind">Tip</span></span></p><p>Tune thresholds on your own names rather than by feel. The <a href="../cli/">CLI</a> can generate attacks against your protected names, score a sample of real sign-ups, and suggest thresholds that block the attacks without refusing real people.</p></aside>
+<h2 id="options"><a class="anchor" href="#options" aria-label="Link to this section">#</a>Options</h2>
+<div class="table-wrap"><table><thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>protect</code></td><td>none</td><td>names to protect</td></tr><tr><td><code>includeReserved</code></td><td><code>true</code></td><td>protect your reserved names too</td></tr><tr><td><code>leetspeak</code></td><td><code>false</code></td><td>count digits and symbols standing for letters (<code>4</code> for <code>a</code>) as lookalikes</td></tr><tr><td><code>warnThreshold</code></td><td><code>45</code></td><td>the score at which <code>checkRisk()</code> warns</td></tr><tr><td><code>blockThreshold</code></td><td><code>70</code></td><td>the score at which it blocks</td></tr><tr><td><code>maxMatches</code></td><td><code>3</code></td><td>how many close protected names to return</td></tr></tbody></table></div>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/protect-names.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../how-it-works/"><span>Previous</span>How it works</a><a class="next" href="../unicode-names/"><span>Next</span>Unicode names</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#say-what-to-protect">Say what to protect</a></li><li class="toc-2"><a href="#what-counts-as-passing-for-a-name">What counts as passing for a name</a></li><li class="toc-2"><a href="#leetspeak">Leetspeak</a></li><li class="toc-2"><a href="#scores-and-thresholds">Scores and thresholds</a></li><li class="toc-2"><a href="#options">Options</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  <script type="application/json" id="examples">[{"body":"const adapter = { findOne: async () => null };\nconst guard = createNamespaceGuardWithProfile(\"consumer-handle\", {\n  reserved: [\"admin\", \"support\"],\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"microsoft\", \"paypal\", \"github\"] },\n}, adapter);\n\n__show(0, (guard.checkRisk(\"rnicrosoft\").action));\n__show(1, (guard.checkRisk(\"paypa1\").action));\n__show(2, (guard.checkRisk(\"paypaI\").action));\n__show(3, (guard.checkRisk(\"раураl\").action));\n__show(4, (guard.checkRisk(\"my-new-app\").action));\n__show(5, (guard.checkRisk(\"аdmin\").action));\n__show(6, (guard.checkRisk(\"admit\").action));","checks":["\"block\"","\"block\"","\"block\"","\"block\"","\"allow\"","\"block\"","\"allow\""],"labels":["guard.checkRisk(\"rnicrosoft\").action","guard.checkRisk(\"paypa1\").action","guard.checkRisk(\"paypaI\").action","guard.checkRisk(\"раураl\").action","guard.checkRisk(\"my-new-app\").action","guard.checkRisk(\"аdmin\").action","guard.checkRisk(\"admit\").action"]},{"body":"const adapter = { findOne: async () => null };\nconst guard = createNamespaceGuard({\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"github\", \"paypal\"] },\n}, adapter);\n\n__show(0, (guard.checkRisk(\"githuh\").action));\n__show(1, (guard.checkRisk(\"paypax\").action));\n__show(2, (guard.checkRisk(\"gitlab\").action));\n__show(3, (guard.checkRisk(\"helper\").action));","checks":["\"warn\"","\"warn\"","\"allow\"","\"allow\""],"labels":["guard.checkRisk(\"githuh\").action","guard.checkRisk(\"paypax\").action","guard.checkRisk(\"gitlab\").action","guard.checkRisk(\"helper\").action"]},{"body":"const adapter = { findOne: async () => null };\nconst strict = createNamespaceGuard({\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"paypal\"], leetspeak: true },\n}, adapter);\n\n__show(0, (strict.checkRisk(\"p4ypal\").action));\n__show(1, (strict.checkRisk(\"p4yp4l\").action));","checks":["\"block\"","\"block\""],"labels":["strict.checkRisk(\"p4ypal\").action","strict.checkRisk(\"p4yp4l\").action"]},{"body":"const adapter = { findOne: async () => null };\nconst guard = createNamespaceGuard({\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"paypal\"] },\n}, adapter);\n\nconst risk = guard.checkRisk(\"paypa1\");\n__show(0, (risk.score));\n__show(1, (risk.action));\n__show(2, (risk.matches[0].target));","checks":["100","\"block\"","\"paypal\""],"labels":["risk.score","risk.action","risk.matches[0].target"]},{"body":"const adapter = { findOne: async () => null };\nconst guard = createNamespaceGuard({\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"github\"] },\n}, adapter);\n\n__show(0, (guard.enforceRisk(\"githuh\").allowed));\n__show(1, (guard.enforceRisk(\"githuh\", { failOn: \"warn\" }).allowed));","checks":["true","false"],"labels":["guard.enforceRisk(\"githuh\").allowed","guard.enforceRisk(\"githuh\", { failOn: \"warn\" }).allowed"]}]</script>
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

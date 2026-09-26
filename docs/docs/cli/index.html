@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The CLI · namespace-guard docs</title>
+  <meta name="description" content="namespace-guard has a command-line tool. It checks names, scores lookalikes of the names you protect, generates attacks against them, suggests thresholds f">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/" aria-current="page">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Guides</p>
+        <h1>The CLI</h1>
+<p>namespace-guard has a command-line tool. It checks names, scores lookalikes of the names you protect, generates attacks against them, suggests thresholds from labelled examples, and gives you checks to run in CI.</p>
+<h2 id="run-it-with-npx"><a class="anchor" href="#run-it-with-npx" aria-label="Link to this section">#</a>Run it with npx</h2>
+<p>You don’t need to install anything to try it. <code>npx</code> downloads the package the first time, and in a project that already has namespace-guard installed it runs that copy:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> check acme<span class="var">-corp</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>✓ acme-corp is available</code></pre></figure>
+<p><code>npx namespace-guard --help</code> lists every command and option. <code>npx namespace-guard &lt;command&gt; --help</code>, or <code>npx namespace-guard help &lt;command&gt;</code>, shows one command’s usage, options and examples.</p>
+<div class="table-wrap"><table><thead><tr><th>Command</th><th>What it does</th><th>Exit code</th></tr></thead><tbody><tr><td><a href="#check"><code>check &lt;name&gt;</code></a></td><td>checks format and reserved names, and with a database URL, your tables</td><td>0 if available, 1 if not</td></tr><tr><td><a href="#risk"><code>risk &lt;name&gt;</code></a></td><td>scores a name against your protected names</td><td>1 if it blocks, otherwise 0</td></tr><tr><td><a href="#attack-gen"><code>attack-gen &lt;name&gt;</code></a></td><td>generates lookalikes of a name and scores each one</td><td>0</td></tr><tr><td><a href="#audit-canonical"><code>audit-canonical &lt;file&gt;</code></a></td><td>finds stored names that collide once normalised</td><td>1 if it finds any, otherwise 0</td></tr><tr><td><a href="#calibrate"><code>calibrate &lt;file&gt;</code></a></td><td>suggests thresholds from labelled names</td><td>0</td></tr><tr><td><a href="#recommend"><code>recommend &lt;file&gt;</code></a></td><td><code>calibrate</code> and <code>drift</code> together, with a config to paste</td><td>0</td></tr><tr><td><a href="#drift"><code>drift [file]</code></a></td><td>counts names whose verdict changes between the two character maps</td><td>0</td></tr></tbody></table></div>
+<p>Every command also exits with 1 on a usage error: an unknown command, a missing argument, a flag with a bad value, or a file it can’t find or parse.</p>
+<h2 id="the-config-file"><a class="anchor" href="#the-config-file" aria-label="Link to this section">#</a>The config file</h2>
+<p>The CLI reads <code>namespace-guard.config.json</code> from the current directory, or the file you name with <code>--config &lt;path&gt;</code>. Without one, nothing is reserved and names are checked against the default pattern. It reads three keys:</p>
+<div class="table-wrap"><table><thead><tr><th>Key</th><th>What it is</th></tr></thead><tbody><tr><td><code>reserved</code></td><td>a list of names, or categories of names, as in <a href="../configuration/#reserved"><code>reserved</code></a></td></tr><tr><td><code>sources</code></td><td>the tables <code>check --database-url</code> looks in, as in <a href="../configuration/#sources"><code>sources</code></a></td></tr><tr><td><code>pattern</code></td><td>the pattern, as a string without slashes or flags</td></tr></tbody></table></div>
+<figure class="code"><figcaption><span class="code-lang">JSON</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="br">{</span>
+  <span class="str">&quot;reserved&quot;</span>: <span class="br">{</span>
+    <span class="str">&quot;system&quot;</span>: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;api&quot;</span>, <span class="str">&quot;settings&quot;</span>, <span class="str">&quot;login&quot;</span><span class="br">]</span>,
+    <span class="str">&quot;brand&quot;</span>: <span class="br">[</span><span class="str">&quot;acme&quot;</span><span class="br">]</span>
+  <span class="br">}</span>,
+  <span class="str">&quot;pattern&quot;</span>: <span class="str">&quot;^[a-z0-9][a-z0-9-]{2,39}$&quot;</span>,
+  <span class="str">&quot;sources&quot;</span>: <span class="br">[</span>
+    <span class="br">{</span> <span class="str">&quot;name&quot;</span>: <span class="str">&quot;users&quot;</span>, <span class="str">&quot;column&quot;</span>: <span class="str">&quot;handle_canonical&quot;</span>, <span class="str">&quot;scopeKey&quot;</span>: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+    <span class="br">{</span> <span class="str">&quot;name&quot;</span>: <span class="str">&quot;organizations&quot;</span>, <span class="str">&quot;column&quot;</span>: <span class="str">&quot;slug_canonical&quot;</span>, <span class="str">&quot;scopeKey&quot;</span>: <span class="str">&quot;id&quot;</span> <span class="br">}</span>
+  <span class="br">]</span>
+<span class="br">}</span></code></pre></figure>
+<p>Everything else is ignored, including <code>messages</code>, <code>risk</code> and <code>caseInsensitive</code>. Risk settings come from flags on each command, so pass the same values your app’s config uses. Messages are always the defaults, so a pattern of your own is still described as “Use 2-30 lowercase letters, numbers, or hyphens.”:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> check ab</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>✗ ab — Use 2-30 lowercase letters, numbers, or hyphens.</code></pre></figure>
+<h2 id="check"><a class="anchor" href="#check" aria-label="Link to this section">#</a><code>check</code></h2>
+<p><code>check &lt;name&gt;</code> normalises the name, then checks it against the pattern and your reserved names, as <code>guard.check()</code> does. It prints the canonical form and the result.</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> check @Sarah
+<span class="kw">npx</span> namespace<span class="var">-guard</span> check admin</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>✓ sarah is available
+✗ admin — That name is reserved. Try another one.</code></pre></figure>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>What it does</th></tr></thead><tbody><tr><td><code>--config &lt;path&gt;</code></td><td>the config file to read</td></tr><tr><td><code>--database-url &lt;url&gt;</code></td><td>also look the name up in every source, in a PostgreSQL database</td></tr></tbody></table></div>
+<p>With <code>--database-url</code>, the CLI connects with <code>pg</code>, which you install yourself (<code>npm install pg</code>), and queries each source through the <a href="../adapters/#raw-sql">raw SQL adapter</a>:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> check sarah <span class="var">--database-url</span> postgres://localhost/app
+<span class="kw">npx</span> namespace<span class="var">-guard</span> check Acme<span class="var">-Corp</span> <span class="var">--database-url</span> postgres://localhost/app</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>✗ sarah — That name is already in use. (source: users)
+✗ acme-corp — That name is already in use. (source: organizations)</code></pre></figure>
+<p><code>check</code> exits with 0 when the name is available and 1 when it isn’t. It doesn’t score lookalikes of protected names; <code>risk</code> does that. <code>--database-url</code> works with <code>check</code> only.</p>
+<h2 id="risk"><a class="anchor" href="#risk" aria-label="Link to this section">#</a><code>risk</code></h2>
+<p><code>risk &lt;name&gt;</code> scores the name against your protected names, as <code>guard.checkRisk()</code> does, and prints the score, the action and the closest match. The protected names are those you pass with <code>--protect</code>, and the reserved names from the config file.</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> risk paypa1 <span class="var">--protect</span> paypal
+<span class="kw">npx</span> namespace<span class="var">-guard</span> risk githuh <span class="var">--protect</span> github,paypal
+<span class="kw">npx</span> namespace<span class="var">-guard</span> risk acrne</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>⛔ paypa1 — risk 100/100 (block)
+Top match: paypal (score 94, distance 0.35, chain depth 1)
+Signals: TR39 skeleton collision
+⚠ githuh — risk 69/100 (warn)
+Top match: github (score 69, distance 1, chain depth 1)
+Signals: one letter changed, added, dropped or swapped, not a lookalike
+⛔ acrne — risk 100/100 (block)
+Top match: acme (score 93, distance 0.35, chain depth 1)
+Signals: TR39 skeleton collision</code></pre></figure>
+<p><code>acrne</code> blocks because <code>acme</code> is reserved in the config file above. The name is scored as typed, so <code>risk paypaI --protect paypal</code> blocks, but the first line shows its canonical form, <code>paypai</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>--protect &lt;names&gt;</code></td><td>none</td><td>a protected name; repeat the flag or separate names with commas</td></tr><tr><td><code>--no-reserved</code></td><td>off</td><td>don’t protect the config file’s reserved names</td></tr><tr><td><code>--leetspeak</code></td><td>off</td><td>count digits and symbols standing for letters as lookalikes</td></tr><tr><td><code>--warn-threshold &lt;n&gt;</code></td><td><code>45</code></td><td>the score at which the action is <code>warn</code></td></tr><tr><td><code>--block-threshold &lt;n&gt;</code></td><td><code>70</code></td><td>the score at which it’s <code>block</code></td></tr><tr><td><code>--max-matches &lt;n&gt;</code></td><td><code>3</code></td><td>how many matches the JSON lists</td></tr><tr><td><code>--fail-on &lt;mode&gt;</code></td><td><code>block</code></td><td><code>block</code> exits with 1 on a block; <code>warn</code> exits with 1 on a warning too</td></tr><tr><td><code>--json</code></td><td>off</td><td>print the full <code>checkRisk()</code> result as JSON</td></tr></tbody></table></div>
+<aside class="callout callout-note"><p class="callout-label"><span class="seg"><span class="kind">Note</span></span></p><p>With no <code>--protect</code> and no reserved names in a config file, nothing is protected: a name scores only for lookalike or invisible characters of its own, so <code>risk paypa1</code> is allowed. The CLI doesn’t fall back to the built-in list that <code>claim()</code> and <code>enforceRisk()</code> use.</p></aside>
+<p>Leetspeak and the exit code:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> risk p4ypal <span class="var">--protect</span> paypal
+<span class="kw">npx</span> namespace<span class="var">-guard</span> risk p4ypal <span class="var">--protect</span> paypal <span class="var">--leetspeak</span>
+<span class="kw">npx</span> namespace<span class="var">-guard</span> risk githuh <span class="var">--protect</span> github <span class="var">--fail-on</span> warn; echo <span class="str">&quot;exit $?&quot;</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>⚠ p4ypal — risk 69/100 (warn)
+Top match: paypal (score 69, distance 1, chain depth 1)
+Signals: one letter changed, added, dropped or swapped, not a lookalike
+⛔ p4ypal — risk 94/100 (block)
+Top match: paypal (score 94, distance 0.35, chain depth 1)
+Signals: 1 leetspeak swap(s)
+⚠ githuh — risk 69/100 (warn)
+Top match: github (score 69, distance 1, chain depth 1)
+Signals: one letter changed, added, dropped or swapped, not a lookalike
+exit 1</code></pre></figure>
+<p>With <code>--json</code>, the output is the same object <code>checkRisk()</code> returns; <a href="../guard/#the-result">The guard</a> describes each field:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> risk githuh <span class="var">--protect</span> github <span class="var">--json</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>{
+  &quot;identifier&quot;: &quot;githuh&quot;,
+  &quot;normalized&quot;: &quot;githuh&quot;,
+  &quot;score&quot;: 69,
+  &quot;level&quot;: &quot;medium&quot;,
+  &quot;action&quot;: &quot;warn&quot;,
+  &quot;canBlock&quot;: false,
+  &quot;reasons&quot;: [
+    {
+      &quot;code&quot;: &quot;confusable-target&quot;,
+      &quot;message&quot;: &quot;Identifier is spelled close to protected target \&quot;github\&quot;, with no lookalike.&quot;,
+      &quot;weight&quot;: 69
+    }
+  ],
+  &quot;matches&quot;: [
+    {
+      &quot;target&quot;: &quot;github&quot;,
+      &quot;score&quot;: 69,
+      &quot;distance&quot;: 1,
+      &quot;chainDepth&quot;: 1,
+      &quot;skeletonEqual&quot;: false,
+      &quot;evidence&quot;: &quot;typo&quot;,
+      &quot;reasons&quot;: [
+        &quot;one letter changed, added, dropped or swapped, not a lookalike&quot;
+      ]
+    }
+  ]
+}</code></pre></figure>
+<h2 id="attack-gen"><a class="anchor" href="#attack-gen" aria-label="Link to this section">#</a><code>attack-gen</code></h2>
+<p><code>attack-gen &lt;name&gt;</code> makes the lookalikes an attacker would try: the name with one or two characters swapped for lookalikes, or with a zero-width character inserted. It scores each against the name, or against your <code>--protect</code> list, and reports how many would get through. A variant gets through, and counts as a bypass, when it isn’t blocked and your pattern accepts it.</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> attack<span class="var">-gen</span> paypal <span class="var">--max-candidates</span> 5 <span class="var">--no-ignorables</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Attack generation results for &quot;paypal&quot; (normalized: &quot;paypal&quot;)
+Mode: evasion, map: CONFUSABLE_MAP_FULL, protect: [paypal], generated: 200 (confusable 189, ascii-lookalike 11, ignorable 0)
+Leetspeak swaps are not lookalikes unless --leetspeak is set: they warn at most, so non-blocking ones count as bypasses.
+Outcomes: allow 0, warn 10, block 190
+Bypasses (non-blocking + format-valid): 10
+Top allow/bypass candidates:
+  &quot;p4ypal&quot; score 69 (warn) edits 1 vs paypal
+  &quot;payp4l&quot; score 69 (warn) edits 1 vs paypal
+  &quot;<span class="lk"><span title="U+FF50 Latin">ｐ</span></span>4ypal&quot; score 69 (warn) edits 2 vs paypal
+  &quot;<span class="lk"><span title="U+1D429">𝐩</span></span>4ypal&quot; score 69 (warn) edits 2 vs paypal
+  &quot;<span class="lk"><span title="U+1D45D">𝑝</span></span>4ypal&quot; score 69 (warn) edits 2 vs paypal
+Top risk candidates:
+  &quot;paypa1&quot; score 100 (block) edits 1 vs paypal
+  &quot;paypa<span class="lk"><span title="U+FF4C Latin">ｌ</span></span>&quot; score 100 (block) edits 1 vs paypal
+  &quot;paypaⅼ&quot; score 100 (block) edits 1 vs paypal
+  &quot;paypa<span class="lk"><span title="U+2113">ℓ</span></span>&quot; score 100 (block) edits 1 vs paypal
+  &quot;paypa<span class="lk"><span title="U+FF2C Latin">Ｌ</span></span>&quot; score 100 (block) edits 1 vs paypal</code></pre></figure>
+<p>Every Unicode lookalike blocks. The ten bypasses all use <code>4</code> for <code>a</code>, which is leetspeak: it reads as the word but doesn’t look like it, so by default it warns. Run the same command with <code>--leetspeak</code>, as your guard would score with <code>risk: { leetspeak: true }</code>, and all 200 block.</p>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>--mode &lt;kind&gt;</code></td><td><code>evasion</code></td><td><code>evasion</code> adds digits for letters (<code>4</code> for <code>a</code>, <code>1</code> for <code>l</code>, <code>0</code> for <code>o</code>) to the Unicode lookalikes; <code>impersonation</code> uses Unicode lookalikes only</td></tr><tr><td><code>--map &lt;map&gt;</code></td><td><code>full</code> in evasion mode, <code>filtered</code> in impersonation mode</td><td>the map the lookalikes come from and are scored with: <code>full</code> is <code>CONFUSABLE_MAP_FULL</code>, <code>filtered</code> is <code>CONFUSABLE_MAP</code></td></tr><tr><td><code>--max-edits &lt;n&gt;</code></td><td><code>2</code></td><td>swap one character, or up to two</td></tr><tr><td><code>--max-per-char &lt;n&gt;</code></td><td><code>8</code></td><td>how many lookalikes to try for each character</td></tr><tr><td><code>--no-ignorables</code></td><td>off</td><td>don’t insert zero-width characters</td></tr><tr><td><code>--max-candidates &lt;n&gt;</code></td><td><code>25</code></td><td>how many variants each list shows, up to 50. It also caps how many are generated, at 20 times this number or 200, whichever is more</td></tr><tr><td><code>--protect</code>, <code>--no-reserved</code>, <code>--leetspeak</code>, the thresholds, <code>--max-matches</code></td><td>as for <code>risk</code></td><td>how each variant is scored; without <code>--protect</code>, the name itself is protected</td></tr><tr><td><code>--json</code></td><td>off</td><td>print the counts and the lists, with each variant’s swaps, score and whether the pattern accepts it</td></tr></tbody></table></div>
+<p><code>attack-gen</code> always exits with 0. To fail a build on a bypass, read <code>bypassCount</code> from the JSON; see <a href="#in-ci">In CI</a>.</p>
+<h2 id="audit-canonical"><a class="anchor" href="#audit-canonical" aria-label="Link to this section">#</a><code>audit-canonical</code></h2>
+<p>Before you add a unique index to a canonical column, find the stored names that would collide on it. <code>audit-canonical &lt;file&gt;</code> reads a JSON array exported from your table, normalises each name as the guard does, and reports names that end up the same.</p>
+<figure class="code"><figcaption><span class="code-lang">JSON</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="br">[</span>
+  <span class="br">{</span> <span class="str">&quot;id&quot;</span>: <span class="str">&quot;u1&quot;</span>, <span class="str">&quot;handle&quot;</span>: <span class="str">&quot;Sarah&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;id&quot;</span>: <span class="str">&quot;u2&quot;</span>, <span class="str">&quot;handle&quot;</span>: <span class="str">&quot;sarah&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;id&quot;</span>: <span class="str">&quot;u3&quot;</span>, <span class="str">&quot;handle&quot;</span>: <span class="str">&quot;<span class="lk"><span title="U+FF53 Latin">ｓ</span><span title="U+FF41 Latin">ａ</span><span title="U+FF52 Latin">ｒ</span><span title="U+FF41 Latin">ａ</span><span title="U+FF48 Latin">ｈ</span></span>&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;id&quot;</span>: <span class="str">&quot;u4&quot;</span>, <span class="str">&quot;handle&quot;</span>: <span class="str">&quot;tom&quot;</span>, <span class="str">&quot;handle_canonical&quot;</span>: <span class="str">&quot;tom&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;id&quot;</span>: <span class="str">&quot;u5&quot;</span>, <span class="str">&quot;handle&quot;</span>: <span class="str">&quot;Zoe&quot;</span>, <span class="str">&quot;handle_canonical&quot;</span>: <span class="str">&quot;Zoe&quot;</span> <span class="br">}</span>
+<span class="br">]</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> audit<span class="var">-canonical</span> users.json</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Canonical audit (/home/you/app/users.json) — 5/5 processed, 1 collision group(s)
+Conflicting rows: 3, stored-canonical mismatches: 1, skipped rows: 0
+canonical &quot;sarah&quot; -&gt; 3 row(s)
+  row 2: id=&quot;u2&quot; raw=&quot;sarah&quot; normalized=&quot;sarah&quot;
+  row 3: id=&quot;u3&quot; raw=&quot;<span class="lk"><span title="U+FF53 Latin">ｓ</span><span title="U+FF41 Latin">ａ</span><span title="U+FF52 Latin">ｒ</span><span title="U+FF41 Latin">ａ</span><span title="U+FF48 Latin">ｈ</span></span>&quot; normalized=&quot;sarah&quot;
+  row 1: id=&quot;u1&quot; raw=&quot;Sarah&quot; normalized=&quot;sarah&quot;</code></pre></figure>
+<p>Three rows would all be stored as <code>sarah</code>, and one row has a canonical value that isn’t its name’s canonical form: <code>Zoe</code> should be stored as <code>zoe</code>. The command exits with 1 when it finds either, so you can run it until it passes.</p>
+<p>Each row is an object. The CLI takes the first of these fields it finds:</p>
+<div class="table-wrap"><table><thead><tr><th>What</th><th>Fields</th></tr></thead><tbody><tr><td>the name</td><td><code>identifier</code>, <code>raw</code>, <code>handle</code>, <code>slug</code>, <code>username</code>, <code>value</code></td></tr><tr><td>an ID to print</td><td><code>id</code>, <code>_id</code>, <code>uuid</code></td></tr><tr><td>the table to print</td><td><code>source</code>, <code>table</code>, <code>model</code></td></tr><tr><td>the stored canonical form, to compare</td><td><code>canonical</code>, <code>normalized</code>, <code>handleCanonical</code>, <code>slugCanonical</code>, <code>handle_canonical</code>, <code>slug_canonical</code></td></tr></tbody></table></div>
+<p>A row with no name is skipped. <code>--limit &lt;n&gt;</code> sets how many collision groups are printed (10 by default), and <code>--json</code> prints the full report. <a href="../claiming/#store-a-canonical-column">Store a canonical column</a> covers the migration around it.</p>
+<h2 id="calibrate"><a class="anchor" href="#calibrate" aria-label="Link to this section">#</a><code>calibrate</code></h2>
+<p><code>calibrate &lt;file&gt;</code> suggests a warn threshold and a block threshold from names you’ve labelled as attacks or genuine. It scores every name, tries every pair of thresholds, and picks the pair that costs least under a cost model: a genuine name blocked costs more than one warned, and an attack let through costs more than one warned.</p>
+<figure class="code"><figcaption><span class="code-lang">JSON</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="br">[</span>
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;paypa1&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;paypaI&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;<span class="lk"><span title="U+0440 Cyrillic">р</span><span title="U+0430 Cyrillic">а</span><span title="U+0443 Cyrillic">у</span><span title="U+0440 Cyrillic">р</span><span title="U+0430 Cyrillic">а</span></span>l&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;p4ypal&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;rnicrosoft&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;microsoft&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;micros0ft&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;microsoft&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;githuh&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;malicious&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;github&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;paypal-fan&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;benign&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;paul&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;benign&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;gitlab&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;benign&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;github&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;microscope&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;benign&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;microsoft&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;sarah&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;benign&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> <span class="str">&quot;identifier&quot;</span>: <span class="str">&quot;papal&quot;</span>, <span class="str">&quot;label&quot;</span>: <span class="str">&quot;benign&quot;</span>, <span class="str">&quot;target&quot;</span>: <span class="str">&quot;paypal&quot;</span> <span class="br">}</span>
+<span class="br">]</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> calibrate risk<span class="var">-dataset</span>.json</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Calibration results (13 rows: 7 malicious, 6 benign)
+Recommended warn threshold: 42 (precision 0.875, recall 1)
+Recommended block threshold: 71 (precision 1, recall 0.714, f1 0.833)
+Expected policy cost: 7 (avg 0.538 per weighted row)</code></pre></figure>
+<p>On this data the five lookalikes score 100, the three close spellings, <code>p4ypal</code>, <code>githuh</code> and the genuine word <code>papal</code>, score 83, and the other genuine names score 0. <code>p4ypal</code> and <code>githuh</code> can’t block, since nothing in them is a lookalike, and <code>papal</code> warns though it’s genuine: those three are the cost of 7. Any warn threshold from 1 to 83 costs the same, as does any block threshold above it, so calibrate takes the middle of each range: it warns from 42, halfway between the genuine names and the close spellings, and blocks from 71, halfway between 42 and the lookalikes. A name that scores a little differently from your examples is then treated as they are. It suggests 100 only when a lower block threshold would cost more.</p>
+<p>Each row needs:</p>
+<ul><li><code>identifier</code>: the name.</li><li><code>label</code>, <code>malicious</code> or <code>attack</code>: <code>true</code>, <code>1</code>, <code>&quot;malicious&quot;</code>, <code>&quot;attack&quot;</code>, <code>&quot;spoof&quot;</code> or <code>&quot;positive&quot;</code> for an attack; <code>false</code>, <code>0</code>, <code>&quot;benign&quot;</code>, <code>&quot;safe&quot;</code> or <code>&quot;negative&quot;</code> for a genuine name.</li><li><code>target</code> or <code>protect</code>, optionally: the protected names for this row, as a string, a comma-separated string or a list. Rows without one use <code>--protect</code>.</li><li><code>weight</code>, optionally: a positive number that counts the row more or less, 1 by default.</li></ul>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>--protect</code>, <code>--no-reserved</code>, <code>--leetspeak</code></td><td>as for <code>risk</code></td><td>how names are scored</td></tr><tr><td><code>--target-recall &lt;n&gt;</code></td><td><code>0.9</code></td><td>the share of attacks the warn threshold should reach, if any threshold can</td></tr><tr><td><code>--cost-block-benign &lt;n&gt;</code></td><td><code>8</code></td><td>the cost of blocking a genuine name</td></tr><tr><td><code>--cost-warn-benign &lt;n&gt;</code></td><td><code>1</code></td><td>the cost of warning on a genuine name</td></tr><tr><td><code>--cost-allow-malicious &lt;n&gt;</code></td><td><code>12</code></td><td>the cost of allowing an attack</td></tr><tr><td><code>--cost-warn-malicious &lt;n&gt;</code></td><td><code>3</code></td><td>the cost of only warning on an attack</td></tr><tr><td><code>--malicious-prior &lt;n&gt;</code></td><td>none</td><td>the share of attacks you expect in real sign-ups, from 0 to 1; reweights the rows to match</td></tr><tr><td><code>--json</code></td><td>off</td><td>print the metrics for both thresholds and the cost breakdown</td></tr></tbody></table></div>
+<p>The thresholds fit the rows you give them. Use a few hundred real sign-ups as genuine rows and a varied set of attacks, and compare the result with the defaults (45 and 70) before you change them.</p>
+<p><code>attack-gen</code> can supply the attacks. Write its JSON to a file, then turn its variants into rows with <code>jq</code>:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> attack<span class="var">-gen</span> paypal <span class="var">--max-candidates</span> 50 <span class="var">--json</span> &gt; attacks.json
+jq <span class="str">'[.previews.topRisk[] | {identifier, label: &quot;malicious&quot;, target: &quot;paypal&quot;}]'</span> attacks.json &gt; malicious.json</code></pre></figure>
+<h2 id="recommend"><a class="anchor" href="#recommend" aria-label="Link to this section">#</a><code>recommend</code></h2>
+<p><code>recommend &lt;file&gt;</code> runs <code>calibrate</code> on your file, then <code>drift</code> on your file and on the built-in corpus, and prints a <code>risk</code> config to paste into your guard and a drift budget for CI. It takes the same flags as <code>calibrate</code>, and <code>--limit</code> for the drift previews.</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> recommend risk<span class="var">-dataset</span>.json</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Recommendation (/home/you/app/risk-dataset.json)
+Risk thresholds: warn 42, block 71
+Expected policy cost: 7 (avg 0.538 per weighted row)
+Drift snapshot: 3 action flip(s), max |<span class="lk"><span title="U+0394 Greek">Δ</span></span>| 100
+Baseline drift (builtin corpus): 34 action flip(s), max |<span class="lk"><span title="U+0394 Greek">Δ</span></span>| 100
+Suggested namespace-guard risk config:
+{
+  &quot;risk&quot;: {
+    &quot;warnThreshold&quot;: 42,
+    &quot;blockThreshold&quot;: 71
+  }
+}
+Suggested CI drift gate command:
+npm run ci:drift-gate -- --max-action-flips 34 --max-average-score-delta 100 --max-abs-score-delta 100</code></pre></figure>
+<p>The config includes <code>protect</code> and <code>leetspeak</code> when you pass <code>--protect</code> and <code>--leetspeak</code>. The same caution applies as for <code>calibrate</code>. The drift gate command runs in the namespace-guard repository; <a href="#the-drift-gate">The drift gate</a> shows how to run the same check in yours.</p>
+<h2 id="drift"><a class="anchor" href="#drift" aria-label="Link to this section">#</a><code>drift</code></h2>
+<p>namespace-guard has two character maps. <code>CONFUSABLE_MAP_FULL</code> has every entry. <code>CONFUSABLE_MAP</code> leaves out Unicode’s ASCII entries, such as <code>m</code> for <code>rn</code>, the characters NFKC turns into ASCII, and the less certain measured lookalikes; see <a href="../data/#the-character-maps">The character maps</a>. <code>drift</code> scores each name with both and counts the names whose action changes: its action flips. It scores names as typed, without NFKC, since NFKC would hide the difference.</p>
+<p>Without a file, it uses the 34 <a href="../data/#composability-vectors">composability vectors</a>: the characters NFKC and Unicode’s list read differently, each scored against the letter Unicode says it passes for.</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> drift <span class="var">--limit</span> 3</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Drift results (builtin:composability-vectors) — 34 rows, 34 action flip(s)
+Full stricter: 34, filtered stricter: 0, average score <span class="lk"><span title="U+0394 Greek">Δ</span></span>: 100, max |<span class="lk"><span title="U+0394 Greek">Δ</span></span>|: 100
+&quot;０&quot;: full 100/block vs filtered 0/allow (<span class="lk"><span title="U+0394 Greek">Δ</span></span> 100) targets [o]
+&quot;𜳰&quot;: full 100/block vs filtered 0/allow (<span class="lk"><span title="U+0394 Greek">Δ</span></span> 100) targets [o]
+&quot;𝟎&quot;: full 100/block vs filtered 0/allow (<span class="lk"><span title="U+0394 Greek">Δ</span></span> 100) targets [o]</code></pre></figure>
+<p>With a file of the same shape as <code>calibrate</code>’s (labels are ignored), it shows which of your names depend on the full map:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> drift risk<span class="var">-dataset</span>.json</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Drift results (/home/you/app/risk-dataset.json) — 13 rows, 3 action flip(s)
+Full stricter: 3, filtered stricter: 0, average score <span class="lk"><span title="U+0394 Greek">Δ</span></span>: 12.462, max |<span class="lk"><span title="U+0394 Greek">Δ</span></span>|: 100
+&quot;rnicrosoft&quot;: full 100/block vs filtered 0/allow (<span class="lk"><span title="U+0394 Greek">Δ</span></span> 100) targets [microsoft]
+&quot;micros0ft&quot;: full 100/block vs filtered 69/warn (<span class="lk"><span title="U+0394 Greek">Δ</span></span> 31) targets [microsoft]
+&quot;paypa1&quot;: full 100/block vs filtered 69/warn (<span class="lk"><span title="U+0394 Greek">Δ</span></span> 31) targets [paypal]</code></pre></figure>
+<p><code>rnicrosoft</code> blocks only with the full map, which lists <code>m</code> as <code>rn</code>. The guard scores with the full map unless you pass <code>map</code>, so these names block.</p>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>--protect</code>, <code>--no-reserved</code>, the thresholds, <code>--max-matches</code></td><td>as for <code>risk</code></td><td>how names are scored; a row’s own <code>target</code> or <code>protect</code> comes first</td></tr><tr><td><code>--limit &lt;n&gt;</code></td><td><code>10</code></td><td>how many changed names to print</td></tr><tr><td><code>--json</code></td><td>off</td><td>print the counts and the changed names as JSON</td></tr></tbody></table></div>
+<p><code>drift</code> always exits with 0; the drift gate below turns its numbers into a pass or a fail.</p>
+<h2 id="json-output"><a class="anchor" href="#json-output" aria-label="Link to this section">#</a>JSON output</h2>
+<p><code>risk</code>, <code>attack-gen</code>, <code>audit-canonical</code>, <code>calibrate</code>, <code>recommend</code> and <code>drift</code> print JSON with <code>--json</code>, and nothing else, so the output can go straight to a file or another tool. <code>check</code> has no JSON output; use its exit code.</p>
+<div class="table-wrap"><table><thead><tr><th>Command</th><th>Useful fields</th></tr></thead><tbody><tr><td><code>risk</code></td><td><code>score</code>, <code>action</code>, <code>canBlock</code>, <code>matches</code></td></tr><tr><td><code>attack-gen</code></td><td><code>bypassCount</code>, <code>outcomes</code>, <code>previews.bypass</code>, <code>previews.topRisk</code>, <code>previews.blocked</code></td></tr><tr><td><code>audit-canonical</code></td><td><code>collisions</code>, <code>conflictingRows</code>, <code>canonicalMismatches</code>, <code>collisionsPreview</code></td></tr><tr><td><code>calibrate</code></td><td><code>recommendations</code>, <code>metrics</code>, <code>expectedCost</code></td></tr><tr><td><code>recommend</code></td><td><code>recommendedConfig</code>, <code>ciGate.budgets</code>, <code>ciGate.command</code></td></tr><tr><td><code>drift</code></td><td><code>actionFlips</code>, <code>averageScoreDelta</code>, <code>maxAbsScoreDelta</code>, <code>changedPreview</code></td></tr></tbody></table></div>
+<h2 id="in-ci"><a class="anchor" href="#in-ci" aria-label="Link to this section">#</a>In CI</h2>
+<h3 id="check-that-attacks-are-blocked"><a class="anchor" href="#check-that-attacks-are-blocked" aria-label="Link to this section">#</a>Check that attacks are blocked</h3>
+<p>Run <code>attack-gen</code> on each name you protect, with the same settings as your guard, and fail when anything gets through. <code>jq -e</code> exits with 1 when the expression is false:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> attack<span class="var">-gen</span> paypal <span class="var">--leetspeak</span> <span class="var">--json</span> &gt; attacks.json
+jq <span class="var">-e</span> <span class="str">'.bypassCount == 0'</span> attacks.json</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>true</code></pre></figure>
+<p>This catches an upgrade, or a change to your pattern or thresholds, that lets a lookalike through. Leave out <code>--leetspeak</code> if your guard doesn’t set it, and use <code>--mode impersonation</code> to test Unicode lookalikes only.</p>
+<p>To check names you’re about to publish, such as seeded organisation slugs, run <code>risk</code> on each with your <code>--protect</code> list: it exits with 1 when a name blocks.</p>
+<h3 id="the-drift-gate"><a class="anchor" href="#the-drift-gate" aria-label="Link to this section">#</a>The drift gate</h3>
+<p>The drift gate fails a build when <code>drift</code>’s numbers on the built-in corpus go over a budget. In 0.23.0 all 34 vectors flip, so the budget is 34 action flips. A new version that changes the maps changes the count, and the gate makes you look at the change before you ship it.</p>
+<p>namespace-guard’s own repository runs it on every pull request, with a script that reads <code>drift --json</code> from the built CLI:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npm</span> run build
+<span class="kw">npm</span> run ci:drift<span class="var">-gate</span> -- <span class="var">--max-action-flips</span> 34 <span class="var">--max-average-score-delta</span> 100 <span class="var">--max-abs-score-delta</span> 100</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>&gt; namespace-guard@0.23.0 ci:drift-gate
+&gt; node scripts/drift-gate.js --max-action-flips 34 --max-average-score-delta 100 --max-abs-score-delta 100
+
+Drift gate passed (builtin:composability-vectors).
+actionFlips=34, |averageScoreDelta|=100, maxAbsScoreDelta=100</code></pre></figure>
+<p>Over budget, it lists what failed and exits with 1:</p>
+<figure class="code"><figcaption><span class="code-lang"></span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>Drift gate failed (builtin:composability-vectors).
+- actionFlips 34 &gt; max-action-flips 30</code></pre></figure>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>What it does</th></tr></thead><tbody><tr><td><code>--max-action-flips &lt;n&gt;</code></td><td>the most action flips allowed</td></tr><tr><td><code>--max-average-score-delta &lt;n&gt;</code></td><td>the largest average score change allowed, either way</td></tr><tr><td><code>--max-abs-score-delta &lt;n&gt;</code></td><td>the largest single score change allowed</td></tr><tr><td><code>--dataset &lt;path&gt;</code></td><td>a file of your own instead of the built-in corpus</td></tr><tr><td><code>--limit &lt;n&gt;</code></td><td>passed to <code>drift --limit</code>, 1 by default</td></tr></tbody></table></div>
+<p>At least one budget is required. <code>recommend</code> prints this command with budgets taken from the built-in corpus.</p>
+<p>The script isn’t part of the npm package, so in your own project, check the same numbers with the published CLI and <code>jq</code>:</p>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> namespace<span class="var">-guard</span> drift <span class="var">--json</span> &gt; drift.json
+jq <span class="var">-e</span> <span class="str">'.actionFlips &lt;= 34 and .maxAbsScoreDelta &lt;= 100'</span> drift.json</code></pre></figure>
+<h3 id="a-github-actions-workflow"><a class="anchor" href="#a-github-actions-workflow" aria-label="Link to this section">#</a>A GitHub Actions workflow</h3>
+<p>This workflow is modelled on namespace-guard’s own <code>.github/workflows/drift-gate.yml</code>. It runs both checks on every pull request and every push to <code>main</code>. <code>jq</code> is installed on GitHub’s Ubuntu runners.</p>
+<figure class="code"><figcaption><span class="code-lang">.github/workflows/names.yml</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>name: <span class="type">Name</span> checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  names:
+    runs-on: ubuntu-latest
+    steps:
+      - name: <span class="type">Checkout</span>
+        uses: actions/checkout@v4
+
+      - name: <span class="type">Setup</span> <span class="type">Node</span>.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: <span class="num">20</span>
+          cache: npm
+
+      - name: <span class="type">Install</span> dependencies
+        run: npm ci
+
+      - name: <span class="type">Lookalikes</span> <span class="kw">of</span> protected names are blocked
+        run: |
+          <span class="kw">for</span> name <span class="kw">in</span> paypal github; do
+            npx namespace-guard attack-gen <span class="str">&quot;$name&quot;</span> --leetspeak --json &gt; attacks.json
+            jq -e <span class="str">'.bypassCount == 0'</span> attacks.json
+          done
+
+      - name: <span class="type">Enforce</span> drift budget
+        run: |
+          npx namespace-guard drift --json &gt; drift.json
+          jq -e <span class="str">'.actionFlips &lt;= 34 and .maxAbsScoreDelta &lt;= 100'</span> drift.json</code></pre></figure>
+<p>With namespace-guard in your dependencies, <code>npm ci</code> installs it and <code>npx</code> runs that version, so the checks test the version your app ships with.</p>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/cli.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../comparing-names/"><span>Previous</span>Comparing names</a><a class="next" href="../upgrading/"><span>Next</span>Upgrading to 0.23</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#run-it-with-npx">Run it with npx</a></li><li class="toc-2"><a href="#the-config-file">The config file</a></li><li class="toc-2"><a href="#check">check</a></li><li class="toc-2"><a href="#risk">risk</a></li><li class="toc-2"><a href="#attack-gen">attack-gen</a></li><li class="toc-2"><a href="#audit-canonical">audit-canonical</a></li><li class="toc-2"><a href="#calibrate">calibrate</a></li><li class="toc-2"><a href="#recommend">recommend</a></li><li class="toc-2"><a href="#drift">drift</a></li><li class="toc-2"><a href="#json-output">JSON output</a></li><li class="toc-2"><a href="#in-ci">In CI</a></li><li class="toc-3"><a href="#check-that-attacks-are-blocked">Check that attacks are blocked</a></li><li class="toc-3"><a href="#the-drift-gate">The drift gate</a></li><li class="toc-3"><a href="#a-github-actions-workflow">A GitHub Actions workflow</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

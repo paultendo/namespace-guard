@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How it works · namespace-guard docs</title>
+  <meta name="description" content="A name goes through the same steps every time, in the same order, and the first step it fails decides the answer. This page walks through them and shows wh">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/" aria-current="page">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Start</p>
+        <h1>How it works</h1>
+<p>A name goes through the same steps every time, in the same order, and the first step it fails decides the answer. This page walks through them and shows which call runs which.</p>
+<h2 id="the-steps"><a class="anchor" href="#the-steps" aria-label="Link to this section">#</a>The steps</h2>
+<ol><li><strong>Normalise.</strong> Trim spaces, apply NFKC (so fullwidth <code><span class="lk"><span title="U+FF48 Latin">ｈ</span><span title="U+FF45 Latin">ｅ</span><span title="U+FF4C Latin">ｌ</span><span title="U+FF4C Latin">ｌ</span><span title="U+FF4F Latin">ｏ</span></span></code> becomes <code>hello</code>), lowercase, and drop a leading <code>@</code>. The result is the name’s canonical form: the one you store and compare.</li><li><strong>Format.</strong> The canonical form must match the pattern: by default 2 to 30 lowercase letters, digits and hyphens, not starting with a hyphen. Profiles can also refuse names made only of digits.</li><li><strong>Reserved.</strong> Names you hold back, such as <code>admin</code> or your brand, in categories with their own messages.</li><li><strong>Validators.</strong> Checks you add: lookalike characters, invisible characters, profanity, or anything of your own. They run in the order you list them.</li><li><strong>Database.</strong> Every source is queried in parallel. If any has the name, it’s taken, unless it belongs to the person asking (see <a href="../claiming/">ownership scoping</a>).</li><li><strong>Protected names.</strong> Separately, the name is scored against the names you protect: <code>rnicrosoft</code> against <code>microsoft</code>. A high enough score blocks it.</li></ol>
+<figure class="code runnable" data-example="0"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="fn">normalize</span>(<span class="str">&quot;  @Sarah &quot;</span><span class="br">)</span>;  <span class="cm">// → &quot;sarah&quot;</span>
+<span class="fn">normalize</span>(<span class="str">&quot;<span class="lk"><span title="U+FF48 Latin">ｈ</span><span title="U+FF45 Latin">ｅ</span><span title="U+FF4C Latin">ｌ</span><span title="U+FF4C Latin">ｌ</span><span title="U+FF4F Latin">ｏ</span></span>&quot;</span><span class="br">)</span>;  <span class="cm">// → &quot;hello&quot;</span>
+<span class="fn">normalize</span>(<span class="str">&quot;Stra<span class="lk"><span title="U+00DF Latin">ß</span></span>e&quot;</span><span class="br">)</span>;  <span class="cm">// → &quot;stra<span class="lk"><span title="U+00DF Latin">ß</span></span>e&quot;</span></code></pre><div class="output" hidden></div></figure>
+<p>Steps 1 to 5 answer “is it free?”. Step 6 answers “does it pass for someone else?”. They’re separate because you may want to treat them differently: refuse a taken name outright, but show a softer message for one that is close to a protected name.</p>
+<h2 id="which-call-runs-which"><a class="anchor" href="#which-call-runs-which" aria-label="Link to this section">#</a>Which call runs which</h2>
+<div class="table-wrap"><table><thead><tr><th>Call</th><th>Steps</th><th>What you get</th></tr></thead><tbody><tr><td><code>guard.check(name)</code></td><td>1 to 5</td><td>a result: <code>{ available: true }</code> or <code>{ available: false, reason, message }</code></td></tr><tr><td><code>guard.assertAvailable(name)</code></td><td>1 to 5</td><td>nothing, or it throws with the message</td></tr><tr><td><code>guard.checkRisk(name)</code></td><td>1, 6</td><td>a score from 0 to 100, an action (<code>allow</code>, <code>warn</code> or <code>block</code>) and the closest protected names</td></tr><tr><td><code>guard.enforceRisk(name)</code></td><td>1, 6</td><td><code>{ allowed, action, risk }</code> under your thresholds</td></tr><tr><td><code>guard.assertClaimable(name)</code></td><td>1 to 6</td><td>nothing, or it throws with the message</td></tr><tr><td><code>guard.claim(name, write)</code></td><td>1 to 6, then your write</td><td><code>{ claimed: true, normalized, value }</code> or <code>{ claimed: false, normalized, reason: &quot;unavailable&quot;, message }</code></td></tr><tr><td><code>guard.checkMany(names)</code></td><td>1 to 5, for each</td><td>a record of results</td></tr></tbody></table></div>
+<p>Use <code>check()</code> while someone types, to show whether a name is free. Use <code>claim()</code> when they submit, so the check and the write happen together.</p>
+<figure class="code runnable" data-example="1"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (source, value<span class="br">)</span> =&gt; <span class="br">(</span>value === <span class="str">&quot;sarah&quot;</span> ? <span class="br">{</span> id: <span class="str">&quot;u1&quot;</span> <span class="br">}</span> : <span class="kw">null</span><span class="br">)</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">&quot;admin&quot;</span><span class="br">]</span>,
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;paypal&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="br">(</span><span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;paypa1&quot;</span><span class="br">)</span><span class="br">)</span>.available;  <span class="cm">// → true</span>
+guard.<span class="fn">checkRisk</span>(<span class="str">&quot;paypa1&quot;</span><span class="br">)</span>.action;  <span class="cm">// → &quot;block&quot;</span>
+<span class="br">(</span><span class="kw">await</span> guard.<span class="fn">claim</span>(<span class="str">&quot;paypa1&quot;</span>, <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="str">&quot;saved&quot;</span><span class="br">)</span><span class="br">)</span>.claimed;  <span class="cm">// → false</span>
+<span class="br">(</span><span class="kw">await</span> guard.<span class="fn">claim</span>(<span class="str">&quot;my-new-app&quot;</span>, <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="str">&quot;saved&quot;</span><span class="br">)</span><span class="br">)</span>.claimed;  <span class="cm">// → true</span></code></pre><div class="output" hidden></div></figure>
+<p><code>paypa1</code> is free, since nobody has it, but it passes for <code>paypal</code>, so <code>claim()</code> refuses it.</p>
+<h2 id="what-a-result-looks-like"><a class="anchor" href="#what-a-result-looks-like" aria-label="Link to this section">#</a>What a result looks like</h2>
+<p><code>check()</code> returns <code>{ available: true }</code>, or <code>{ available: false }</code> with a <code>reason</code> and a <code>message</code> you can show:</p>
+<div class="table-wrap"><table><thead><tr><th><code>reason</code></th><th>Why</th><th>Also</th></tr></thead><tbody><tr><td><code>invalid</code></td><td>the format, a number-only name, or a validator refused it</td><td><code>message</code></td></tr><tr><td><code>reserved</code></td><td>it’s on your reserved list</td><td><code>category</code>: the category’s name, or <code>&quot;default&quot;</code> for a plain list</td></tr><tr><td><code>taken</code></td><td>a source already has it</td><td><code>source</code>, and <code>suggestions</code> if you turned them on</td></tr></tbody></table></div>
+<p>Messages can be changed with the <code>messages</code> option; see <a href="../configuration/">Configuration</a>.</p>
+<h2 id="where-the-lookalike-data-comes-from"><a class="anchor" href="#where-the-lookalike-data-comes-from" aria-label="Link to this section">#</a>Where the lookalike data comes from</h2>
+<p>The characters that pass for Latin letters come from Unicode’s confusables list and from <a href="../where-the-data-comes-from/">confusable-vision</a>, which measures how alike characters look in 322 fonts at the size people read them. <a href="../protect-names/">Protect names</a> explains how the score in step 6 uses them.</p>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/how-it-works.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../getting-started/"><span>Previous</span>Getting started</a><a class="next" href="../protect-names/"><span>Next</span>Protect names</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#the-steps">The steps</a></li><li class="toc-2"><a href="#which-call-runs-which">Which call runs which</a></li><li class="toc-2"><a href="#what-a-result-looks-like">What a result looks like</a></li><li class="toc-2"><a href="#where-the-lookalike-data-comes-from">Where the lookalike data comes from</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  <script type="application/json" id="examples">[{"body":"__show(0, (normalize(\"  @Sarah \")));\n__show(1, (normalize(\"ｈｅｌｌｏ\")));\n__show(2, (normalize(\"Straße\")));","checks":["\"sarah\"","\"hello\"","\"straße\""],"labels":["normalize(\"  @Sarah \")","normalize(\"ｈｅｌｌｏ\")","normalize(\"Straße\")"]},{"body":"const adapter = { findOne: async (source, value) => (value === \"sarah\" ? { id: \"u1\" } : null) };\nconst guard = createNamespaceGuardWithProfile(\"consumer-handle\", {\n  reserved: [\"admin\"],\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"paypal\"] },\n}, adapter);\n\n__show(0, ((await guard.check(\"paypa1\")).available));\n__show(1, (guard.checkRisk(\"paypa1\").action));\n__show(2, ((await guard.claim(\"paypa1\", async () => \"saved\")).claimed));\n__show(3, ((await guard.claim(\"my-new-app\", async () => \"saved\")).claimed));","checks":["true","\"block\"","false","true"],"labels":["(await guard.check(\"paypa1\")).available","guard.checkRisk(\"paypa1\").action","(await guard.claim(\"paypa1\", async () => \"saved\")).claimed","(await guard.claim(\"my-new-app\", async () => \"saved\")).claimed"]}]</script>
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

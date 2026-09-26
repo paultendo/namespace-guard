@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TypeScript · namespace-guard docs</title>
+  <meta name="description" content="namespace-guard is written in TypeScript and ships its own type declarations, for ES modules and CommonJS alike, so there is nothing extra to install. Ever">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/" aria-current="page">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Reference</p>
+        <h1>TypeScript</h1>
+<p>namespace-guard is written in TypeScript and ships its own type declarations, for ES modules and CommonJS alike, so there is nothing extra to install. Every type on this page is exported from <code>namespace-guard</code>. Import them with <code>import type</code>:</p>
+<figure class="code"><figcaption><span class="code-lang">Importing types</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="kw">type</span> <span class="br">{</span> <span class="type">CheckResult</span>, <span class="type">NamespaceAdapter</span>, <span class="type">NamespaceConfig</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;</code></pre></figure>
+<p>The functions are typed too, so most of the time you won’t name a type at all: the result of <code>guard.check()</code> is already a <code>CheckResult</code>. Name one when you write something namespace-guard calls (an adapter, a validator) or pass a result on to code of your own.</p>
+<h2 id="configuration-and-adapters"><a class="anchor" href="#configuration-and-adapters" aria-label="Link to this section">#</a>Configuration and adapters</h2>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>NamespaceConfig</code></td><td>the config for <code>createNamespaceGuard()</code> and <code>createNamespaceGuardWithProfile()</code>: <code>sources</code>, <code>reserved</code>, <code>pattern</code>, <code>validators</code>, <code>suggest</code>, <code>cache</code>, <code>risk</code> and the rest. See <a href="../configuration/">Configuration</a>.</td></tr><tr><td><code>NamespaceSource</code></td><td>one table to check: <code>{ name, column, idColumn?, scopeKey? }</code></td></tr><tr><td><code>NamespaceAdapter</code></td><td>what an adapter implements: <code>{ findOne(source, value, options?) }</code>, resolving to a row or <code>null</code>. See <a href="../adapters/#write-your-own-adapter">Write your own adapter</a>.</td></tr><tr><td><code>FindOneOptions</code></td><td>the options the guard passes to <code>findOne</code>: <code>{ caseInsensitive?: boolean }</code></td></tr><tr><td><code>OwnershipScope</code></td><td>the scope you pass to <code>check()</code> and <code>claim()</code>, such as <code>{ id: user.id }</code>: <code>Record&lt;string, string | null | undefined&gt;</code></td></tr><tr><td><code>NamespaceProfileName</code></td><td><code>&quot;consumer-handle&quot; | &quot;org-slug&quot; | &quot;developer-id&quot;</code></td></tr><tr><td><code>NamespaceProfilePreset</code></td><td>what a profile sets: <code>description</code>, <code>pattern</code>, <code>invalidMessage</code>, <code>normalizeUnicode</code>, <code>allowPurelyNumeric</code> and <code>risk</code>. <code>NAMESPACE_PROFILES</code> holds the three.</td></tr><tr><td><code>SuggestStrategyName</code></td><td>a built-in suggestion strategy: <code>&quot;sequential&quot;</code>, <code>&quot;random-digits&quot;</code>, <code>&quot;suffix-words&quot;</code>, <code>&quot;short-random&quot;</code>, <code>&quot;scramble&quot;</code> or <code>&quot;similar&quot;</code></td></tr><tr><td><code>NamespaceGuard</code></td><td>the guard itself, as <code>createNamespaceGuard()</code> returns it. Use it to type a guard you pass around.</td></tr></tbody></table></div>
+<h2 id="results"><a class="anchor" href="#results" aria-label="Link to this section">#</a>Results</h2>
+<p><code>CheckResult</code> is a union. Test <code>available</code>, and TypeScript knows which fields exist:</p>
+<figure class="code"><figcaption><span class="code-lang">Narrowing a CheckResult</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="kw">type</span> <span class="br">{</span> <span class="type">CheckResult</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="kw">function</span> <span class="fn">describe</span>(result: <span class="type">CheckResult</span><span class="br">)</span>: string <span class="br">{</span>
+  <span class="kw">if</span> (result.available<span class="br">)</span> <span class="kw">return</span> <span class="str">&quot;Free&quot;</span>;
+  <span class="kw">switch</span> (result.reason<span class="br">)</span> <span class="br">{</span>
+    <span class="kw">case</span> <span class="str">&quot;taken&quot;</span>:
+      <span class="kw">return</span> <span class="str">`${result.message} Try ${result.suggestions?.join(&quot;, &quot;) ?? &quot;another&quot;}.`</span>;
+    <span class="kw">case</span> <span class="str">&quot;reserved&quot;</span>:
+      <span class="kw">return</span> <span class="str">`${result.message} (${result.category})`</span>;
+    <span class="kw">case</span> <span class="str">&quot;invalid&quot;</span>:
+      <span class="kw">return</span> result.message;
+  <span class="br">}</span>
+<span class="br">}</span></code></pre></figure>
+<p>The <code>switch</code> covers every <code>reason</code>, so TypeScript accepts the function without a final <code>return</code>. If a later version adds a reason, it tells you here.</p>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>CheckResult</code></td><td><code>{ available: true }</code>, or <code>{ available: false, reason, message }</code> with <code>reason</code> one of <code>&quot;invalid&quot;</code>, <code>&quot;reserved&quot;</code> or <code>&quot;taken&quot;</code>, and optionally <code>source</code>, <code>category</code> and <code>suggestions</code></td></tr><tr><td><code>CheckManyOptions</code></td><td>options for <code>checkMany()</code>: <code>{ skipSuggestions?: boolean }</code>, true by default</td></tr><tr><td><code>ClaimResult&lt;T&gt;</code></td><td>what <code>claim()</code> returns: <code>{ claimed: true, normalized, value: T }</code> with <code>T</code> the type your write returns, or <code>{ claimed: false, normalized, reason: &quot;unavailable&quot;, message }</code></td></tr><tr><td><code>ClaimOptions</code></td><td>options for <code>claim()</code>: the risk options below, plus <code>scope</code>, <code>isUniqueViolation</code> and <code>takenMessage</code></td></tr><tr><td><code>UniqueViolationDetector</code></td><td><code>(error: unknown) =&gt; boolean</code>, for <code>ClaimOptions.isUniqueViolation</code>. The default is <code>isLikelyUniqueViolationError</code>.</td></tr><tr><td><code>AssertClaimableOptions</code></td><td>options for <code>assertClaimable()</code>; the same as <code>EnforceRiskOptions</code></td></tr></tbody></table></div>
+<h2 id="validators"><a class="anchor" href="#validators" aria-label="Link to this section">#</a>Validators</h2>
+<p>A validator receives the normalised name, and the name as typed in a second argument, and resolves to <code>null</code> to allow it or <code>{ available: false, message }</code> to refuse it:</p>
+<figure class="code"><figcaption><span class="code-lang">A validator of your own</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="kw">type</span> <span class="br">{</span> <span class="type">NamespaceValidator</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="kw">const</span> noDoubleHyphens: <span class="type">NamespaceValidator</span> = <span class="kw">async</span> (value<span class="br">)</span> =&gt;
+  value.<span class="fn">includes</span>(<span class="str">&quot;--&quot;</span><span class="br">)</span> ? <span class="br">{</span> available: <span class="kw">false</span>, message: <span class="str">&quot;Use one hyphen at a time.&quot;</span> <span class="br">}</span> : <span class="kw">null</span>;</code></pre></figure>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>NamespaceValidator</code></td><td><code>(value: string, context?: { identifier: string }) =&gt; Promise&lt;NamespaceValidatorResult&gt;</code></td></tr><tr><td><code>NamespaceValidatorResult</code></td><td><code>{ available: false; message: string } | null</code></td></tr><tr><td><code>PredicateValidatorOptions</code></td><td>options for <code>createPredicateValidator()</code>: <code>message</code> and <code>transform</code></td></tr><tr><td><code>ProfanityValidatorOptions</code></td><td>options for <code>createProfanityValidator()</code> and <code>createEnglishProfanityValidator()</code></td></tr><tr><td><code>ProfanityValidationMode</code></td><td><code>&quot;basic&quot; | &quot;evasion&quot;</code></td></tr><tr><td><code>ProfanityVariantProfile</code></td><td><code>&quot;balanced&quot; | &quot;aggressive&quot;</code></td></tr><tr><td><code>InvisibleCharacterValidatorOptions</code></td><td>options for <code>createInvisibleCharacterValidator()</code></td></tr></tbody></table></div>
+<p><code>createHomoglyphValidator()</code> takes <code>{ message?, additionalMappings?, rejectMixedScript? }</code>, which has no exported name. If you need it, take it from the function:</p>
+<figure class="code"><figcaption><span class="code-lang">An unnamed options type</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">type</span> <span class="type">HomoglyphOptions</span> = <span class="type">NonNullable</span>&lt;<span class="type">Parameters</span>&lt;<span class="kw">typeof</span> createHomoglyphValidator&gt;<span class="br">[</span><span class="num">0</span><span class="br">]</span>&gt;;</code></pre></figure>
+<h2 id="risk"><a class="anchor" href="#risk" aria-label="Link to this section">#</a>Risk</h2>
+<p>These describe how close a name comes to the names you protect. See <a href="../protect-names/">Protect names</a>.</p>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>RiskCheckResult</code></td><td>what <code>checkRisk()</code> returns: <code>score</code> (0 to 100), <code>level</code>, <code>action</code>, <code>canBlock</code>, <code>reasons</code> and <code>matches</code></td></tr><tr><td><code>RiskMatch</code></td><td>one protected name it came close to: <code>target</code>, <code>score</code>, <code>distance</code>, <code>chainDepth</code>, <code>skeletonEqual</code>, <code>evidence</code> and <code>reasons</code></td></tr><tr><td><code>RiskMatchEvidence</code></td><td>how it matched: <code>&quot;exact&quot;</code>, <code>&quot;lookalike&quot;</code>, <code>&quot;lookalike-extension&quot;</code> or <code>&quot;typo&quot;</code></td></tr><tr><td><code>RiskReason</code></td><td>one reason for the score: <code>{ code, message, weight }</code></td></tr><tr><td><code>RiskReasonCode</code></td><td><code>&quot;confusable-target&quot;</code>, <code>&quot;skeleton-collision&quot;</code>, <code>&quot;mixed-script&quot;</code>, <code>&quot;invisible-character&quot;</code>, <code>&quot;confusable-character&quot;</code>, <code>&quot;divergent-mapping&quot;</code> or <code>&quot;deep-chain&quot;</code></td></tr><tr><td><code>RiskLevel</code></td><td><code>&quot;low&quot; | &quot;medium&quot; | &quot;high&quot;</code></td></tr><tr><td><code>RiskAction</code></td><td><code>&quot;allow&quot; | &quot;warn&quot; | &quot;block&quot;</code></td></tr><tr><td><code>CheckRiskOptions</code></td><td>options for <code>checkRisk()</code>: <code>protect</code>, <code>includeReserved</code>, <code>leetspeak</code>, <code>map</code>, <code>maxMatches</code>, <code>warnThreshold</code>, <code>blockThreshold</code></td></tr><tr><td><code>EnforceRiskOptions</code></td><td><code>CheckRiskOptions</code> plus <code>failOn</code> (<code>&quot;block&quot;</code> or <code>&quot;warn&quot;</code>) and <code>messages</code></td></tr><tr><td><code>EnforceRiskResult</code></td><td>what <code>enforceRisk()</code> returns: <code>{ allowed, action, message?, risk }</code></td></tr></tbody></table></div>
+<h2 id="scanning-text"><a class="anchor" href="#scanning-text" aria-label="Link to this section">#</a>Scanning text</h2>
+<p>For <code>canonicalise()</code>, <code>scan()</code> and <code>isClean()</code>. See <a href="../llm-text/">LLM text</a>.</p>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>CanonicaliseOptions</code></td><td><code>threshold</code>, <code>includeNovel</code>, <code>scripts</code>, <code>strategy</code> (<code>&quot;mixed&quot;</code> or <code>&quot;all&quot;</code>) and <code>maxSizeRatio</code></td></tr><tr><td><code>ScanOptions</code></td><td><code>CanonicaliseOptions</code> plus <code>riskTerms</code></td></tr><tr><td><code>ScanResult</code></td><td>what <code>scan()</code> returns: <code>hasConfusables</code>, <code>count</code>, <code>findings</code> and a <code>summary</code> with <code>riskLevel</code> (<code>&quot;none&quot;</code>, <code>&quot;low&quot;</code>, <code>&quot;medium&quot;</code> or <code>&quot;high&quot;</code>)</td></tr><tr><td><code>ScanFinding</code></td><td>one rewritten character: <code>char</code>, <code>codepoint</code>, <code>script</code>, <code>latinEquivalent</code>, <code>visualScore</code>, <code>source</code> (<code>&quot;tr39&quot;</code>, <code>&quot;novel&quot;</code> or <code>&quot;fold&quot;</code>), <code>index</code>, <code>word</code> and <code>mixedScript</code></td></tr></tbody></table></div>
+<h2 id="comparing-names-and-characters"><a class="anchor" href="#comparing-names-and-characters" aria-label="Link to this section">#</a>Comparing names and characters</h2>
+<p>For <code>skeleton()</code>, <code>areConfusable()</code>, <code>confusableDistance()</code>, <code>detectCrossScriptRisk()</code> and <code>isDomainSpoof()</code>. See <a href="../comparing-names/">Comparing names</a> and <a href="../domains/">Domains</a>.</p>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>SkeletonOptions</code></td><td><code>map</code>, <code>preserveCase</code> and <code>ignoreDiacritics</code></td></tr><tr><td><code>AreConfusableOptions</code></td><td><code>SkeletonOptions</code> plus <code>weights</code> and <code>context</code> (<code>&quot;identifier&quot;</code>, <code>&quot;domain&quot;</code> or <code>&quot;all&quot;</code>)</td></tr><tr><td><code>ConfusableWeight</code></td><td>one measured pair: <code>danger</code>, <code>stableDanger</code>, <code>cost</code>, and flags for the source character (<code>glyphReuse</code>, <code>xidContinue</code>, <code>idnaPvalid</code>, <code>tr39Allowed</code>)</td></tr><tr><td><code>ConfusableWeights</code></td><td><code>Record&lt;string, Record&lt;string, ConfusableWeight&gt;&gt;</code>, keyed by source character, then target. <code>CONFUSABLE_WEIGHTS</code> has this type.</td></tr><tr><td><code>ConfusableDistanceOptions</code></td><td><code>map</code>, <code>weights</code> and <code>context</code></td></tr><tr><td><code>ConfusableDistanceResult</code></td><td>what <code>confusableDistance()</code> returns: <code>distance</code>, <code>maxDistance</code>, <code>similarity</code> (0 to 1), <code>skeletonEqual</code>, <code>normalizedEqual</code>, <code>chainDepth</code>, <code>crossScriptCount</code>, <code>ignorableCount</code>, <code>divergenceCount</code> and <code>steps</code></td></tr><tr><td><code>ConfusableDistanceStep</code></td><td>one step of the path: <code>op</code>, <code>from</code>, <code>to</code>, the indexes and <code>cost</code>, and for a step worth flagging, a <code>reason</code> such as <code>&quot;cross-script&quot;</code> or <code>&quot;visual-weight&quot;</code></td></tr><tr><td><code>CrossScriptRiskResult</code></td><td>what <code>detectCrossScriptRisk()</code> returns: <code>scripts</code>, <code>crossScriptPairs</code> and <code>riskLevel</code></td></tr><tr><td><code>DomainSpoofOptions</code></td><td><code>map</code>, <code>weights</code>, <code>minDanger</code> and <code>allowlist</code></td></tr><tr><td><code>DomainSpoofResult</code></td><td>what <code>isDomainSpoof()</code> returns: <code>spoof</code>, and when a script matches, <code>script</code>, <code>danger</code> and <code>substitutions</code></td></tr><tr><td><code>DomainSpoofSubstitution</code></td><td>one swapped character: <code>index</code>, <code>from</code>, <code>to</code> and <code>similarity</code></td></tr></tbody></table></div>
+<h2 id="data"><a class="anchor" href="#data" aria-label="Link to this section">#</a>Data</h2>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>MeasuredConfusable</code></td><td>an entry of <code>MEASURED_CONFUSABLES</code>: <code>letter</code>, <code>target</code>, <code>tier</code> and <code>contexts</code></td></tr><tr><td><code>NfkcTr39DivergenceVector</code></td><td>an entry of <code>NFKC_TR39_DIVERGENCE_VECTORS</code>: <code>{ char, codePoint, tr39, nfkc }</code></td></tr><tr><td><code>ComposabilityVector</code></td><td>the same type under the composability suite’s name; also exported from <code>namespace-guard/composability-vectors</code></td></tr></tbody></table></div>
+<p>The entries of <code>LLM_CONFUSABLE_MAP</code> have no exported type name. Take it from the map:</p>
+<figure class="code"><figcaption><span class="code-lang">The LLM map's entry type</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="const">LLM_CONFUSABLE_MAP</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="kw">type</span> <span class="type">LlmEntry</span> = <span class="br">(</span><span class="kw">typeof</span> <span class="const">LLM_CONFUSABLE_MAP</span><span class="br">)</span><span class="br">[</span>string<span class="br">]</span><span class="br">[</span>number<span class="br">]</span>;
+<span class="cm">// { latin, visualScore, source: &quot;tr39&quot; | &quot;novel&quot;, script, codepoint, widthRatio?, heightRatio? }</span></code></pre></figure>
+<p><a href="../data/">Data and maps</a> describes each export.</p>
+<h2 id="a-typed-example"><a class="anchor" href="#a-typed-example" aria-label="Link to this section">#</a>A typed example</h2>
+<p>An adapter over a <code>Map</code>, a validator, a guard, and a <code>claim()</code> whose result carries the type the write returns:</p>
+<figure class="code"><figcaption><span class="code-lang">Typed from end to end</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span>
+  createNamespaceGuardWithProfile,
+  createHomoglyphValidator,
+  <span class="kw">type</span> <span class="type">ClaimResult</span>,
+  <span class="kw">type</span> <span class="type">NamespaceAdapter</span>,
+  <span class="kw">type</span> <span class="type">NamespaceConfig</span>,
+  <span class="kw">type</span> <span class="type">NamespaceValidator</span>,
+<span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="kw">type</span> <span class="type">User</span> = <span class="br">{</span> id: string; handle: string; handleCanonical: string <span class="br">}</span>;
+<span class="kw">const</span> users = <span class="kw">new</span> <span class="type">Map</span>&lt;string, <span class="type">User</span>&gt;<span class="br">(</span><span class="br">)</span>; <span class="cm">// keyed by canonical handle</span>
+
+<span class="kw">const</span> adapter: <span class="type">NamespaceAdapter</span> = <span class="br">{</span>
+  <span class="kw">async</span> <span class="fn">findOne</span>(source, value<span class="br">)</span> <span class="br">{</span>
+    <span class="kw">const</span> user = users.<span class="fn">get</span>(value<span class="br">)</span>;
+    <span class="kw">return</span> user ? <span class="br">{</span> id: user.id <span class="br">}</span> : <span class="kw">null</span>;
+  <span class="br">}</span>,
+<span class="br">}</span>;
+
+<span class="kw">const</span> noDoubleHyphens: <span class="type">NamespaceValidator</span> = <span class="kw">async</span> (value<span class="br">)</span> =&gt;
+  value.<span class="fn">includes</span>(<span class="str">&quot;--&quot;</span><span class="br">)</span> ? <span class="br">{</span> available: <span class="kw">false</span>, message: <span class="str">&quot;Use one hyphen at a time.&quot;</span> <span class="br">}</span> : <span class="kw">null</span>;
+
+<span class="kw">const</span> config: <span class="type">NamespaceConfig</span> = <span class="br">{</span>
+  reserved: <span class="br">{</span> system: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;api&quot;</span><span class="br">]</span>, brand: <span class="br">[</span><span class="str">&quot;yourapp&quot;</span><span class="br">]</span> <span class="br">}</span>,
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handleCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  validators: <span class="br">[</span>noDoubleHyphens, <span class="fn">createHomoglyphValidator</span>(<span class="br">{</span> rejectMixedScript: <span class="kw">true</span> <span class="br">}</span><span class="br">)</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;yourapp&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, config, adapter<span class="br">)</span>;
+
+<span class="kw">async</span> <span class="kw">function</span> <span class="fn">register</span>(handle: string<span class="br">)</span>: <span class="type">Promise</span>&lt;<span class="type">ClaimResult</span>&lt;<span class="type">User</span>&gt;&gt; <span class="br">{</span>
+  <span class="kw">return</span> guard.<span class="fn">claim</span>(handle, <span class="kw">async</span> (canonical<span class="br">)</span> =&gt; <span class="br">{</span>
+    <span class="kw">const</span> user: <span class="type">User</span> = <span class="br">{</span> id: crypto.<span class="fn">randomUUID</span>(<span class="br">)</span>, handle, handleCanonical: canonical <span class="br">}</span>;
+    users.<span class="fn">set</span>(canonical, user<span class="br">)</span>;
+    <span class="kw">return</span> user;
+  <span class="br">}</span><span class="br">)</span>;
+<span class="br">}</span>
+
+<span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">register</span>(<span class="str">&quot;Sarah&quot;</span><span class="br">)</span>;
+<span class="kw">if</span> (result.claimed<span class="br">)</span> <span class="br">{</span>
+  console.<span class="fn">log</span>(result.value.handle<span class="br">)</span>;  <span class="cm">// result.value is a User</span>
+<span class="br">}</span> <span class="kw">else</span> <span class="br">{</span>
+  console.<span class="fn">log</span>(result.message<span class="br">)</span>;       <span class="cm">// a message to show</span>
+<span class="br">}</span></code></pre></figure>
+<p>This compiles under <code>strict</code>. The subpath exports have their own declarations: <code>CONFUSABLE_WEIGHTS</code> from <code>namespace-guard/confusable-weights</code> is <code>ConfusableWeights</code>, and <code>FONT_SPECIFIC_WEIGHTS</code> from <code>namespace-guard/font-specific-weights</code> is <code>Record&lt;string, ConfusableWeights&gt;</code>, one entry per font.</p>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/typescript.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../frameworks/"><span>Previous</span>Frameworks</a><a class="next" href="../changelog/"><span>Next</span>Changelog</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#configuration-and-adapters">Configuration and adapters</a></li><li class="toc-2"><a href="#results">Results</a></li><li class="toc-2"><a href="#validators">Validators</a></li><li class="toc-2"><a href="#risk">Risk</a></li><li class="toc-2"><a href="#scanning-text">Scanning text</a></li><li class="toc-2"><a href="#comparing-names-and-characters">Comparing names and characters</a></li><li class="toc-2"><a href="#data">Data</a></li><li class="toc-2"><a href="#a-typed-example">A typed example</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

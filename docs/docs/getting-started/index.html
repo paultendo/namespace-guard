@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Getting started · namespace-guard docs</title>
+  <meta name="description" content="Install namespace-guard, tell it where your names live, and check a name. This page takes about five minutes. Install It has no dependencies and runs anywh">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/" aria-current="page">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Start</p>
+        <h1>Getting started</h1>
+<p>Install namespace-guard, tell it where your names live, and check a name. This page takes about five minutes.</p>
+<h2 id="install"><a class="anchor" href="#install" aria-label="Link to this section">#</a>Install</h2>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npm</span> install namespace<span class="var">-guard</span></code></pre></figure>
+<p>It has no dependencies and runs anywhere JavaScript does: Node, Bun, Deno, edge runtimes and the browser.</p>
+<h2 id="make-three-decisions"><a class="anchor" href="#make-three-decisions" aria-label="Link to this section">#</a>Make three decisions</h2>
+<p><strong>Which kind of name.</strong> A profile sets sensible defaults for length, characters and numbers. Pick the closest and override what you need.</p>
+<div class="table-wrap"><table><thead><tr><th>Profile</th><th>For</th><th>Length</th><th>Numbers only</th></tr></thead><tbody><tr><td><code>consumer-handle</code></td><td>public usernames</td><td>2 to 30</td><td>refused</td></tr><tr><td><code>org-slug</code></td><td>team and workspace URLs</td><td>2 to 40</td><td>refused</td></tr><tr><td><code>developer-id</code></td><td>package names, internal IDs</td><td>2 to 50</td><td>allowed</td></tr></tbody></table></div>
+<p><strong>Where names live.</strong> Every table that shares the namespace: if <code>yourapp.com/acme</code> could be a user or an organisation, both tables are sources, and a name must be free in all of them.</p>
+<p><strong>What to protect.</strong> Names that nobody should be able to imitate: your brand, your staff, your biggest customers. namespace-guard refuses names that pass for these, such as <code>rnicrosoft</code> for <code>microsoft</code>.</p>
+<h2 id="check-a-name"><a class="anchor" href="#check-a-name" aria-label="Link to this section">#</a>Check a name</h2>
+<p>This example uses a stand-in adapter so it runs on this page; in your app you pass your ORM’s adapter instead (see <a href="../adapters/">Adapters</a>).</p>
+<figure class="code runnable" data-example="0"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createNamespaceGuardWithProfile <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="cm">// A stand-in for your database: one user called sarah</span>
+<span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (source, value<span class="br">)</span> =&gt; <span class="br">(</span>value === <span class="str">&quot;sarah&quot;</span> ? <span class="br">{</span> id: <span class="str">&quot;u1&quot;</span> <span class="br">}</span> : <span class="kw">null</span><span class="br">)</span> <span class="br">}</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;api&quot;</span>, <span class="str">&quot;settings&quot;</span>, <span class="str">&quot;login&quot;</span>, <span class="str">&quot;help&quot;</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">&quot;organization&quot;</span>, column: <span class="str">&quot;slug&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;microsoft&quot;</span>, <span class="str">&quot;paypal&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;my-new-app&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: true }</span>
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;sarah&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: false, reason: &quot;taken&quot; }</span>
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;admin&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: false, reason: &quot;reserved&quot; }</span>
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;a&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: false, reason: &quot;invalid&quot; }</span></code></pre><div class="output" hidden></div></figure>
+<p><code>check()</code> answers whether a name is free. It doesn’t score lookalikes of your protected names, because that’s a judgement you may want to show differently. <code>assertClaimable()</code> does both, and throws with a message you can show:</p>
+<figure class="code runnable" data-example="1"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="kw">null</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  risk: <span class="br">{</span> protect: <span class="br">[</span><span class="str">&quot;microsoft&quot;</span>, <span class="str">&quot;paypal&quot;</span><span class="br">]</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">const</span> blocked = <span class="kw">await</span> guard.<span class="fn">assertClaimable</span>(<span class="str">&quot;rnicrosoft&quot;</span><span class="br">)</span>.<span class="fn">then</span>(<span class="br">(</span><span class="br">)</span> =&gt; <span class="str">&quot;claimable&quot;</span>, <span class="br">(</span>e<span class="br">)</span> =&gt; e.message<span class="br">)</span>;
+blocked;  <span class="cm">// → &quot;Identifier is too confusable with a protected name. Closest protected target: \&quot;microsoft\&quot;.&quot;</span>
+<span class="kw">await</span> guard.<span class="fn">assertClaimable</span>(<span class="str">&quot;my-new-app&quot;</span><span class="br">)</span>.<span class="fn">then</span>(<span class="br">(</span><span class="br">)</span> =&gt; <span class="str">&quot;claimable&quot;</span><span class="br">)</span>;  <span class="cm">// → &quot;claimable&quot;</span></code></pre><div class="output" hidden></div></figure>
+<h2 id="claim-it"><a class="anchor" href="#claim-it" aria-label="Link to this section">#</a>Claim it</h2>
+<p>Checking and then writing leaves a gap in which someone else can take the name. <code>claim()</code> checks, runs your write, and turns a unique-constraint error from your database into a clean “taken” result:</p>
+<figure class="code"><figcaption><span class="code-lang">In your app</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> result = <span class="kw">await</span> guard.<span class="fn">claim</span>(input.handle, <span class="kw">async</span> (canonical<span class="br">)</span> =&gt; <span class="br">{</span>
+  <span class="kw">return</span> prisma.user.<span class="fn">create</span>(<span class="br">{</span> data: <span class="br">{</span> handle: input.handle, handleCanonical: canonical <span class="br">}</span> <span class="br">}</span><span class="br">)</span>;
+<span class="br">}</span><span class="br">)</span>;
+
+<span class="kw">if</span> (!result.claimed<span class="br">)</span> <span class="kw">return</span> <span class="br">{</span> error: result.message <span class="br">}</span>;</code></pre></figure>
+<p><code>canonical</code> is the form to store and index: lowercase, NFKC-normalised. With a unique index on it, two people can’t end up with <code>Sarah</code> and <code>sarah</code>. <a href="../claiming/">Claiming names</a> covers this in full.</p>
+<h2 id="add-the-unicode-checks"><a class="anchor" href="#add-the-unicode-checks" aria-label="Link to this section">#</a>Add the Unicode checks</h2>
+<p>The profiles only accept lowercase ASCII, which already refuses most tricks. If you allow Unicode names, or want a second layer in case the pattern changes, add the validators:</p>
+<figure class="code"><figcaption><span class="code-lang">In your app</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span>
+  createNamespaceGuardWithProfile,
+  createHomoglyphValidator,
+  createInvisibleCharacterValidator,
+<span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  sources: <span class="br">[</span><span class="cm">/* ... */</span><span class="br">]</span>,
+  validators: <span class="br">[</span>
+    <span class="fn">createInvisibleCharacterValidator</span>(<span class="br">)</span>,                   <span class="cm">// zero-width joiners, direction overrides</span>
+    <span class="fn">createHomoglyphValidator</span>(<span class="br">{</span> rejectMixedScript: <span class="kw">true</span> <span class="br">}</span><span class="br">)</span>, <span class="cm">// <span class="lk"><span title="U+0430 Cyrillic">а</span></span>dmin with a Cyrillic <span class="lk"><span title="U+0430 Cyrillic">а</span></span></span>
+  <span class="br">]</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;</code></pre></figure>
+<h2 id="next"><a class="anchor" href="#next" aria-label="Link to this section">#</a>Next</h2>
+<ul><li><a href="../how-it-works/">How a name is checked</a>: the order of the checks, and which call runs which.</li><li><a href="../protect-names/">Protect names</a>: what counts as passing for a protected name, and how to tune it.</li><li><a href="../adapters/">Adapters</a>: Prisma, Drizzle, Kysely, Knex, TypeORM, MikroORM, Sequelize, Mongoose and raw SQL.</li></ul>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/getting-started.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../"><span>Previous</span>Is this name really free?</a><a class="next" href="../how-it-works/"><span>Next</span>How it works</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#install">Install</a></li><li class="toc-2"><a href="#make-three-decisions">Make three decisions</a></li><li class="toc-2"><a href="#check-a-name">Check a name</a></li><li class="toc-2"><a href="#claim-it">Claim it</a></li><li class="toc-2"><a href="#add-the-unicode-checks">Add the Unicode checks</a></li><li class="toc-2"><a href="#next">Next</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  <script type="application/json" id="examples">[{"body":"\n// A stand-in for your database: one user called sarah\nconst adapter = { findOne: async (source, value) => (value === \"sarah\" ? { id: \"u1\" } : null) };\n\nconst guard = createNamespaceGuardWithProfile(\"consumer-handle\", {\n  reserved: [\"admin\", \"api\", \"settings\", \"login\", \"help\"],\n  sources: [\n    { name: \"user\", column: \"handle\", scopeKey: \"id\" },\n    { name: \"organization\", column: \"slug\", scopeKey: \"id\" },\n  ],\n  risk: { protect: [\"microsoft\", \"paypal\"] },\n}, adapter);\n\n__show(0, (await guard.check(\"my-new-app\")));\n__show(1, (await guard.check(\"sarah\")));\n__show(2, (await guard.check(\"admin\")));\n__show(3, (await guard.check(\"a\")));","checks":["{ available: true }","{ available: false, reason: \"taken\" }","{ available: false, reason: \"reserved\" }","{ available: false, reason: \"invalid\" }"],"labels":["guard.check(\"my-new-app\")","guard.check(\"sarah\")","guard.check(\"admin\")","guard.check(\"a\")"]},{"body":"const adapter = { findOne: async () => null };\nconst guard = createNamespaceGuardWithProfile(\"consumer-handle\", {\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  risk: { protect: [\"microsoft\", \"paypal\"] },\n}, adapter);\n\nconst blocked = await guard.assertClaimable(\"rnicrosoft\").then(() => \"claimable\", (e) => e.message);\n__show(0, (blocked));\n__show(1, (await guard.assertClaimable(\"my-new-app\").then(() => \"claimable\")));","checks":["\"Identifier is too confusable with a protected name. Closest protected target: \\\"microsoft\\\".\"","\"claimable\""],"labels":["blocked","guard.assertClaimable(\"my-new-app\").then(() => \"claimable\")"]}]</script>
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

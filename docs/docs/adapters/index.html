@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adapters · namespace-guard docs</title>
+  <meta name="description" content="An adapter is how namespace-guard asks your database whether a name is in use. There is one for each of nine ORMs and query builders, each at its own impor">
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Google+Sans+Code:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body class="" data-root="../" data-lib="../../lib/">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <button class="nav-toggle" type="button" aria-label="Open the contents" aria-expanded="false"><span></span></button>
+    <a class="wordmark" href="../../">namespace-guard</a><a class="wordmark-docs" href="../">docs</a>
+    <button class="search-open" type="button" aria-label="Search the docs"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+    <nav class="topnav" aria-label="Site">
+      <a href="../../#playground">Playground</a>
+      <a href="https://github.com/paultendo/namespace-guard">GitHub</a>
+      <a class="version-tag" href="../changelog/">v0.23.0</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Docs"><div class="nav-section"><p class="nav-label">Start</p><ul><li><a href="../">Overview</a></li><li><a href="../getting-started/">Getting started</a></li><li><a href="../how-it-works/">How it works</a></li></ul></div><div class="nav-section"><p class="nav-label">Guides</p><ul><li><a href="../protect-names/">Protect names</a></li><li><a href="../unicode-names/">Unicode names</a></li><li><a href="../claiming/">Claiming names</a></li><li><a href="../suggestions/">Suggestions</a></li><li><a href="../moderation/">Moderation</a></li><li><a href="../llm-text/">Text for LLMs</a></li><li><a href="../domains/">Domain names</a></li><li><a href="../comparing-names/">Comparing names</a></li><li><a href="../cli/">The CLI</a></li><li><a href="../upgrading/">Upgrading to 0.23</a></li></ul></div><div class="nav-section"><p class="nav-label">Reference</p><ul><li><a href="../configuration/">Configuration</a></li><li><a href="../guard/">The guard</a></li><li><a href="../functions/">Functions</a></li><li><a href="../data/">Data and maps</a></li><li><a href="../adapters/" aria-current="page">Adapters</a></li><li><a href="../frameworks/">Frameworks</a></li><li><a href="../typescript/">TypeScript</a></li></ul></div><div class="nav-section"><p class="nav-label">Project</p><ul><li><a href="../changelog/">Changelog</a></li><li><a href="../where-the-data-comes-from/">Where the data comes from</a></li></ul></div></nav>
+    <main id="content" class="article-wrap">
+      <article class="article">
+        <p class="crumb">Reference</p>
+        <h1>Adapters</h1>
+<p>An adapter is how namespace-guard asks your database whether a name is in use. There is one for each of nine ORMs and query builders, each at its own import path, so your bundle carries only the one you use. The ORM is an optional peer dependency: namespace-guard uses the client you already have and installs nothing.</p>
+<h2 id="pick-an-adapter"><a class="anchor" href="#pick-an-adapter" aria-label="Link to this section">#</a>Pick an adapter</h2>
+<div class="table-wrap"><table><thead><tr><th>ORM</th><th>Import from</th><th>Create with</th><th><code>name</code> is</th><th><code>column</code> is</th></tr></thead><tbody><tr><td><a href="#prisma">Prisma</a></td><td><code>namespace-guard/adapters/prisma</code></td><td><code>createPrismaAdapter(prisma)</code></td><td>the model’s property on the client (<code>user</code>)</td><td>the field name</td></tr><tr><td><a href="#drizzle">Drizzle</a></td><td><code>namespace-guard/adapters/drizzle</code></td><td><code>createDrizzleAdapter(db, tables, eq)</code></td><td>the table’s key in your schema (<code>users</code>)</td><td>the column’s key on the table object</td></tr><tr><td><a href="#kysely">Kysely</a></td><td><code>namespace-guard/adapters/kysely</code></td><td><code>createKyselyAdapter(db)</code></td><td>the table, as your <code>Database</code> type names it</td><td>the column, likewise</td></tr><tr><td><a href="#knex">Knex</a></td><td><code>namespace-guard/adapters/knex</code></td><td><code>createKnexAdapter(knex)</code></td><td>the table name</td><td>the column name</td></tr><tr><td><a href="#typeorm">TypeORM</a></td><td><code>namespace-guard/adapters/typeorm</code></td><td><code>createTypeORMAdapter(dataSource, entities)</code></td><td>the entity’s key in <code>entities</code></td><td>the entity property</td></tr><tr><td><a href="#mikroorm">MikroORM</a></td><td><code>namespace-guard/adapters/mikro-orm</code></td><td><code>createMikroORMAdapter(orm.em, entities)</code></td><td>the entity’s key in <code>entities</code></td><td>the entity property</td></tr><tr><td><a href="#sequelize">Sequelize</a></td><td><code>namespace-guard/adapters/sequelize</code></td><td><code>createSequelizeAdapter(models)</code></td><td>the model’s key in <code>models</code></td><td>the model attribute</td></tr><tr><td><a href="#mongoose">Mongoose</a></td><td><code>namespace-guard/adapters/mongoose</code></td><td><code>createMongooseAdapter(models)</code></td><td>the model’s key in <code>models</code></td><td>the schema path</td></tr><tr><td><a href="#raw-sql">Raw SQL</a></td><td><code>namespace-guard/adapters/raw</code></td><td><code>createRawAdapter(execute)</code></td><td>the table name</td><td>the column name</td></tr></tbody></table></div>
+<p>The core package, <code>namespace-guard</code>, has the guard itself. You pass it the adapter:</p>
+<figure class="code"><figcaption><span class="code-lang">Any adapter</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createNamespaceGuardWithProfile <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="kw">export</span> <span class="kw">const</span> guard = <span class="fn">createNamespaceGuardWithProfile</span>(<span class="str">&quot;consumer-handle&quot;</span>, <span class="br">{</span>
+  reserved: <span class="br">[</span><span class="str">&quot;admin&quot;</span>, <span class="str">&quot;api&quot;</span>, <span class="str">&quot;settings&quot;</span><span class="br">]</span>,
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handleCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">&quot;organization&quot;</span>, column: <span class="str">&quot;slugCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;</code></pre></figure>
+<h2 id="what-an-adapter-is-asked"><a class="anchor" href="#what-an-adapter-is-asked" aria-label="Link to this section">#</a>What an adapter is asked</h2>
+<p>For each name it checks, the guard calls the adapter’s <code>findOne(source, value, options)</code> once per source, in parallel. <code>value</code> is the name after normalising: trimmed, NFKC-normalised, lowercased, without a leading <code>@</code>. The adapter looks for one row whose <code>column</code> equals <code>value</code> and returns it, or <code>null</code>. It selects only the id column, never the whole row.</p>
+<figure class="code runnable" data-example="0"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> calls = <span class="br">[</span><span class="br">]</span>;
+<span class="kw">const</span> adapter = <span class="br">{</span>
+  findOne: <span class="kw">async</span> (source, value, options<span class="br">)</span> =&gt; <span class="br">{</span>
+    calls.<span class="fn">push</span>(<span class="br">[</span>source.name, source.column, value, options<span class="br">]</span><span class="br">)</span>;
+    <span class="kw">return</span> <span class="kw">null</span>;
+  <span class="br">}</span>,
+<span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handleCanonical&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  caseInsensitive: <span class="kw">true</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;  @Sarah &quot;</span><span class="br">)</span>;
+calls<span class="br">[</span><span class="num">0</span><span class="br">]</span>;  <span class="cm">// → [&quot;user&quot;, &quot;handleCanonical&quot;, &quot;sarah&quot;, { caseInsensitive: true }]</span></code></pre><div class="output" hidden></div></figure>
+<p>Each source has four fields:</p>
+<div class="table-wrap"><table><thead><tr><th>Field</th><th>What it is</th><th>Default</th></tr></thead><tbody><tr><td><code>name</code></td><td>how the adapter finds the table (see the table above)</td><td>required</td></tr><tr><td><code>column</code></td><td>the column that holds the name</td><td>required</td></tr><tr><td><code>idColumn</code></td><td>the primary key</td><td><code>&quot;id&quot;</code></td></tr><tr><td><code>scopeKey</code></td><td>the key in the ownership scope you pass to <code>check()</code> or <code>claim()</code>: a row whose <code>idColumn</code> equals <code>scope[scopeKey]</code> belongs to the caller, so it doesn’t count as taken</td><td>none</td></tr></tbody></table></div>
+<p><code>scopeKey</code> names a key in the scope object, not a column. With one table, use <code>scopeKey: &quot;id&quot;</code> and <code>guard.check(name, { id: user.id })</code>. When two tables share the namespace, give each its own key, such as <code>userId</code> and <code>orgId</code>, and pass the ones that apply: <code>guard.check(name, { userId: user.id, orgId: org.id })</code>. The ids are compared as strings, so a numeric id matches <code>&quot;42&quot;</code>.</p>
+<aside class="callout callout-note"><p class="callout-label"><span class="seg"><span class="kind">Note</span></span></p><p>Mongoose keeps a document’s id in <code>_id</code>. When <code>idColumn</code> is unset, the Mongoose adapter looks up <code>_id</code> and returns it as <code>id</code> too, so ownership works whether or not you set <code>idColumn: &quot;_id&quot;</code>. (Before 0.23 it had to be set, or a person editing their own profile was told their name was taken.)</p></aside>
+<h2 id="case-insensitive-matching"><a class="anchor" href="#case-insensitive-matching" aria-label="Link to this section">#</a>Case-insensitive matching</h2>
+<p>The guard lowercases a name before it queries, so an exact match finds <code>sarah</code> only if the column holds <code>sarah</code>. If the column holds names as people typed them (<code>Sarah</code>), set <code>caseInsensitive: true</code> in the config, and each adapter compares without case:</p>
+<div class="table-wrap"><table><thead><tr><th>Adapter</th><th>What it sends</th><th>Also pass to the adapter</th></tr></thead><tbody><tr><td>Prisma</td><td><code>{ equals: value, mode: &quot;insensitive&quot; }</code></td><td></td></tr><tr><td>Drizzle</td><td><code>ilike(column, value)</code></td><td><code>{ eq, ilike }</code> in place of <code>eq</code></td></tr><tr><td>Kysely</td><td><code>.where(column, &quot;ilike&quot;, value)</code></td><td></td></tr><tr><td>Knex</td><td><code>.whereRaw(&quot;LOWER(??) = LOWER(?)&quot;, [column, value])</code></td><td></td></tr><tr><td>TypeORM</td><td><code>ILike(value)</code></td><td><code>ILike</code> as the third argument</td></tr><tr><td>MikroORM</td><td><code>{ [column]: { $ilike: value } }</code></td><td></td></tr><tr><td>Sequelize</td><td><code>where(fn(&quot;LOWER&quot;, col(column)), value.toLowerCase())</code></td><td><code>{ where, fn, col }</code> from Sequelize</td></tr><tr><td>Mongoose</td><td>the query with collation <code>{ locale: &quot;en&quot;, strength: 2 }</code></td><td></td></tr><tr><td>Raw SQL</td><td><code>LOWER(&quot;column&quot;) = LOWER($1)</code></td><td></td></tr></tbody></table></div>
+<p>Drizzle, TypeORM and Sequelize throw if <code>caseInsensitive</code> is on and the extra argument is missing.</p>
+<p><code>ILIKE</code> is a PostgreSQL operator, and Prisma’s <code>mode</code> works on PostgreSQL and MongoDB. On another database, check what your ORM makes of them, or store a canonical column (below): it holds the lowercase form, so an exact match is already case-insensitive and you can leave <code>caseInsensitive</code> off.</p>
+<aside class="callout callout-note"><p class="callout-label"><span class="seg"><span class="kind">Note</span></span></p><p><code>_</code> and <code>%</code> are wildcards in <code>ILIKE</code>. The adapters escape them, so if your pattern allows <code>_</code>, <code>a_b</code> finds only <code>a_b</code>, not <code>axb</code>. (Before 0.23 they didn’t, and <code>a_b</code> was reported as taken when <code>axb</code> existed.)</p></aside>
+<h2 id="store-a-canonical-column"><a class="anchor" href="#store-a-canonical-column" aria-label="Link to this section">#</a>Store a canonical column</h2>
+<p>The setup that holds up is a second column with each name’s canonical form, and a unique index on it. The guard checks that column, and the index stops two people claiming the same name at the same moment: <a href="../claiming/"><code>claim()</code></a> turns the index’s error into a “taken” result. It recognises the duplicate-key errors of PostgreSQL (<code>23505</code>), MySQL (<code>ER_DUP_ENTRY</code>, errno 1062), SQLite (<code>SQLITE_CONSTRAINT</code>), Prisma (<code>P2002</code>) and MongoDB (11000), including when an ORM wraps them in <code>cause</code>, <code>parent</code>, <code>original</code> or <code>meta</code>.</p>
+<p>On a table that already has names:</p>
+<ol><li>Look for existing names that collide once normalised: export them and run <code>npx namespace-guard audit-canonical users.json</code> (see <a href="../cli/">CLI</a>). Resolve any it finds.</li><li>Add the canonical column, nullable, with a unique index. PostgreSQL, MySQL and SQLite let a unique index hold any number of nulls.</li><li>Write it on every create and update. <code>claim()</code> passes the canonical form to your write; elsewhere, use <code>normalize(handle)</code>.</li><li>Backfill the existing rows in batches with <code>normalize()</code>.</li><li>Make the column required.</li><li>Point <code>column</code> in your sources at it.</li></ol>
+<figure class="code"><figcaption><span class="code-lang">Writing both columns</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> normalize <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard&quot;</span>;
+
+<span class="cm">// In claim(), the canonical form is passed to your write</span>
+<span class="kw">await</span> guard.<span class="fn">claim</span>(input.handle, <span class="br">(</span>canonical<span class="br">)</span> =&gt;
+  db.user.<span class="fn">create</span>(<span class="br">{</span> data: <span class="br">{</span> handle: input.handle, handleCanonical: canonical <span class="br">}</span> <span class="br">}</span><span class="br">)</span>,
+<span class="br">)</span>;
+
+<span class="cm">// Anywhere else a handle changes</span>
+<span class="kw">await</span> db.user.<span class="fn">update</span>(<span class="br">{</span>
+  where: <span class="br">{</span> id <span class="br">}</span>,
+  data: <span class="br">{</span> handle: input.handle, handleCanonical: <span class="fn">normalize</span>(input.handle<span class="br">)</span> <span class="br">}</span>,
+<span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<p>Keep <code>handle</code> for display. Each section below shows the migration for that ORM and the source that points at the new column.</p>
+<h2 id="prisma"><a class="anchor" href="#prisma" aria-label="Link to this section">#</a>Prisma</h2>
+<figure class="code"><figcaption><span class="code-lang">Prisma</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createPrismaAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/prisma&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> prisma <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./db&quot;</span>; <span class="cm">// your PrismaClient</span>
+
+<span class="kw">const</span> adapter = <span class="fn">createPrismaAdapter</span>(prisma<span class="br">)</span>;</code></pre></figure>
+<p><code>name</code> is the model’s property on the client: model <code>User</code> is <code>prisma.user</code>, so <code>name: &quot;user&quot;</code>. <code>column</code> is the field name in your schema, not a <code>@map</code>ped database name. The adapter calls <code>findFirst</code> with a <code>select</code> of the id and scope fields. For <code>caseInsensitive</code> it adds <code>mode: &quot;insensitive&quot;</code>, which Prisma supports on PostgreSQL and MongoDB.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">schema.prisma</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code>model <span class="type">User</span> <span class="br">{</span>
+  id              <span class="type">String</span>  @id @<span class="kw">default</span>(<span class="fn">cuid</span>(<span class="br">)</span><span class="br">)</span>
+  handle          <span class="type">String</span>
+  handleCanonical <span class="type">String</span>? @unique
+<span class="br">}</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> prisma migrate dev <span class="var">--name</span> add_handle_canonical</code></pre></figure>
+<p>After the backfill, change <code>String?</code> to <code>String</code> and migrate again. Then use <code>{ name: &quot;user&quot;, column: &quot;handleCanonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="drizzle"><a class="anchor" href="#drizzle" aria-label="Link to this section">#</a>Drizzle</h2>
+<figure class="code"><figcaption><span class="code-lang">Drizzle</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> eq <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;drizzle-orm&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createDrizzleAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/drizzle&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> db <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./db&quot;</span>; <span class="cm">// drizzle(client, { schema })</span>
+<span class="kw">import</span> <span class="br">{</span> users, organizations <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./schema&quot;</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createDrizzleAdapter</span>(db, <span class="br">{</span> users, organizations <span class="br">}</span>, eq<span class="br">)</span>;</code></pre></figure>
+<p>The adapter uses Drizzle’s relational queries (<code>db.query.users.findFirst</code>), so create the client with your schema: <code>drizzle(client, { schema })</code>. <code>name</code> is the table’s key in both <code>db.query</code> and the tables object you pass (<code>users</code>). <code>column</code> is the key on the table object (<code>handleCanonical</code>), not the SQL name (<code>handle_canonical</code>). If <code>db.query</code> or the tables object has no such table, or the table has no such column, the adapter throws an error that names it.</p>
+<p>For <code>caseInsensitive</code>, pass <code>{ eq, ilike }</code> from <code>drizzle-orm</code> as the third argument.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">schema.ts</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> pgTable, text, uniqueIndex <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;drizzle-orm/pg-core&quot;</span>;
+
+<span class="kw">export</span> <span class="kw">const</span> users = <span class="fn">pgTable</span>(<span class="str">&quot;users&quot;</span>, <span class="br">{</span>
+  id: <span class="fn">text</span>(<span class="str">&quot;id&quot;</span><span class="br">)</span>.<span class="fn">primaryKey</span>(<span class="br">)</span>,
+  handle: <span class="fn">text</span>(<span class="str">&quot;handle&quot;</span><span class="br">)</span>.<span class="fn">notNull</span>(<span class="br">)</span>,
+  handleCanonical: <span class="fn">text</span>(<span class="str">&quot;handle_canonical&quot;</span><span class="br">)</span>,
+<span class="br">}</span>, <span class="br">(</span>table<span class="br">)</span> =&gt; <span class="br">[</span><span class="fn">uniqueIndex</span>(<span class="str">&quot;users_handle_canonical_uidx&quot;</span><span class="br">)</span>.<span class="fn">on</span>(table.handleCanonical<span class="br">)</span><span class="br">]</span><span class="br">)</span>;</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> drizzle<span class="var">-kit</span> generate <span class="var">--name</span> add<span class="var">-handle-canonical</span>
+<span class="kw">npx</span> drizzle<span class="var">-kit</span> migrate</code></pre></figure>
+<p>After the backfill, add <code>.notNull()</code> and generate again. Then use <code>{ name: &quot;users&quot;, column: &quot;handleCanonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="kysely"><a class="anchor" href="#kysely" aria-label="Link to this section">#</a>Kysely</h2>
+<figure class="code"><figcaption><span class="code-lang">Kysely</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createKyselyAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/kysely&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> db <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./db&quot;</span>; <span class="cm">// your Kysely&lt;Database&gt;</span>
+
+<span class="kw">const</span> adapter = <span class="fn">createKyselyAdapter</span>(db<span class="br">)</span>;</code></pre></figure>
+<p><code>name</code> and <code>column</code> are the table and column as your <code>Database</code> type names them. The adapter runs <code>selectFrom(name).select([...]).where(column, &quot;=&quot;, value).limit(1).executeTakeFirst()</code>. For <code>caseInsensitive</code> it uses the <code>ilike</code> operator, which is PostgreSQL’s.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">Migration</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="type">Kysely</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;kysely&quot;</span>;
+
+<span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">up</span>(db: <span class="type">Kysely</span>&lt;any&gt;<span class="br">)</span>: <span class="type">Promise</span>&lt;<span class="kw">void</span>&gt; <span class="br">{</span>
+  <span class="kw">await</span> db.schema.<span class="fn">alterTable</span>(<span class="str">&quot;users&quot;</span><span class="br">)</span>.<span class="fn">addColumn</span>(<span class="str">&quot;handle_canonical&quot;</span>, <span class="str">&quot;varchar(255)&quot;</span><span class="br">)</span>.<span class="fn">execute</span>(<span class="br">)</span>;
+  <span class="kw">await</span> db.schema.<span class="fn">createIndex</span>(<span class="str">&quot;users_handle_canonical_uidx&quot;</span><span class="br">)</span>
+    .<span class="fn">on</span>(<span class="str">&quot;users&quot;</span><span class="br">)</span>.<span class="fn">column</span>(<span class="str">&quot;handle_canonical&quot;</span><span class="br">)</span>.<span class="fn">unique</span>(<span class="br">)</span>.<span class="fn">execute</span>(<span class="br">)</span>;
+<span class="br">}</span></code></pre></figure>
+<p>After the backfill, add <code>NOT NULL</code> in a second migration. Then use <code>{ name: &quot;users&quot;, column: &quot;handle_canonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="knex"><a class="anchor" href="#knex" aria-label="Link to this section">#</a>Knex</h2>
+<figure class="code"><figcaption><span class="code-lang">Knex</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> knex <span class="kw">from</span> <span class="str">&quot;knex&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createKnexAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/knex&quot;</span>;
+
+<span class="kw">const</span> db = <span class="fn">knex</span>(<span class="br">{</span> client: <span class="str">&quot;pg&quot;</span>, connection: process.env.<span class="const">DATABASE_URL</span> <span class="br">}</span><span class="br">)</span>;
+<span class="kw">const</span> adapter = <span class="fn">createKnexAdapter</span>(db<span class="br">)</span>;</code></pre></figure>
+<p><code>name</code> and <code>column</code> are the table and column names. The adapter runs <code>knex(name).select([...]).where(column, value).first()</code>. For <code>caseInsensitive</code> it uses <code>LOWER()</code> on both sides, which works on any database Knex supports.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">Migration</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">up</span>(knex<span class="br">)</span> <span class="br">{</span>
+  <span class="kw">await</span> knex.schema.<span class="fn">alterTable</span>(<span class="str">&quot;users&quot;</span>, <span class="br">(</span>table<span class="br">)</span> =&gt; <span class="br">{</span>
+    table.<span class="fn">string</span>(<span class="str">&quot;handle_canonical&quot;</span>, <span class="num">255</span><span class="br">)</span>;
+    table.<span class="fn">unique</span>(<span class="br">[</span><span class="str">&quot;handle_canonical&quot;</span><span class="br">]</span>, <span class="br">{</span> indexName: <span class="str">&quot;users_handle_canonical_uidx&quot;</span> <span class="br">}</span><span class="br">)</span>;
+  <span class="br">}</span><span class="br">)</span>;
+<span class="br">}</span></code></pre></figure>
+<p>After the backfill, make it <code>.notNullable().alter()</code> in a second migration. Then use <code>{ name: &quot;users&quot;, column: &quot;handle_canonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="typeorm"><a class="anchor" href="#typeorm" aria-label="Link to this section">#</a>TypeORM</h2>
+<figure class="code"><figcaption><span class="code-lang">TypeORM</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createTypeORMAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/typeorm&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> dataSource <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./data-source&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="type">User</span>, <span class="type">Organization</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./entities&quot;</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createTypeORMAdapter</span>(dataSource, <span class="br">{</span> user: <span class="type">User</span>, organization: <span class="type">Organization</span> <span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<p><code>name</code> is the entity’s key in the object you pass (<code>user</code>), and <code>column</code> is the entity property (<code>handleCanonical</code>), not the column’s database name. The adapter calls <code>dataSource.getRepository(entity).findOne({ where, select })</code>. For <code>caseInsensitive</code>, pass TypeORM’s <code>ILike</code> as the third argument: <code>createTypeORMAdapter(dataSource, entities, ILike)</code>.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">Entity</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="type">Column</span>, <span class="type">Entity</span>, <span class="type">Index</span>, <span class="type">PrimaryGeneratedColumn</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;typeorm&quot;</span>;
+
+@<span class="fn">Entity</span>(<span class="str">&quot;user&quot;</span><span class="br">)</span>
+<span class="kw">export</span> <span class="kw">class</span> <span class="type">User</span> <span class="br">{</span>
+  @<span class="fn">PrimaryGeneratedColumn</span>(<span class="str">&quot;uuid&quot;</span><span class="br">)</span>
+  id!: string;
+
+  @<span class="fn">Column</span>(<span class="br">{</span> <span class="kw">type</span>: <span class="str">&quot;varchar&quot;</span>, length: <span class="num">255</span> <span class="br">}</span><span class="br">)</span>
+  handle!: string;
+
+  @<span class="fn">Index</span>(<span class="str">&quot;IDX_user_handle_canonical_unique&quot;</span>, <span class="br">{</span> unique: <span class="kw">true</span> <span class="br">}</span><span class="br">)</span>
+  @<span class="fn">Column</span>(<span class="br">{</span> name: <span class="str">&quot;handle_canonical&quot;</span>, <span class="kw">type</span>: <span class="str">&quot;varchar&quot;</span>, length: <span class="num">255</span>, nullable: <span class="kw">true</span> <span class="br">}</span><span class="br">)</span>
+  handleCanonical!: string | <span class="kw">null</span>;
+<span class="br">}</span></code></pre></figure>
+<p>Generate a migration from the entity with the TypeORM CLI, or write one with <code>queryRunner.addColumn()</code> and <code>queryRunner.createIndex()</code>. After the backfill, drop <code>nullable: true</code> and migrate again. Then use <code>{ name: &quot;user&quot;, column: &quot;handleCanonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="mikroorm"><a class="anchor" href="#mikroorm" aria-label="Link to this section">#</a>MikroORM</h2>
+<figure class="code"><figcaption><span class="code-lang">MikroORM</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createMikroORMAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/mikro-orm&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> orm <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./db&quot;</span>; <span class="cm">// await MikroORM.init(config)</span>
+<span class="kw">import</span> <span class="br">{</span> <span class="type">User</span>, <span class="type">Organization</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./entities&quot;</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createMikroORMAdapter</span>(orm.em, <span class="br">{</span> user: <span class="type">User</span>, organization: <span class="type">Organization</span> <span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<p><code>name</code> is the entity’s key in the object you pass, and <code>column</code> is the entity property. The adapter calls <code>em.findOne(entity, { [column]: value }, { fields })</code>. For <code>caseInsensitive</code> it uses <code>$ilike</code>.</p>
+<p>MikroORM refuses queries on its global <code>EntityManager</code> outside a request context. Pass <code>orm.em</code> and run requests inside <code>RequestContext</code> (MikroORM’s middleware does this), and the adapter’s queries go to that request’s fork.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">Entity</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="type">Entity</span>, <span class="type">PrimaryKey</span>, <span class="type">Property</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;@mikro-orm/core&quot;</span>;
+
+@<span class="fn">Entity</span>(<span class="br">)</span>
+<span class="kw">export</span> <span class="kw">class</span> <span class="type">User</span> <span class="br">{</span>
+  @<span class="fn">PrimaryKey</span>(<span class="br">)</span>
+  id!: string;
+
+  @<span class="fn">Property</span>(<span class="br">)</span>
+  handle!: string;
+
+  @<span class="fn">Property</span>(<span class="br">{</span> fieldName: <span class="str">&quot;handle_canonical&quot;</span>, length: <span class="num">255</span>, nullable: <span class="kw">true</span>, unique: <span class="kw">true</span> <span class="br">}</span><span class="br">)</span>
+  handleCanonical?: string;
+<span class="br">}</span></code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">Terminal</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">npx</span> mikro<span class="var">-orm</span> migration:create
+<span class="kw">npx</span> mikro<span class="var">-orm</span> migration:up</code></pre></figure>
+<p>After the backfill, drop <code>nullable: true</code> and create another migration. Then use <code>{ name: &quot;user&quot;, column: &quot;handleCanonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="sequelize"><a class="anchor" href="#sequelize" aria-label="Link to this section">#</a>Sequelize</h2>
+<figure class="code"><figcaption><span class="code-lang">Sequelize</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="type">Sequelize</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;sequelize&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createSequelizeAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/sequelize&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="type">User</span>, <span class="type">Organization</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./models&quot;</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createSequelizeAdapter</span>(<span class="br">{</span> user: <span class="type">User</span>, organization: <span class="type">Organization</span> <span class="br">}</span><span class="br">)</span>;
+
+<span class="cm">// With caseInsensitive: true, pass Sequelize's helpers too</span>
+<span class="kw">const</span> insensitive = <span class="fn">createSequelizeAdapter</span>(
+  <span class="br">{</span> user: <span class="type">User</span>, organization: <span class="type">Organization</span> <span class="br">}</span>,
+  <span class="br">{</span> where: <span class="type">Sequelize</span>.where, fn: <span class="type">Sequelize</span>.fn, col: <span class="type">Sequelize</span>.col <span class="br">}</span>,
+<span class="br">)</span>;</code></pre></figure>
+<p><code>name</code> is the model’s key in the object you pass, and <code>column</code> is the model attribute. The adapter calls <code>Model.findOne({ where, attributes, raw: true })</code>. The case-insensitive query goes through <code>Sequelize.col()</code>, which takes the database column name: if your model maps the attribute to another field (<code>underscored: true</code>), that query needs the field name.</p>
+<p><strong>Canonical column.</strong></p>
+<figure class="code"><figcaption><span class="code-lang">Migration</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fn">up</span>(queryInterface, <span class="type">Sequelize</span><span class="br">)</span> <span class="br">{</span>
+  <span class="kw">await</span> queryInterface.<span class="fn">addColumn</span>(<span class="str">&quot;Users&quot;</span>, <span class="str">&quot;handleCanonical&quot;</span>, <span class="br">{</span>
+    <span class="kw">type</span>: <span class="type">Sequelize</span>.<span class="type">DataTypes</span>.<span class="fn">STRING</span>(<span class="num">255</span><span class="br">)</span>,
+    allowNull: <span class="kw">true</span>,
+  <span class="br">}</span><span class="br">)</span>;
+  <span class="kw">await</span> queryInterface.<span class="fn">addIndex</span>(<span class="str">&quot;Users&quot;</span>, <span class="br">[</span><span class="str">&quot;handleCanonical&quot;</span><span class="br">]</span>, <span class="br">{</span>
+    name: <span class="str">&quot;users_handle_canonical_uidx&quot;</span>,
+    unique: <span class="kw">true</span>,
+  <span class="br">}</span><span class="br">)</span>;
+<span class="br">}</span></code></pre></figure>
+<p>Add <code>handleCanonical</code> to the model definition too. After the backfill, set <code>allowNull: false</code> with <code>changeColumn</code>. Then use <code>{ name: &quot;user&quot;, column: &quot;handleCanonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="mongoose"><a class="anchor" href="#mongoose" aria-label="Link to this section">#</a>Mongoose</h2>
+<figure class="code"><figcaption><span class="code-lang">Mongoose</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> createMongooseAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/mongoose&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> <span class="type">User</span>, <span class="type">Organization</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;./models&quot;</span>;
+
+<span class="kw">const</span> adapter = <span class="fn">createMongooseAdapter</span>(<span class="br">{</span> user: <span class="type">User</span>, organization: <span class="type">Organization</span> <span class="br">}</span><span class="br">)</span>;
+
+<span class="cm">// Sources: idColumn defaults to _id for this adapter</span>
+<span class="kw">const</span> sources = <span class="br">[</span>
+  <span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handleCanonical&quot;</span>, idColumn: <span class="str">&quot;_id&quot;</span>, scopeKey: <span class="str">&quot;_id&quot;</span> <span class="br">}</span>,
+  <span class="br">{</span> name: <span class="str">&quot;organization&quot;</span>, column: <span class="str">&quot;slugCanonical&quot;</span>, idColumn: <span class="str">&quot;_id&quot;</span>, scopeKey: <span class="str">&quot;_id&quot;</span> <span class="br">}</span>,
+<span class="br">]</span>;</code></pre></figure>
+<p><code>name</code> is the model’s key in the object you pass, and <code>column</code> is the schema path. The adapter calls <code>Model.findOne(conditions, projection).lean()</code>. For <code>caseInsensitive</code> it adds the collation <code>{ locale: &quot;en&quot;, strength: 2 }</code>, which compares without case. Pass the scope as a string: <code>{ _id: String(user._id) }</code>.</p>
+<p><strong>Canonical column.</strong> A MongoDB unique index counts a missing field as null, and allows only one, so limit the index to documents that have the field until the backfill is done:</p>
+<figure class="code"><figcaption><span class="code-lang">Schema</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="type">Schema</span>, model <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;mongoose&quot;</span>;
+
+<span class="kw">const</span> userSchema = <span class="kw">new</span> <span class="fn">Schema</span>(<span class="br">{</span>
+  handle: <span class="br">{</span> <span class="kw">type</span>: <span class="type">String</span>, required: <span class="kw">true</span> <span class="br">}</span>,
+  handleCanonical: <span class="br">{</span> <span class="kw">type</span>: <span class="type">String</span> <span class="br">}</span>,
+<span class="br">}</span><span class="br">)</span>;
+userSchema.<span class="fn">index</span>(
+  <span class="br">{</span> handleCanonical: <span class="num">1</span> <span class="br">}</span>,
+  <span class="br">{</span> unique: <span class="kw">true</span>, partialFilterExpression: <span class="br">{</span> handleCanonical: <span class="br">{</span> $type: <span class="str">&quot;string&quot;</span> <span class="br">}</span> <span class="br">}</span> <span class="br">}</span>,
+<span class="br">)</span>;
+
+<span class="kw">export</span> <span class="kw">const</span> <span class="type">User</span> = <span class="fn">model</span>(<span class="str">&quot;User&quot;</span>, userSchema<span class="br">)</span>;</code></pre></figure>
+<p>Build the index with <code>await User.createIndexes()</code>. After the backfill, add <code>required: true</code> to <code>handleCanonical</code>.</p>
+<h2 id="raw-sql"><a class="anchor" href="#raw-sql" aria-label="Link to this section">#</a>Raw SQL</h2>
+<figure class="code"><figcaption><span class="code-lang">PostgreSQL (pg)</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="br">{</span> <span class="type">Pool</span> <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;pg&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createRawAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/raw&quot;</span>;
+
+<span class="kw">const</span> pool = <span class="kw">new</span> <span class="fn">Pool</span>(<span class="br">)</span>;
+<span class="kw">const</span> adapter = <span class="fn">createRawAdapter</span>(<span class="br">(</span>sql, params<span class="br">)</span> =&gt; pool.<span class="fn">query</span>(sql, params<span class="br">)</span><span class="br">)</span>;</code></pre></figure>
+<p>You pass a function that runs a query and resolves to <code>{ rows }</code>. <code>name</code> and <code>column</code> are the table and column names. The adapter writes PostgreSQL SQL, with double-quoted identifiers and <code>$1</code> placeholders:</p>
+<figure class="code"><figcaption><span class="code-lang">SQL</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">SELECT</span> &quot;id&quot; <span class="kw">FROM</span> &quot;users&quot; <span class="kw">WHERE</span> &quot;handle_canonical&quot; = $<span class="num">1</span> LIMIT <span class="num">1</span>
+<span class="cm">-- with caseInsensitive</span>
+<span class="kw">SELECT</span> &quot;id&quot; <span class="kw">FROM</span> &quot;users&quot; <span class="kw">WHERE</span> <span class="kw">LOWER</span>(&quot;handle&quot;) = <span class="kw">LOWER</span>($<span class="num">1</span>) LIMIT <span class="num">1</span></code></pre></figure>
+<p>Table and column names must be letters, digits and underscores, not starting with a digit; anything else throws before a query runs. That rules out a schema prefix (<code>public.users</code>): set the schema with <code>search_path</code>, or write your own adapter. Quoted names are case-sensitive in PostgreSQL, so <code>name: &quot;Users&quot;</code> finds only a table created as <code>&quot;Users&quot;</code>.</p>
+<p>For MySQL and SQLite, translate the placeholders in your function:</p>
+<figure class="code"><figcaption><span class="code-lang">MySQL (mysql2)</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> mysql <span class="kw">from</span> <span class="str">&quot;mysql2/promise&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createRawAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/raw&quot;</span>;
+
+<span class="kw">const</span> pool = mysql.<span class="fn">createPool</span>(<span class="br">{</span> uri: process.env.<span class="const">DATABASE_URL</span> <span class="br">}</span><span class="br">)</span>;
+<span class="kw">const</span> adapter = <span class="fn">createRawAdapter</span>(<span class="kw">async</span> (sql, params<span class="br">)</span> =&gt; <span class="br">{</span>
+  <span class="cm">// $1 to ?, and &quot;name&quot; to `name`</span>
+  <span class="kw">const</span> <span class="br">[</span>rows<span class="br">]</span> = <span class="kw">await</span> pool.<span class="fn">execute</span>(sql.<span class="fn">replace</span>(/\$\d+/g, <span class="str">&quot;?&quot;</span><span class="br">)</span>.<span class="fn">replace</span>(/<span class="str">&quot;/g, &quot;</span>`&quot;<span class="br">)</span>, params<span class="br">)</span>;
+  <span class="kw">return</span> <span class="br">{</span> rows: rows <span class="kw">as</span> <span class="type">Record</span>&lt;string, unknown&gt;<span class="br">[</span><span class="br">]</span> <span class="br">}</span>;
+<span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<figure class="code"><figcaption><span class="code-lang">SQLite (better-sqlite3)</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">import</span> <span class="type">Database</span> <span class="kw">from</span> <span class="str">&quot;better-sqlite3&quot;</span>;
+<span class="kw">import</span> <span class="br">{</span> createRawAdapter <span class="br">}</span> <span class="kw">from</span> <span class="str">&quot;namespace-guard/adapters/raw&quot;</span>;
+
+<span class="kw">const</span> db = <span class="kw">new</span> <span class="fn">Database</span>(<span class="str">&quot;app.db&quot;</span><span class="br">)</span>;
+<span class="kw">const</span> adapter = <span class="fn">createRawAdapter</span>(<span class="kw">async</span> (sql, params<span class="br">)</span> =&gt; <span class="br">{</span>
+  <span class="cm">// $1 to ?; SQLite accepts double-quoted names as they are</span>
+  <span class="kw">return</span> <span class="br">{</span> rows: db.<span class="fn">prepare</span>(sql.<span class="fn">replace</span>(/\$\d+/g, <span class="str">&quot;?&quot;</span><span class="br">)</span><span class="br">)</span>.<span class="fn">all</span>(...params<span class="br">)</span> <span class="kw">as</span> <span class="type">Record</span>&lt;string, unknown&gt;<span class="br">[</span><span class="br">]</span> <span class="br">}</span>;
+<span class="br">}</span><span class="br">)</span>;</code></pre></figure>
+<p><strong>Canonical column</strong> (PostgreSQL):</p>
+<figure class="code"><figcaption><span class="code-lang">SQL</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">ALTER</span> <span class="kw">TABLE</span> users <span class="kw">ADD</span> <span class="kw">COLUMN</span> handle_canonical text;
+<span class="kw">CREATE</span> <span class="kw">UNIQUE</span> <span class="kw">INDEX</span> users_handle_canonical_uidx <span class="kw">ON</span> users (handle_canonical);
+<span class="cm">-- backfill from application code with normalize(), then:</span>
+<span class="kw">ALTER</span> <span class="kw">TABLE</span> users <span class="kw">ALTER</span> <span class="kw">COLUMN</span> handle_canonical <span class="kw">SET</span> <span class="kw">NOT</span> <span class="kw">NULL</span>;</code></pre></figure>
+<p>Then use <code>{ name: &quot;users&quot;, column: &quot;handle_canonical&quot;, scopeKey: &quot;id&quot; }</code>.</p>
+<h2 id="write-your-own-adapter"><a class="anchor" href="#write-your-own-adapter" aria-label="Link to this section">#</a>Write your own adapter</h2>
+<p>An adapter is an object with one method. Write one for a database or client without a built-in adapter, or to query something other than a table: a search index, a list of names held by another service.</p>
+<figure class="code"><figcaption><span class="code-lang">As namespace-guard declares it</span><span class="code-actions"><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">type</span> <span class="type">NamespaceAdapter</span> = <span class="br">{</span>
+  findOne: <span class="br">(</span>
+    source: <span class="type">NamespaceSource</span>,
+    value: string,
+    options?: <span class="type">FindOneOptions</span>,
+  <span class="br">)</span> =&gt; <span class="type">Promise</span>&lt;<span class="type">Record</span>&lt;string, unknown&gt; | <span class="kw">null</span>&gt;;
+<span class="br">}</span>;
+
+<span class="kw">type</span> <span class="type">FindOneOptions</span> = <span class="br">{</span> caseInsensitive?: boolean <span class="br">}</span>;</code></pre></figure>
+<p>Import the types to type yours: <code>import type { NamespaceAdapter } from &quot;namespace-guard&quot;</code>.</p>
+<p>What <code>findOne</code> has to do:</p>
+<ul><li>Find one record in the place <code>source.name</code> stands for, whose <code>source.column</code> equals <code>value</code>. <code>value</code> is already normalised.</li><li>Return <code>null</code> if there isn’t one. Return the record if there is, with at least its <code>source.idColumn</code> (default <code>&quot;id&quot;</code>) so the guard can check ownership.</li><li>Compare without case when <code>options.caseInsensitive</code> is true. The guard passes it when the config sets <code>caseInsensitive: true</code>.</li><li>Throw only for real failures. The error reaches whoever called <code>check()</code> or <code>claim()</code>; the guard doesn’t catch it.</li></ul>
+<p>This one keeps names in memory, and runs on this page:</p>
+<figure class="code runnable" data-example="1"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">const</span> tables = <span class="br">{</span>
+  user: <span class="br">[</span><span class="br">{</span> id: <span class="str">&quot;u1&quot;</span>, handle: <span class="str">&quot;sarah&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  organization: <span class="br">[</span><span class="br">{</span> id: <span class="str">&quot;o1&quot;</span>, slug: <span class="str">&quot;acme&quot;</span> <span class="br">}</span><span class="br">]</span>,
+<span class="br">}</span>;
+
+<span class="kw">const</span> memoryAdapter = <span class="br">{</span>
+  <span class="kw">async</span> <span class="fn">findOne</span>(source, value, options<span class="br">)</span> <span class="br">{</span>
+    <span class="kw">const</span> same = options?.caseInsensitive
+      ? <span class="br">(</span>stored<span class="br">)</span> =&gt; <span class="fn">String</span>(stored<span class="br">)</span>.<span class="fn">toLowerCase</span>(<span class="br">)</span> === value.<span class="fn">toLowerCase</span>(<span class="br">)</span>
+      : <span class="br">(</span>stored<span class="br">)</span> =&gt; stored === value;
+    <span class="kw">const</span> row = <span class="br">(</span>tables<span class="br">[</span>source.name<span class="br">]</span> ?? <span class="br">[</span><span class="br">]</span><span class="br">)</span>.<span class="fn">find</span>(<span class="br">(</span>r<span class="br">)</span> =&gt; <span class="fn">same</span>(r<span class="br">[</span>source.column<span class="br">]</span><span class="br">)</span><span class="br">)</span>;
+    <span class="kw">if</span> (!row<span class="br">)</span> <span class="kw">return</span> <span class="kw">null</span>;
+    <span class="kw">const</span> id = source.idColumn ?? <span class="str">&quot;id&quot;</span>;
+    <span class="kw">return</span> <span class="br">{</span> <span class="br">[</span>id<span class="br">]</span>: row<span class="br">[</span>id<span class="br">]</span> <span class="br">}</span>;
+  <span class="br">}</span>,
+<span class="br">}</span>;
+
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span>
+    <span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+    <span class="br">{</span> name: <span class="str">&quot;organization&quot;</span>, column: <span class="str">&quot;slug&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span>,
+  <span class="br">]</span>,
+<span class="br">}</span>, memoryAdapter<span class="br">)</span>;
+
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;acme&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: false, reason: &quot;taken&quot;, source: &quot;organization&quot; }</span>
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;sarah&quot;</span>, <span class="br">{</span> id: <span class="str">&quot;u1&quot;</span> <span class="br">}</span><span class="br">)</span>;  <span class="cm">// → { available: true }</span>
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;sarah&quot;</span>, <span class="br">{</span> id: <span class="str">&quot;u2&quot;</span> <span class="br">}</span><span class="br">)</span>;  <span class="cm">// → { available: false, reason: &quot;taken&quot;, source: &quot;user&quot; }</span>
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;new-name&quot;</span><span class="br">)</span>;  <span class="cm">// → { available: true }</span></code></pre><div class="output" hidden></div></figure>
+<h2 id="cache-lookups"><a class="anchor" href="#cache-lookups" aria-label="Link to this section">#</a>Cache lookups</h2>
+<p>While someone types a name, the same lookups repeat. The <code>cache</code> option keeps each adapter result in memory for a while:</p>
+<figure class="code runnable" data-example="2"><figcaption><span class="code-lang">TypeScript</span><span class="code-actions"><button class="run" type="button">Run</button><button class="copy" type="button" aria-label="Copy code">Copy</button></span></figcaption><pre><code><span class="kw">let</span> queries = <span class="num">0</span>;
+<span class="kw">const</span> adapter = <span class="br">{</span> findOne: <span class="kw">async</span> (<span class="br">)</span> =&gt; <span class="br">{</span> queries++; <span class="kw">return</span> <span class="kw">null</span>; <span class="br">}</span> <span class="br">}</span>;
+<span class="kw">const</span> guard = <span class="fn">createNamespaceGuard</span>(<span class="br">{</span>
+  sources: <span class="br">[</span><span class="br">{</span> name: <span class="str">&quot;user&quot;</span>, column: <span class="str">&quot;handle&quot;</span>, scopeKey: <span class="str">&quot;id&quot;</span> <span class="br">}</span><span class="br">]</span>,
+  cache: <span class="br">{</span> ttl: <span class="num">5000</span>, maxSize: <span class="num">1000</span> <span class="br">}</span>,
+<span class="br">}</span>, adapter<span class="br">)</span>;
+
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;sarah&quot;</span><span class="br">)</span>;
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;sarah&quot;</span><span class="br">)</span>;
+<span class="kw">await</span> guard.<span class="fn">check</span>(<span class="str">&quot;Sarah&quot;</span><span class="br">)</span>;  <span class="cm">// the same name once normalised</span>
+queries;  <span class="cm">// → 1</span>
+guard.<span class="fn">cacheStats</span>(<span class="br">)</span>;  <span class="cm">// → { size: 1, hits: 2, misses: 1 }</span>
+guard.<span class="fn">clearCache</span>(<span class="br">)</span>;
+guard.<span class="fn">cacheStats</span>(<span class="br">)</span>;  <span class="cm">// → { size: 0, hits: 0, misses: 0 }</span></code></pre><div class="output" hidden></div></figure>
+<div class="table-wrap"><table><thead><tr><th>Option</th><th>What it does</th><th>Default</th></tr></thead><tbody><tr><td><code>ttl</code></td><td>how long a result is kept, in milliseconds</td><td><code>5000</code></td></tr><tr><td><code>maxSize</code></td><td>how many results are kept; past this, the least recently used goes first</td><td><code>1000</code></td></tr></tbody></table></div>
+<p><code>cache: {}</code> turns it on with the defaults. Each result is keyed by source, name and whether the query was case-insensitive. <code>clearCache()</code> empties the cache and resets the counts; <code>cacheStats()</code> returns <code>{ size, hits, misses }</code>, all zero when the cache is off.</p>
+<p>Things to know before you turn it on:</p>
+<ul><li>The cache lives in the guard’s memory. Each server process, and each serverless instance, has its own.</li><li><code>claim()</code> checks through the cache too, so a name claimed elsewhere in the last <code>ttl</code> milliseconds can still look free. The unique index on your canonical column is what catches that; don’t rely on the cache without one.</li><li>A lookup that fails is cached like one that succeeds: for <code>ttl</code> milliseconds, the same name gets the same error. Call <code>clearCache()</code> after a database error if you retry straight away.</li><li>Call <code>clearCache()</code> after your own writes if you show <code>check()</code> results straight after them.</li></ul>
+        <footer class="page-foot">
+          <a class="edit" href="https://github.com/paultendo/namespace-guard/blob/main/guide/adapters.md">Edit this page on GitHub</a>
+          <div class="pager"><a class="prev" href="../data/"><span>Previous</span>Data and maps</a><a class="next" href="../frameworks/"><span>Next</span>Frameworks</a></div>
+        </footer>
+      </article>
+      <aside class="toc" aria-label="On this page"><p class="nav-label">On this page</p><ul><li class="toc-2"><a href="#pick-an-adapter">Pick an adapter</a></li><li class="toc-2"><a href="#what-an-adapter-is-asked">What an adapter is asked</a></li><li class="toc-2"><a href="#case-insensitive-matching">Case-insensitive matching</a></li><li class="toc-2"><a href="#store-a-canonical-column">Store a canonical column</a></li><li class="toc-2"><a href="#prisma">Prisma</a></li><li class="toc-2"><a href="#drizzle">Drizzle</a></li><li class="toc-2"><a href="#kysely">Kysely</a></li><li class="toc-2"><a href="#knex">Knex</a></li><li class="toc-2"><a href="#typeorm">TypeORM</a></li><li class="toc-2"><a href="#mikroorm">MikroORM</a></li><li class="toc-2"><a href="#sequelize">Sequelize</a></li><li class="toc-2"><a href="#mongoose">Mongoose</a></li><li class="toc-2"><a href="#raw-sql">Raw SQL</a></li><li class="toc-2"><a href="#write-your-own-adapter">Write your own adapter</a></li><li class="toc-2"><a href="#cache-lookups">Cache lookups</a></li></ul></aside>
+    </main>
+  </div>
+  <div class="search" hidden>
+    <div class="search-backdrop"></div>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search the docs" aria-label="Search the docs" autocomplete="off" spellcheck="false"><kbd>esc</kbd></div>
+      <ul class="search-results" role="listbox"></ul>
+      <p class="search-hint"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open</p>
+    </div>
+  </div>
+  <script type="application/json" id="examples">[{"body":"const calls = [];\nconst adapter = {\n  findOne: async (source, value, options) => {\n    calls.push([source.name, source.column, value, options]);\n    return null;\n  },\n};\nconst guard = createNamespaceGuard({\n  sources: [{ name: \"user\", column: \"handleCanonical\", scopeKey: \"id\" }],\n  caseInsensitive: true,\n}, adapter);\n\nawait guard.check(\"  @Sarah \");\n__show(0, (calls[0]));","checks":["[\"user\", \"handleCanonical\", \"sarah\", { caseInsensitive: true }]"],"labels":["calls[0]"]},{"body":"const tables = {\n  user: [{ id: \"u1\", handle: \"sarah\" }],\n  organization: [{ id: \"o1\", slug: \"acme\" }],\n};\n\nconst memoryAdapter = {\n  async findOne(source, value, options) {\n    const same = options?.caseInsensitive\n      ? (stored) => String(stored).toLowerCase() === value.toLowerCase()\n      : (stored) => stored === value;\n    const row = (tables[source.name] ?? []).find((r) => same(r[source.column]));\n    if (!row) return null;\n    const id = source.idColumn ?? \"id\";\n    return { [id]: row[id] };\n  },\n};\n\nconst guard = createNamespaceGuard({\n  sources: [\n    { name: \"user\", column: \"handle\", scopeKey: \"id\" },\n    { name: \"organization\", column: \"slug\", scopeKey: \"id\" },\n  ],\n}, memoryAdapter);\n\n__show(0, (await guard.check(\"acme\")));\n__show(1, (await guard.check(\"sarah\", { id: \"u1\" })));\n__show(2, (await guard.check(\"sarah\", { id: \"u2\" })));\n__show(3, (await guard.check(\"new-name\")));","checks":["{ available: false, reason: \"taken\", source: \"organization\" }","{ available: true }","{ available: false, reason: \"taken\", source: \"user\" }","{ available: true }"],"labels":["guard.check(\"acme\")","guard.check(\"sarah\", { id: \"u1\" })","guard.check(\"sarah\", { id: \"u2\" })","guard.check(\"new-name\")"]},{"body":"let queries = 0;\nconst adapter = { findOne: async () => { queries++; return null; } };\nconst guard = createNamespaceGuard({\n  sources: [{ name: \"user\", column: \"handle\", scopeKey: \"id\" }],\n  cache: { ttl: 5000, maxSize: 1000 },\n}, adapter);\n\nawait guard.check(\"sarah\");\nawait guard.check(\"sarah\");\nawait guard.check(\"Sarah\");  // the same name once normalised\n__show(0, (queries));\n__show(1, (guard.cacheStats()));\nguard.clearCache();\n__show(2, (guard.cacheStats()));","checks":["1","{ size: 1, hits: 2, misses: 1 }","{ size: 0, hits: 0, misses: 0 }"],"labels":["queries","guard.cacheStats()","guard.cacheStats()"]}]</script>
+  <script type="module" src="../assets/docs.js"></script>
+</body>
+</html>

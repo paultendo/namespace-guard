@@ -6,6 +6,12 @@
     "nfkc": "s"
   },
   {
+    "char": "₀",
+    "codePoint": "U+2080",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
     "char": "ℐ",
     "codePoint": "U+2110",
     "tr39": "l",
@@ -22,6 +28,18 @@
     "codePoint": "U+2160",
     "tr39": "l",
     "nfkc": "i"
+  },
+  {
+    "char": "０",
+    "codePoint": "U+FF10",
+    "tr39": "o",
+    "nfkc": "0"
+  },
+  {
+    "char": "１",
+    "codePoint": "U+FF11",
+    "tr39": "l",
+    "nfkc": "1"
   },
   {
     "char": "Ｉ",
