@@ -53,6 +53,17 @@ const risk = detectCrossScriptRisk("\u3163\u4E28", { weights: CONFUSABLE_WEIGHTS
 npm install namespace-guard
 ```
 
+## Use it from an AI agent
+
+A skill teaches Claude Code, Codex and other agents to use namespace-guard when they write sign-up code or send untrusted text to a model:
+
+```bash
+claude plugin marketplace add paultendo/skills
+claude plugin install namespace-guard@paultendo
+```
+
+For Codex or another agent, copy [`plugins/namespace-guard/skills/lookalike-names-and-text`](plugins/namespace-guard/skills/lookalike-names-and-text) into its skills folder.
+
 ## Quick Start (60 seconds)
 
 ```typescript

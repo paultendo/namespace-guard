@@ -1,0 +1,13 @@
+{
+  "name": "namespace-guard",
+  "version": "0.23.0",
+  "description": "Stop confusables (lookalike letters, or homoglyphs): names that impersonate others at sign-up, and text that costs an AI several times more to read.",
+  "author": {
+    "name": "Paul Wood FRSA",
+    "url": "https://paultendo.github.io"
+  },
+  "homepage": "https://paultendo.github.io/namespace-guard/docs/",
+  "repository": "https://github.com/paultendo/namespace-guard",
+  "license": "MIT",
+  "keywords": ["unicode", "confusables", "homoglyph", "homograph", "tr39", "spoofing", "security", "usernames", "llm", "prompt-injection", "profanity"]
+}
