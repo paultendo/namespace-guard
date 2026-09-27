@@ -25,6 +25,10 @@ The same marketplace has a separate plugin, `d0ma1n`, for finding lookalike doma
 
 The lookalike data comes from Unicode's confusables.txt (Unicode Technical Standard #39) and from [confusable-vision](https://github.com/paultendo/confusable-vision), which measures 64,751 characters in 322 fonts. addons.mozilla.org checks add-on names for lookalikes with characters from confusable-vision, and namespace-guard is used by agent-sanitizer and d0ma1n.
 
+## Privacy
+
+The skill and the package collect and send nothing: see the [privacy policy](https://github.com/paultendo/namespace-guard/blob/main/PRIVACY.md).
+
 ## License
 
 MIT, by Paul Wood FRSA ([@paultendo](https://github.com/paultendo)).

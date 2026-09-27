@@ -9,5 +9,18 @@
   "homepage": "https://paultendo.github.io/namespace-guard/docs/",
   "repository": "https://github.com/paultendo/namespace-guard",
   "license": "MIT",
-  "keywords": ["unicode", "confusables", "homoglyph", "homograph", "tr39", "spoofing", "security", "usernames", "llm", "prompt-injection", "profanity"]
+  "keywords": [
+    "unicode",
+    "confusables",
+    "homoglyph",
+    "homograph",
+    "tr39",
+    "spoofing",
+    "security",
+    "usernames",
+    "llm",
+    "prompt-injection",
+    "profanity"
+  ],
+  "privacyPolicyUrl": "https://github.com/paultendo/namespace-guard/blob/main/PRIVACY.md"
 }
