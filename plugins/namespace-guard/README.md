@@ -10,7 +10,9 @@ Nothing. The skill is instructions: it tells the agent how to use the namespace-
 
 ## Install
 
-In Claude Code:
+It's listed in Anthropic's plugin directory for Claude Code, Cowork and the Claude apps, so you can add it from the directory there.
+
+From the command line in Claude Code:
 
 ```bash
 claude plugin marketplace add paultendo/skills

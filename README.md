@@ -55,7 +55,9 @@ npm install namespace-guard
 
 ## Use it from an AI agent
 
-A skill teaches Claude Code, Codex and other agents to use namespace-guard when they write sign-up code or send untrusted text to a model:
+A skill teaches Claude Code, Codex and other agents to use namespace-guard when they write sign-up code or send untrusted text to a model.
+
+It's listed in Anthropic's plugin directory for Claude Code, Cowork and the Claude apps, so you can add it from the directory there. You can also install it from the command line:
 
 ```bash
 claude plugin marketplace add paultendo/skills
